@@ -6,6 +6,8 @@ import { createClient } from "@/lib/supabase/server";
 export type LoginFormState = {
   error?: string;
   fieldErrors?: Partial<Record<"email" | "password", string>>;
+  /** Preserve user input on error so they don't have to retype. */
+  values?: { email: string };
 };
 
 export async function login(
@@ -19,13 +21,15 @@ export async function login(
   const fieldErrors: NonNullable<LoginFormState["fieldErrors"]> = {};
   if (!email) fieldErrors.email = "Email wajib diisi.";
   if (!password) fieldErrors.password = "Password wajib diisi.";
-  if (Object.keys(fieldErrors).length > 0) return { fieldErrors };
+  if (Object.keys(fieldErrors).length > 0) {
+    return { fieldErrors, values: { email } };
+  }
 
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
-    return { error: error.message };
+    return { error: error.message, values: { email } };
   }
 
   redirect(next.startsWith("/") ? next : "/projects");

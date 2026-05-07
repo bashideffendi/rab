@@ -7,6 +7,8 @@ export type SignupFormState = {
   error?: string;
   message?: string;
   fieldErrors?: Partial<Record<"email" | "password", string>>;
+  /** Preserve email on error. Password jangan di-preserve (security). */
+  values?: { email: string };
 };
 
 export async function signup(
@@ -22,7 +24,9 @@ export async function signup(
   if (!password) fieldErrors.password = "Password wajib diisi.";
   else if (password.length < 8)
     fieldErrors.password = "Password minimal 8 karakter.";
-  if (Object.keys(fieldErrors).length > 0) return { fieldErrors };
+  if (Object.keys(fieldErrors).length > 0) {
+    return { fieldErrors, values: { email } };
+  }
 
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signUp({
@@ -34,18 +38,14 @@ export async function signup(
   });
 
   if (error) {
-    return { error: error.message };
+    return { error: error.message, values: { email } };
   }
 
-  // Kalau email confirmation enabled (default Supabase), user perlu klik link
-  // di email dulu. Session belum aktif sampai dia confirm.
   if (data.user && !data.session) {
     return {
       message: `Cek email ${email} untuk konfirmasi akun, baru bisa login.`,
     };
   }
 
-  // Kalau email confirmation disabled di Supabase Auth settings, langsung
-  // login + redirect.
   redirect("/projects");
 }

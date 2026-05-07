@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Field } from "@/components/ui/field";
@@ -10,6 +10,14 @@ const initialState: LoginFormState = {};
 
 export function LoginForm({ next }: { next: string }) {
   const [state, formAction, pending] = useActionState(login, initialState);
+  const [email, setEmail] = useState("");
+
+  // Sync email back from server kalau error → input gak ke-reset
+  useEffect(() => {
+    if (state.values?.email !== undefined) {
+      setEmail(state.values.email);
+    }
+  }, [state.values?.email]);
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
@@ -28,6 +36,8 @@ export function LoginForm({ next }: { next: string }) {
           autoComplete="email"
           autoFocus
           placeholder="kamu@email.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
         />
       </Field>
 
@@ -46,7 +56,7 @@ export function LoginForm({ next }: { next: string }) {
       </Field>
 
       {state.error && (
-        <div className="rounded border border-danger/40 bg-danger/5 px-3 py-2 text-sm text-danger">
+        <div className="rounded-md border border-danger/40 bg-danger/5 px-3 py-2 text-sm text-danger">
           {state.error}
         </div>
       )}

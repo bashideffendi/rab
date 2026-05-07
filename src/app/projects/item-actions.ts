@@ -126,6 +126,16 @@ export type CreateItemFormState = {
   fieldErrors?: Partial<
     Record<"name" | "unit" | "volume" | "unitPrice" | "ahspItemId", string>
   >;
+  /** Preserve user input on validation error */
+  values?: {
+    mode: string;
+    wbsItemId: string;
+    ahspItemId: string;
+    name: string;
+    unit: string;
+    volume: string;
+    unitPrice: string;
+  };
 };
 
 export async function createProjectItem(
@@ -137,9 +147,28 @@ export async function createProjectItem(
   const wbsItemId = wbsItemRaw ? wbsItemRaw : null;
   const mode = (formData.get("mode") ?? "custom").toString();
   const volume = parseNum(formData.get("volume"));
+  const volumeRaw = (formData.get("volume") ?? "").toString().trim();
+  const ahspItemIdRaw = (formData.get("ahspItemId") ?? "").toString().trim();
+  const nameRaw = (formData.get("name") ?? "").toString().trim();
+  const unitRaw = (formData.get("unit") ?? "").toString().trim();
+  const unitPriceRaw = (formData.get("unitPrice") ?? "").toString().trim();
+
+  // Snapshot all input — di-attach ke return state kalau error, biar form gak ke-reset
+  const inputValues = {
+    mode,
+    wbsItemId: wbsItemRaw,
+    ahspItemId: ahspItemIdRaw,
+    name: nameRaw,
+    unit: unitRaw,
+    volume: volumeRaw,
+    unitPrice: unitPriceRaw,
+  };
 
   if (!volume) {
-    return { fieldErrors: { volume: "Volume harus angka positif." } };
+    return {
+      fieldErrors: { volume: "Volume harus angka positif." },
+      values: inputValues,
+    };
   }
 
   const user = await requireUser();
@@ -149,15 +178,17 @@ export async function createProjectItem(
     return {
       error:
         e instanceof Error ? e.message : "Gak punya akses ke project ini.",
+      values: inputValues,
     };
   }
 
   // ─── AHSP mode ────────────────────────────────────────────────────────────
   if (mode === "ahsp") {
-    const ahspItemId = (formData.get("ahspItemId") ?? "").toString().trim();
+    const ahspItemId = ahspItemIdRaw;
     if (!ahspItemId) {
       return {
         fieldErrors: { ahspItemId: "Pilih AHSP dari dropdown." },
+        values: inputValues,
       };
     }
 
@@ -174,7 +205,10 @@ export async function createProjectItem(
       .limit(1);
 
     if (!ahsp[0]) {
-      return { fieldErrors: { ahspItemId: "AHSP tidak ditemukan." } };
+      return {
+        fieldErrors: { ahspItemId: "AHSP tidak ditemukan." },
+        values: inputValues,
+      };
     }
 
     // Get project's regionId untuk IKK multiplier
@@ -204,6 +238,7 @@ export async function createProjectItem(
       return {
         error:
           e instanceof Error ? `Gagal simpan: ${e.message}` : "Gagal simpan.",
+        values: inputValues,
       };
     }
 
@@ -217,8 +252,8 @@ export async function createProjectItem(
   }
 
   // ─── Custom mode ──────────────────────────────────────────────────────────
-  const customName = (formData.get("name") ?? "").toString().trim();
-  const customUnit = (formData.get("unit") ?? "").toString().trim();
+  const customName = nameRaw;
+  const customUnit = unitRaw;
   const customUnitPrice = parseNum(formData.get("unitPrice"));
 
   const fieldErrors: NonNullable<CreateItemFormState["fieldErrors"]> = {};
@@ -230,7 +265,7 @@ export async function createProjectItem(
     fieldErrors.unitPrice = "Harga satuan harus angka positif.";
 
   if (Object.keys(fieldErrors).length > 0) {
-    return { fieldErrors };
+    return { fieldErrors, values: inputValues };
   }
 
   try {
@@ -247,6 +282,7 @@ export async function createProjectItem(
   } catch (e) {
     return {
       error: e instanceof Error ? `Gagal simpan: ${e.message}` : "Gagal simpan.",
+      values: inputValues,
     };
   }
 
