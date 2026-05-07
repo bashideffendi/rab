@@ -109,9 +109,18 @@ export default async function ProjectDetailPage({
           <div className="flex shrink-0 flex-wrap gap-2">
             <a href={`/api/projects/${project.id}/export`} download>
               <Button variant="primary" size="sm">
-                ↓ Export Excel
+                ↓ Excel
               </Button>
             </a>
+            <Link
+              href={`/projects/${project.id}/print`}
+              target="_blank"
+              rel="noopener"
+            >
+              <Button variant="primary" size="sm">
+                ↓ PDF
+              </Button>
+            </Link>
             <Link
               href={`/projects/${project.id}/breakdown`}
               className="inline-block"

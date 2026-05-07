@@ -1,4 +1,5 @@
 import ExcelJS from "exceljs";
+import { roundToNearest, terbilangRupiah } from "./terbilang";
 
 export type ExportProject = {
   name: string;
@@ -6,6 +7,11 @@ export type ExportProject = {
   ownerName: string | null;
   status: string;
   notes: string | null;
+  tahun: number | null;
+  alamat: string | null;
+  ppnPercent: string;
+  overheadPercent: string;
+  dibulatkanKe: number;
 };
 
 export type ExportItem = {
@@ -17,6 +23,15 @@ export type ExportItem = {
   unitPrice: string;
   ahspCode: string | null;
   ahspSourceDoc: string | null;
+};
+
+export type ExportBreakdownRow = {
+  type: "tenaga" | "bahan" | "alat";
+  name: string;
+  unit: string;
+  totalKebutuhan: number;
+  hargaSatuan: number;
+  totalBiaya: number;
 };
 
 type Group = {
@@ -71,13 +86,13 @@ function groupByWbs(items: ExportItem[]): Group[] {
 }
 
 const COLOR_HEADER_BG = "FF1A1A1A";
-const COLOR_HEADER_FG = "FFEDEDED";
+const COLOR_HEADER_FG = "FFFFFFFF";
 const COLOR_GROUP_BG = "FFFFF4E0";
 const COLOR_GROUP_FG = "FFB35900";
 const COLOR_SUBTOTAL_BG = "FFFAFAFA";
-const COLOR_TOTAL_BG = "FFF5A623";
-const COLOR_TOTAL_FG = "FF000000";
-const COLOR_BORDER = "FFE0E0E0";
+const COLOR_TOTAL_BG = "FFEA580C";
+const COLOR_TOTAL_FG = "FFFFFFFF";
+const COLOR_BORDER = "FFE4E4E7";
 
 const thinBorder = {
   top: { style: "thin" as const, color: { argb: COLOR_BORDER } },
@@ -86,68 +101,8 @@ const thinBorder = {
   right: { style: "thin" as const, color: { argb: COLOR_BORDER } },
 };
 
-export async function buildProjectWorkbook(
-  project: ExportProject,
-  items: ExportItem[],
-): Promise<ExcelJS.Workbook> {
-  const wb = new ExcelJS.Workbook();
-  wb.creator = "RABin";
-  wb.created = new Date();
-
-  const ws = wb.addWorksheet("RAB", {
-    views: [{ state: "frozen", ySplit: 8 }],
-  });
-
-  // Column widths
-  ws.columns = [
-    { width: 6 }, // No
-    { width: 38 }, // Pekerjaan
-    { width: 12 }, // Volume
-    { width: 8 }, // Sat
-    { width: 16 }, // Harga Sat
-    { width: 18 }, // Total
-    { width: 30 }, // Sumber AHSP
-  ];
-
-  // ─── Header block ────────────────────────────────────────────────────────
-  ws.mergeCells("A1:G1");
-  ws.getCell("A1").value = "RENCANA ANGGARAN BIAYA (RAB)";
-  ws.getCell("A1").font = { bold: true, size: 14 };
-  ws.getCell("A1").alignment = { horizontal: "center", vertical: "middle" };
-  ws.getRow(1).height = 24;
-
-  ws.getCell("A2").value = "Nama Project";
-  ws.getCell("B2").value = project.name;
-  ws.getCell("A3").value = "Klien / Pemilik";
-  ws.getCell("B3").value = project.opd ?? "-";
-  ws.getCell("A4").value = "Penanggung Jawab";
-  ws.getCell("B4").value = project.ownerName ?? "-";
-  ws.getCell("A5").value = "Status";
-  ws.getCell("B5").value = project.status;
-  ws.getCell("A6").value = "Tanggal Export";
-  ws.getCell("B6").value = new Date().toLocaleDateString("id-ID", {
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-  });
-
-  for (let r = 2; r <= 6; r++) {
-    ws.getCell(`A${r}`).font = { bold: true, color: { argb: "FF666666" } };
-  }
-
-  // ─── Table header ────────────────────────────────────────────────────────
-  const headerRow = 8;
-  const headers = [
-    "No",
-    "Uraian Pekerjaan",
-    "Volume",
-    "Sat",
-    "Harga Satuan",
-    "Total",
-    "Sumber",
-  ];
-  ws.getRow(headerRow).values = headers;
-  ws.getRow(headerRow).eachCell((cell) => {
+function styleHeaderRow(row: ExcelJS.Row) {
+  row.eachCell((cell) => {
     cell.font = { bold: true, color: { argb: COLOR_HEADER_FG } };
     cell.fill = {
       type: "pattern",
@@ -157,16 +112,194 @@ export async function buildProjectWorkbook(
     cell.alignment = { horizontal: "center", vertical: "middle" };
     cell.border = thinBorder;
   });
-  ws.getRow(headerRow).height = 22;
+  row.height = 20;
+}
 
-  // ─── Body grouped by WBS ─────────────────────────────────────────────────
+function addProjectMetaBlock(
+  ws: ExcelJS.Worksheet,
+  project: ExportProject,
+  startRow = 1,
+): number {
+  ws.mergeCells(`A${startRow}:G${startRow}`);
+  ws.getCell(`A${startRow}`).value = "RENCANA ANGGARAN BIAYA (RAB)";
+  ws.getCell(`A${startRow}`).font = { bold: true, size: 14 };
+  ws.getCell(`A${startRow}`).alignment = {
+    horizontal: "center",
+    vertical: "middle",
+  };
+  ws.getRow(startRow).height = 24;
+
+  const fields: Array<[string, string]> = [
+    ["Nama Project", project.name],
+    ["Klien / Pemilik", project.opd ?? "-"],
+    ["Penanggung Jawab", project.ownerName ?? "-"],
+    ["Tahun", project.tahun?.toString() ?? "-"],
+    ["Alamat", project.alamat ?? "-"],
+    ["Status", project.status],
+    [
+      "Tanggal Export",
+      new Date().toLocaleDateString("id-ID", {
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+      }),
+    ],
+  ];
+  let row = startRow + 1;
+  for (const [label, value] of fields) {
+    ws.getCell(`A${row}`).value = label;
+    ws.getCell(`A${row}`).font = { bold: true, color: { argb: "FF666666" } };
+    ws.getCell(`B${row}`).value = value;
+    row++;
+  }
+  return row + 1; // blank row after
+}
+
+// ─── REKAP sheet ────────────────────────────────────────────────────────────
+function buildRekapSheet(
+  wb: ExcelJS.Workbook,
+  project: ExportProject,
+  items: ExportItem[],
+) {
+  const ws = wb.addWorksheet("REKAP", {
+    views: [{ state: "frozen", ySplit: 0 }],
+  });
+  ws.columns = [
+    { width: 6 },
+    { width: 38 },
+    { width: 16 },
+    { width: 8 },
+    { width: 18 },
+    { width: 22 },
+    { width: 22 },
+  ];
+
+  const nextRow = addProjectMetaBlock(ws, project);
+
+  // Header: section per WBS
+  const groups = groupByWbs(items);
+  const headerRow = nextRow;
+  ws.getRow(headerRow).values = ["No", "Uraian Pekerjaan (WBS)", "", "", "", "", "Subtotal"];
+  styleHeaderRow(ws.getRow(headerRow));
+
+  let cursor = headerRow + 1;
+  let no = 1;
+  let subtotal = 0;
+  for (const g of groups) {
+    const label =
+      g.wbsCode === null ? "Tanpa WBS" : `${g.wbsCode} — ${g.wbsName ?? ""}`;
+    const r = ws.getRow(cursor);
+    r.values = [no, label, "", "", "", "", g.subtotal];
+    r.getCell(1).alignment = { horizontal: "center" };
+    r.getCell(7).numFmt = '"Rp"#,##0';
+    r.getCell(7).alignment = { horizontal: "right" };
+    r.eachCell((c) => (c.border = thinBorder));
+    cursor++;
+    no++;
+    subtotal += g.subtotal;
+  }
+
+  // Calc totals
+  const overheadPct = Number(project.overheadPercent);
+  const ppnPct = Number(project.ppnPercent);
+  const overhead = subtotal * (overheadPct / 100);
+  const subPlusOverhead = subtotal + overhead;
+  const ppn = subPlusOverhead * (ppnPct / 100);
+  const total = subPlusOverhead + ppn;
+  const dibulatkan = roundToNearest(total, project.dibulatkanKe);
+
+  // Summary rows
+  cursor++;
+  const summaryRows: Array<[string, number, boolean]> = [
+    [`Subtotal`, subtotal, false],
+    [`Overhead (${overheadPct}%)`, overhead, false],
+    [`Subtotal + Overhead`, subPlusOverhead, false],
+    [`PPN (${ppnPct}%)`, ppn, false],
+    [`Total`, total, false],
+    [`DIBULATKAN`, dibulatkan, true],
+  ];
+  for (const [label, value, emphasized] of summaryRows) {
+    ws.mergeCells(`A${cursor}:F${cursor}`);
+    ws.getCell(`A${cursor}`).value = label;
+    ws.getCell(`A${cursor}`).alignment = { horizontal: "right" };
+    if (emphasized)
+      ws.getCell(`A${cursor}`).font = { bold: true, size: 12 };
+    ws.getCell(`G${cursor}`).value = value;
+    ws.getCell(`G${cursor}`).numFmt = '"Rp"#,##0';
+    ws.getCell(`G${cursor}`).alignment = { horizontal: "right" };
+    if (emphasized) {
+      ws.getCell(`G${cursor}`).font = {
+        bold: true,
+        size: 12,
+        color: { argb: COLOR_TOTAL_FG },
+      };
+      ws.getCell(`G${cursor}`).fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: COLOR_TOTAL_BG },
+      };
+      ws.getCell(`A${cursor}`).fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: COLOR_TOTAL_BG },
+      };
+      ws.getCell(`A${cursor}`).font = {
+        bold: true,
+        size: 12,
+        color: { argb: COLOR_TOTAL_FG },
+      };
+    }
+    cursor++;
+  }
+
+  // Terbilang
+  cursor++;
+  ws.mergeCells(`A${cursor}:G${cursor}`);
+  ws.getCell(`A${cursor}`).value = `Terbilang: ${terbilangRupiah(dibulatkan)}`;
+  ws.getCell(`A${cursor}`).font = { italic: true };
+}
+
+// ─── RAB sheet (full items table) ───────────────────────────────────────────
+function buildRabSheet(
+  wb: ExcelJS.Workbook,
+  project: ExportProject,
+  items: ExportItem[],
+) {
+  const ws = wb.addWorksheet("RAB", {
+    views: [{ state: "frozen", ySplit: 9 }],
+  });
+
+  ws.columns = [
+    { width: 6 },
+    { width: 38 },
+    { width: 12 },
+    { width: 8 },
+    { width: 16 },
+    { width: 18 },
+    { width: 30 },
+  ];
+
+  const nextRow = addProjectMetaBlock(ws, project);
+
+  // Table header
+  const headerRow = nextRow;
+  ws.getRow(headerRow).values = [
+    "No",
+    "Uraian Pekerjaan",
+    "Volume",
+    "Sat",
+    "Harga Satuan",
+    "Total",
+    "Sumber",
+  ];
+  styleHeaderRow(ws.getRow(headerRow));
+
   const groups = groupByWbs(items);
   let cursor = headerRow + 1;
   let itemNo = 1;
   let grandTotal = 0;
 
   for (const g of groups) {
-    // Group header row
     const groupLabel =
       g.wbsCode === null
         ? "Tanpa WBS"
@@ -180,14 +313,12 @@ export async function buildProjectWorkbook(
       pattern: "solid",
       fgColor: { argb: COLOR_GROUP_BG },
     };
-    groupCell.alignment = { horizontal: "left", vertical: "middle" };
     groupCell.border = thinBorder;
     cursor++;
 
     for (const it of g.items) {
       const total = calcTotal(it.volume, it.unitPrice);
       grandTotal += total;
-
       const row = ws.getRow(cursor);
       row.values = [
         itemNo,
@@ -197,9 +328,7 @@ export async function buildProjectWorkbook(
         Number(it.unitPrice),
         total,
         it.ahspCode
-          ? `AHSP ${it.ahspCode}${
-              it.ahspSourceDoc ? ` — ${it.ahspSourceDoc}` : ""
-            }`
+          ? `AHSP ${it.ahspCode}${it.ahspSourceDoc ? ` — ${it.ahspSourceDoc}` : ""}`
           : "Custom",
       ];
       row.getCell(1).alignment = { horizontal: "center" };
@@ -212,9 +341,9 @@ export async function buildProjectWorkbook(
       row.getCell(6).alignment = { horizontal: "right" };
       row.getCell(6).font = { bold: true };
       row.getCell(7).font = { color: { argb: "FF888888" }, size: 9 };
-      row.eachCell((cell) => {
-        cell.border = thinBorder;
-        cell.alignment = { ...cell.alignment, vertical: "middle", wrapText: true };
+      row.eachCell((c) => {
+        c.border = thinBorder;
+        c.alignment = { ...c.alignment, vertical: "middle", wrapText: true };
       });
       itemNo++;
       cursor++;
@@ -235,7 +364,6 @@ export async function buildProjectWorkbook(
     subRow.getCell(5).alignment = { horizontal: "right" };
     subRow.getCell(6).numFmt = '"Rp"#,##0';
     subRow.getCell(6).font = { italic: true, bold: true };
-    subRow.getCell(6).alignment = { horizontal: "right" };
     subRow.eachCell((cell) => {
       cell.fill = {
         type: "pattern",
@@ -247,58 +375,180 @@ export async function buildProjectWorkbook(
     cursor++;
   }
 
-  // ─── Grand total ─────────────────────────────────────────────────────────
+  // Final totals block
   cursor++;
-  const totalRow = ws.getRow(cursor);
-  totalRow.values = ["", "", "", "", "GRAND TOTAL", grandTotal, ""];
-  totalRow.getCell(5).font = {
-    bold: true,
-    size: 12,
-    color: { argb: COLOR_TOTAL_FG },
-  };
-  totalRow.getCell(5).alignment = { horizontal: "right" };
-  totalRow.getCell(6).numFmt = '"Rp"#,##0';
-  totalRow.getCell(6).font = {
-    bold: true,
-    size: 12,
-    color: { argb: COLOR_TOTAL_FG },
-  };
-  totalRow.getCell(6).alignment = { horizontal: "right" };
-  totalRow.eachCell((cell, colNumber) => {
-    if (colNumber === 5 || colNumber === 6) {
-      cell.fill = {
+  const overheadPct = Number(project.overheadPercent);
+  const ppnPct = Number(project.ppnPercent);
+  const overhead = grandTotal * (overheadPct / 100);
+  const subPlusOverhead = grandTotal + overhead;
+  const ppn = subPlusOverhead * (ppnPct / 100);
+  const total = subPlusOverhead + ppn;
+  const dibulatkan = roundToNearest(total, project.dibulatkanKe);
+
+  const totalsRows: Array<[string, number, boolean]> = [
+    ["Subtotal", grandTotal, false],
+    [`Overhead (${overheadPct}%)`, overhead, false],
+    [`PPN (${ppnPct}%)`, ppn, false],
+    ["Total", total, false],
+    ["DIBULATKAN", dibulatkan, true],
+  ];
+  for (const [label, value, emphasized] of totalsRows) {
+    ws.mergeCells(`A${cursor}:E${cursor}`);
+    ws.getCell(`A${cursor}`).value = label;
+    ws.getCell(`A${cursor}`).alignment = { horizontal: "right" };
+    if (emphasized)
+      ws.getCell(`A${cursor}`).font = { bold: true, size: 12 };
+    ws.getCell(`F${cursor}`).value = value;
+    ws.getCell(`F${cursor}`).numFmt = '"Rp"#,##0';
+    ws.getCell(`F${cursor}`).alignment = { horizontal: "right" };
+    if (emphasized) {
+      ws.getCell(`F${cursor}`).font = {
+        bold: true,
+        size: 12,
+        color: { argb: COLOR_TOTAL_FG },
+      };
+      ws.getCell(`F${cursor}`).fill = {
         type: "pattern",
         pattern: "solid",
         fgColor: { argb: COLOR_TOTAL_BG },
       };
+      ws.getCell(`A${cursor}`).fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: COLOR_TOTAL_BG },
+      };
+      ws.getCell(`A${cursor}`).font = {
+        bold: true,
+        size: 12,
+        color: { argb: COLOR_TOTAL_FG },
+      };
     }
-    cell.border = {
-      top: { style: "medium" as const, color: { argb: "FF000000" } },
-      bottom: { style: "medium" as const, color: { argb: "FF000000" } },
-      left: thinBorder.left,
-      right: thinBorder.right,
-    };
-  });
-  totalRow.height = 28;
-
-  // ─── Footer note ─────────────────────────────────────────────────────────
-  cursor += 2;
-  ws.mergeCells(`A${cursor}:G${cursor}`);
-  ws.getCell(`A${cursor}`).value = `Generated by RABin · ${new Date().toLocaleString("id-ID")}`;
-  ws.getCell(`A${cursor}`).font = {
-    italic: true,
-    size: 9,
-    color: { argb: "FF999999" },
-  };
-  ws.getCell(`A${cursor}`).alignment = { horizontal: "right" };
-
-  if (project.notes) {
     cursor++;
-    ws.mergeCells(`A${cursor}:G${cursor}`);
-    ws.getCell(`A${cursor}`).value = `Catatan: ${project.notes}`;
-    ws.getCell(`A${cursor}`).font = { italic: true, size: 9 };
-    ws.getCell(`A${cursor}`).alignment = { wrapText: true };
   }
+
+  cursor++;
+  ws.mergeCells(`A${cursor}:G${cursor}`);
+  ws.getCell(`A${cursor}`).value = `Terbilang: ${terbilangRupiah(dibulatkan)}`;
+  ws.getCell(`A${cursor}`).font = { italic: true };
+}
+
+// ─── Breakdown sheets (Upah / Bahan / Alat) ─────────────────────────────────
+const TYPE_TITLES = {
+  tenaga: "UPAH / TENAGA KERJA",
+  bahan: "BAHAN / MATERIAL",
+  alat: "PERALATAN",
+} as const;
+
+function buildBreakdownSheet(
+  wb: ExcelJS.Workbook,
+  type: "tenaga" | "bahan" | "alat",
+  rows: ExportBreakdownRow[],
+) {
+  const sheetName =
+    type === "tenaga" ? "Upah" : type === "bahan" ? "Bahan" : "Alat";
+  const ws = wb.addWorksheet(sheetName);
+
+  ws.columns = [
+    { width: 6 },
+    { width: 40 },
+    { width: 18 },
+    { width: 10 },
+    { width: 18 },
+    { width: 22 },
+  ];
+
+  ws.mergeCells("A1:F1");
+  ws.getCell("A1").value = TYPE_TITLES[type];
+  ws.getCell("A1").font = { bold: true, size: 14 };
+  ws.getCell("A1").alignment = { horizontal: "center" };
+  ws.getRow(1).height = 24;
+
+  ws.getRow(3).values = [
+    "No",
+    "Nama",
+    "Total Kebutuhan",
+    "Sat",
+    "Harga Satuan",
+    "Total Biaya",
+  ];
+  styleHeaderRow(ws.getRow(3));
+
+  const filtered = rows.filter((r) => r.type === type);
+  let cursor = 4;
+  let total = 0;
+  let no = 1;
+  for (const r of filtered) {
+    const row = ws.getRow(cursor);
+    row.values = [
+      no,
+      r.name,
+      r.totalKebutuhan,
+      r.unit,
+      r.hargaSatuan,
+      r.totalBiaya,
+    ];
+    row.getCell(1).alignment = { horizontal: "center" };
+    row.getCell(3).numFmt = "#,##0.####";
+    row.getCell(3).alignment = { horizontal: "right" };
+    row.getCell(4).alignment = { horizontal: "center" };
+    row.getCell(5).numFmt = '"Rp"#,##0';
+    row.getCell(5).alignment = { horizontal: "right" };
+    row.getCell(6).numFmt = '"Rp"#,##0';
+    row.getCell(6).alignment = { horizontal: "right" };
+    row.getCell(6).font = { bold: true };
+    row.eachCell((c) => (c.border = thinBorder));
+    total += r.totalBiaya;
+    no++;
+    cursor++;
+  }
+
+  // Total row
+  ws.mergeCells(`A${cursor}:E${cursor}`);
+  ws.getCell(`A${cursor}`).value = `Total ${TYPE_TITLES[type]}`;
+  ws.getCell(`A${cursor}`).font = { bold: true, size: 11 };
+  ws.getCell(`A${cursor}`).alignment = { horizontal: "right" };
+  ws.getCell(`A${cursor}`).fill = {
+    type: "pattern",
+    pattern: "solid",
+    fgColor: { argb: COLOR_TOTAL_BG },
+  };
+  ws.getCell(`A${cursor}`).font = {
+    bold: true,
+    size: 11,
+    color: { argb: COLOR_TOTAL_FG },
+  };
+  ws.getCell(`F${cursor}`).value = total;
+  ws.getCell(`F${cursor}`).numFmt = '"Rp"#,##0';
+  ws.getCell(`F${cursor}`).font = {
+    bold: true,
+    size: 11,
+    color: { argb: COLOR_TOTAL_FG },
+  };
+  ws.getCell(`F${cursor}`).fill = {
+    type: "pattern",
+    pattern: "solid",
+    fgColor: { argb: COLOR_TOTAL_BG },
+  };
+}
+
+// ─── Main entry ─────────────────────────────────────────────────────────────
+export async function buildProjectWorkbook(
+  project: ExportProject,
+  items: ExportItem[],
+  breakdown: ExportBreakdownRow[],
+): Promise<ExcelJS.Workbook> {
+  const wb = new ExcelJS.Workbook();
+  wb.creator = "RABin";
+  wb.created = new Date();
+
+  buildRekapSheet(wb, project, items);
+  buildRabSheet(wb, project, items);
+  if (breakdown.some((r) => r.type === "tenaga"))
+    buildBreakdownSheet(wb, "tenaga", breakdown);
+  if (breakdown.some((r) => r.type === "bahan"))
+    buildBreakdownSheet(wb, "bahan", breakdown);
+  if (breakdown.some((r) => r.type === "alat"))
+    buildBreakdownSheet(wb, "alat", breakdown);
 
   return wb;
 }
