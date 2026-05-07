@@ -5,6 +5,7 @@ import { db, schema } from "@/db";
 import { AppShell } from "@/components/app-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { DeleteProjectButton } from "@/components/delete-project-button";
 import { formatDate } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -77,9 +78,14 @@ export default async function ProjectDetailPage({
               </span>
             </div>
           </div>
-          <Button variant="secondary" size="sm" disabled>
-            Edit (soon)
-          </Button>
+          <div className="flex shrink-0 gap-2">
+            <Link href={`/projects/${project.id}/edit`}>
+              <Button variant="secondary" size="sm">
+                Edit
+              </Button>
+            </Link>
+            <DeleteProjectButton id={project.id} projectName={project.name} />
+          </div>
         </header>
 
         <div className="grid gap-px overflow-hidden rounded border border-border bg-border md:grid-cols-2">
