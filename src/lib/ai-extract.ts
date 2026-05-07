@@ -36,6 +36,8 @@ const DEFAULT_MODEL = "claude-sonnet-4-5";
 
 const SYSTEM_PROMPT = `Kamu adalah engineer sipil senior estimator yang ahli ngebaca gambar kerja konstruksi Indonesia. Tugasmu: analisa gambar kerja PDF yang di-upload, extract draft Rencana Anggaran Biaya (RAB) yang lengkap dan terstruktur.
 
+WAJIB: Output via tool call submit_rab_suggestions HARUS include field "wbs_items" dengan minimal 8-10 WBS entries dan items di dalamnya. Tanpa wbs_items, output dianggap gagal dan akan ditolak.
+
 Aturan penting:
 1. WBS hierarchical pakai code numerik dengan dot ("1", "1.1", "1.2.3"). Untuk rumah/gedung, tipikal struktur:
    - 1. Pekerjaan Persiapan
@@ -102,7 +104,7 @@ export async function extractRabFromPdf(
 
   const response = await client.messages.create({
     model,
-    max_tokens: 8192,
+    max_tokens: 16384,
     system: SYSTEM_PROMPT,
     tools: [
       {
@@ -204,7 +206,11 @@ export async function extractRabFromPdf(
           },
           {
             type: "text" as const,
-            text: "Tolong analisa gambar kerja ini dan output draft RAB lengkap via tool submit_rab_suggestions.",
+            text: `Tolong analisa gambar kerja ini dan output draft RAB lengkap via tool submit_rab_suggestions.
+
+WAJIB include "wbs_items" dengan minimal 10 WBS entries (Persiapan, Tanah, Pondasi, Sloof, Kolom, Balok, Plat, Atap, Dinding, Plester/Acian, Lantai, Plafon, Pintu/Jendela, Listrik, Sanitasi, Finishing). Tiap WBS punya items dengan estimated_volume + confidence. Kalau gak yakin volume-nya, tetap masukkan dengan estimated_volume=0 dan confidence="low" + notes — JANGAN skip item.
+
+Field "wbs_items" tidak boleh empty. Kalau benar-benar gak bisa baca drawing, tetap output WBS dengan items confidence="low" estimated_volume=0 — biar user tau ada yang harus diisi manual.`,
           },
         ],
       },
@@ -214,13 +220,82 @@ export async function extractRabFromPdf(
   // Extract tool use block
   const toolUseBlock = response.content.find((b) => b.type === "tool_use");
   if (!toolUseBlock || toolUseBlock.type !== "tool_use") {
+    console.error(
+      "[ai-extract] No tool_use block. Full response:",
+      JSON.stringify(response.content).slice(0, 1500),
+    );
     throw new Error(
-      "Claude API gak return tool_use block. Response: " +
-        JSON.stringify(response.content).slice(0, 500),
+      "Claude API gak return tool_use block. Stop_reason: " +
+        response.stop_reason,
     );
   }
 
-  return toolUseBlock.input as AIExtractedRab;
+  const raw = toolUseBlock.input as Record<string, unknown>;
+
+  // Debug log shape (info, not error)
+  console.log(
+    "[ai-extract] Tool input keys:",
+    Object.keys(raw).join(", "),
+    "| wbs count:",
+    Array.isArray(raw.wbs_items) ? (raw.wbs_items as unknown[]).length : "N/A",
+  );
+
+  // Defensive: kadang Claude pake camelCase walaupun schema snake_case
+  const wbsItems =
+    raw.wbs_items ??
+    (raw as Record<string, unknown>).wbsItems ??
+    (raw as Record<string, unknown>).wbs ??
+    [];
+
+  if (!Array.isArray(wbsItems) || wbsItems.length === 0) {
+    console.error(
+      "[ai-extract] No wbs_items in response. Stop reason:",
+      response.stop_reason,
+      "| Raw input:",
+      JSON.stringify(raw).slice(0, 2000),
+    );
+    const reason =
+      response.stop_reason === "max_tokens"
+        ? "Output terlalu panjang (limit max_tokens). Coba PDF yang lebih sedikit halaman, atau split per-section."
+        : "Claude gak generate WBS items meski struktur dimensi terbaca. Mungkin format gambar terlalu kompleks atau PDF terlalu besar.";
+    throw new Error(reason);
+  }
+
+  // Normalize: ensure all WBS entries have items array
+  const normalized = (wbsItems as Array<Record<string, unknown>>).map(
+    (w) => ({
+      code: String(w.code ?? ""),
+      name: String(w.name ?? ""),
+      items: Array.isArray(w.items)
+        ? (w.items as Array<Record<string, unknown>>).map((it) => ({
+            name: String(it.name ?? ""),
+            unit: String(it.unit ?? ""),
+            estimated_volume: Number(
+              it.estimated_volume ?? it.estimatedVolume ?? 0,
+            ),
+            confidence: (it.confidence as "high" | "medium" | "low") ?? "low",
+            notes: it.notes ? String(it.notes) : undefined,
+          }))
+        : [],
+    }),
+  );
+
+  return {
+    project_summary: String(raw.project_summary ?? raw.projectSummary ?? ""),
+    estimated_floor_area_m2:
+      typeof raw.estimated_floor_area_m2 === "number"
+        ? raw.estimated_floor_area_m2
+        : typeof raw.estimatedFloorAreaM2 === "number"
+          ? raw.estimatedFloorAreaM2
+          : undefined,
+    total_height_m:
+      typeof raw.total_height_m === "number"
+        ? raw.total_height_m
+        : typeof raw.totalHeightM === "number"
+          ? raw.totalHeightM
+          : undefined,
+    wbs_items: normalized,
+  };
 }
 
 /**
