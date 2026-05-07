@@ -80,7 +80,12 @@ export default async function ProjectDetailPage({
               </span>
             </div>
           </div>
-          <div className="flex shrink-0 gap-2">
+          <div className="flex shrink-0 flex-wrap gap-2">
+            <a href={`/api/projects/${project.id}/export`} download>
+              <Button variant="primary" size="sm">
+                ↓ Export Excel
+              </Button>
+            </a>
             <Link href={`/projects/${project.id}/edit`}>
               <Button variant="secondary" size="sm">
                 Edit
