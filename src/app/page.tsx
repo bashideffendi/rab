@@ -42,6 +42,12 @@ export default async function Home() {
                 >
                   Workspace
                 </Link>
+                <Link
+                  href="/account"
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  Akun
+                </Link>
                 <span
                   className="hidden font-mono text-xs text-muted-foreground sm:inline"
                   title={user.email ?? undefined}

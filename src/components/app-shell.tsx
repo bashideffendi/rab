@@ -26,6 +26,13 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
                 >
                   Workspace
                 </Link>
+                <Link
+                  href="/account"
+                  className="font-medium hover:text-foreground"
+                  title={user.email ?? undefined}
+                >
+                  Akun
+                </Link>
                 <span
                   className="hidden font-mono text-xs sm:inline"
                   title={user.email ?? undefined}

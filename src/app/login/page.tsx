@@ -6,9 +6,9 @@ export const dynamic = "force-dynamic";
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string }>;
+  searchParams: Promise<{ next?: string; reset?: string }>;
 }) {
-  const { next } = await searchParams;
+  const { next, reset } = await searchParams;
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -30,7 +30,29 @@ export default async function LoginPage({
           <p className="mb-8 text-sm text-muted-foreground">
             Masuk ke akun untuk mengakses workspace RAB kamu.
           </p>
+
+          {reset === "success" && (
+            <div className="mb-5 rounded-md border border-success/40 bg-success/5 px-3 py-2.5 text-sm">
+              <p className="font-semibold text-success">
+                ✓ Password berhasil direset
+              </p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                Silakan login dengan password baru.
+              </p>
+            </div>
+          )}
+
           <LoginForm next={next ?? "/projects"} />
+
+          <div className="mt-4 text-center text-sm">
+            <Link
+              href="/forgot-password"
+              className="text-muted-foreground hover:text-accent hover:underline"
+            >
+              Lupa password?
+            </Link>
+          </div>
+
           <p className="mt-6 text-center text-sm text-muted-foreground">
             Belum punya akun?{" "}
             <Link
