@@ -13,12 +13,24 @@ type ItemRow = {
   unit: string;
   volume: string;
   unitPrice: string;
+  ahspCode: string | null;
+  ahspSourceDoc: string | null;
+  ahspSourceModule: string | null;
+  ahspSourceSection: string | null;
 };
 
 type WbsOption = {
   id: string;
   code: string;
   name: string;
+};
+
+export type AhspOption = {
+  id: string;
+  code: string;
+  name: string;
+  unit: string;
+  category: string;
 };
 
 async function loadItems(projectId: string): Promise<ItemRow[]> {
@@ -31,11 +43,19 @@ async function loadItems(projectId: string): Promise<ItemRow[]> {
       customUnit: schema.projectItems.customUnit,
       volume: schema.projectItems.volume,
       customUnitPrice: schema.projectItems.customUnitPrice,
+      ahspCode: schema.ahspItems.code,
+      ahspSourceDoc: schema.ahspItems.sourceDoc,
+      ahspSourceModule: schema.ahspItems.sourceModule,
+      ahspSourceSection: schema.ahspItems.sourceSection,
     })
     .from(schema.projectItems)
     .leftJoin(
       schema.wbsItems,
       eq(schema.wbsItems.id, schema.projectItems.wbsItemId),
+    )
+    .leftJoin(
+      schema.ahspItems,
+      eq(schema.ahspItems.id, schema.projectItems.ahspItemId),
     )
     .where(eq(schema.projectItems.projectId, projectId))
     .orderBy(asc(schema.projectItems.sortOrder));
@@ -48,6 +68,10 @@ async function loadItems(projectId: string): Promise<ItemRow[]> {
     unit: r.customUnit ?? "",
     volume: r.volume,
     unitPrice: r.customUnitPrice ?? "0",
+    ahspCode: r.ahspCode,
+    ahspSourceDoc: r.ahspSourceDoc,
+    ahspSourceModule: r.ahspSourceModule,
+    ahspSourceSection: r.ahspSourceSection,
   }));
 }
 
@@ -63,6 +87,19 @@ async function loadWbsOptions(projectId: string): Promise<WbsOption[]> {
     .orderBy(asc(schema.wbsItems.code));
 }
 
+async function loadAhspOptions(): Promise<AhspOption[]> {
+  return db
+    .select({
+      id: schema.ahspItems.id,
+      code: schema.ahspItems.code,
+      name: schema.ahspItems.name,
+      unit: schema.ahspItems.unit,
+      category: schema.ahspItems.category,
+    })
+    .from(schema.ahspItems)
+    .orderBy(asc(schema.ahspItems.code));
+}
+
 function calcTotal(volume: string, unitPrice: string): number {
   const v = Number(volume);
   const p = Number(unitPrice);
@@ -72,7 +109,7 @@ function calcTotal(volume: string, unitPrice: string): number {
 
 function sortByCode(a: string | null, b: string | null): number {
   if (a === null && b === null) return 0;
-  if (a === null) return 1; // null/no-WBS goes last
+  if (a === null) return 1;
   if (b === null) return -1;
   const ap = a.split(".").map(Number);
   const bp = b.split(".").map(Number);
@@ -117,11 +154,13 @@ function groupByWbs(items: ItemRow[]): Group[] {
 export async function ItemsSection({ projectId }: { projectId: string }) {
   let items: ItemRow[] = [];
   let wbsOptions: WbsOption[] = [];
+  let ahspOptions: AhspOption[] = [];
   let dbError: string | null = null;
   try {
-    [items, wbsOptions] = await Promise.all([
+    [items, wbsOptions, ahspOptions] = await Promise.all([
       loadItems(projectId),
       loadWbsOptions(projectId),
+      loadAhspOptions(),
     ]);
   } catch (e) {
     dbError = e instanceof Error ? e.message : "Gagal load items.";
@@ -199,7 +238,11 @@ export async function ItemsSection({ projectId }: { projectId: string }) {
         </div>
       )}
 
-      <ItemAddForm projectId={projectId} wbsOptions={wbsOptions} />
+      <ItemAddForm
+        projectId={projectId}
+        wbsOptions={wbsOptions}
+        ahspOptions={ahspOptions}
+      />
     </section>
   );
 }
@@ -236,7 +279,22 @@ function GroupRows({
             key={it.id}
             className="border-t border-border hover:bg-muted/20"
           >
-            <td className="px-3 py-2">{it.name}</td>
+            <td className="px-3 py-2">
+              <div>{it.name}</div>
+              {it.ahspCode && (
+                <div className="mt-0.5 flex items-center gap-2 font-mono text-[10px] text-muted-foreground">
+                  <span className="rounded border border-accent/40 bg-accent/5 px-1.5 py-0.5 text-accent">
+                    AHSP
+                  </span>
+                  <span>{it.ahspCode}</span>
+                  {it.ahspSourceDoc && (
+                    <span title={it.ahspSourceDoc}>
+                      · {it.ahspSourceModule ?? it.ahspSourceDoc}
+                    </span>
+                  )}
+                </div>
+              )}
+            </td>
             <td className="px-3 py-2 text-right font-mono tabular-nums">
               {Number(it.volume).toLocaleString("id-ID")}
             </td>
