@@ -8,6 +8,7 @@ import { formatIDR } from "@/lib/utils";
 type ItemRow = {
   id: string;
   wbsCode: string | null;
+  wbsName: string | null;
   name: string;
   unit: string;
   volume: string;
@@ -25,6 +26,7 @@ async function loadItems(projectId: string): Promise<ItemRow[]> {
     .select({
       id: schema.projectItems.id,
       wbsCode: schema.wbsItems.code,
+      wbsName: schema.wbsItems.name,
       customName: schema.projectItems.customName,
       customUnit: schema.projectItems.customUnit,
       volume: schema.projectItems.volume,
@@ -41,6 +43,7 @@ async function loadItems(projectId: string): Promise<ItemRow[]> {
   return rows.map((r) => ({
     id: r.id,
     wbsCode: r.wbsCode,
+    wbsName: r.wbsName,
     name: r.customName ?? "(custom item)",
     unit: r.customUnit ?? "",
     volume: r.volume,
@@ -67,6 +70,50 @@ function calcTotal(volume: string, unitPrice: string): number {
   return v * p;
 }
 
+function sortByCode(a: string | null, b: string | null): number {
+  if (a === null && b === null) return 0;
+  if (a === null) return 1; // null/no-WBS goes last
+  if (b === null) return -1;
+  const ap = a.split(".").map(Number);
+  const bp = b.split(".").map(Number);
+  const len = Math.max(ap.length, bp.length);
+  for (let i = 0; i < len; i++) {
+    const av = ap[i] ?? 0;
+    const bv = bp[i] ?? 0;
+    if (av !== bv) return av - bv;
+  }
+  return 0;
+}
+
+type Group = {
+  wbsCode: string | null;
+  wbsName: string | null;
+  items: ItemRow[];
+  subtotal: number;
+};
+
+function groupByWbs(items: ItemRow[]): Group[] {
+  const map = new Map<string, Group>();
+  for (const it of items) {
+    const key = it.wbsCode ?? "__no_wbs__";
+    let g = map.get(key);
+    if (!g) {
+      g = {
+        wbsCode: it.wbsCode,
+        wbsName: it.wbsName,
+        items: [],
+        subtotal: 0,
+      };
+      map.set(key, g);
+    }
+    g.items.push(it);
+    g.subtotal += calcTotal(it.volume, it.unitPrice);
+  }
+  return Array.from(map.values()).sort((a, b) =>
+    sortByCode(a.wbsCode, b.wbsCode),
+  );
+}
+
 export async function ItemsSection({ projectId }: { projectId: string }) {
   let items: ItemRow[] = [];
   let wbsOptions: WbsOption[] = [];
@@ -80,10 +127,8 @@ export async function ItemsSection({ projectId }: { projectId: string }) {
     dbError = e instanceof Error ? e.message : "Gagal load items.";
   }
 
-  const grandTotal = items.reduce(
-    (sum, it) => sum + calcTotal(it.volume, it.unitPrice),
-    0,
-  );
+  const groups = groupByWbs(items);
+  const grandTotal = groups.reduce((sum, g) => sum + g.subtotal, 0);
 
   return (
     <section className="mt-12">
@@ -119,7 +164,6 @@ export async function ItemsSection({ projectId }: { projectId: string }) {
           <table className="w-full text-sm">
             <thead className="bg-muted/40 text-left font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
               <tr>
-                <th className="px-3 py-2 font-medium">WBS</th>
                 <th className="px-3 py-2 font-medium">Pekerjaan</th>
                 <th className="px-3 py-2 text-right font-medium">Volume</th>
                 <th className="px-3 py-2 font-medium">Sat</th>
@@ -129,58 +173,23 @@ export async function ItemsSection({ projectId }: { projectId: string }) {
               </tr>
             </thead>
             <tbody>
-              {items.map((it) => {
-                const total = calcTotal(it.volume, it.unitPrice);
-                return (
-                  <tr
-                    key={it.id}
-                    className="border-t border-border hover:bg-muted/20"
-                  >
-                    <td className="px-3 py-2 font-mono text-xs text-muted-foreground tabular-nums">
-                      {it.wbsCode ?? "—"}
-                    </td>
-                    <td className="px-3 py-2">{it.name}</td>
-                    <td className="px-3 py-2 text-right font-mono tabular-nums">
-                      {Number(it.volume).toLocaleString("id-ID")}
-                    </td>
-                    <td className="px-3 py-2 text-muted-foreground">
-                      {it.unit}
-                    </td>
-                    <td className="px-3 py-2 text-right font-mono tabular-nums">
-                      {formatIDR(it.unitPrice)}
-                    </td>
-                    <td className="px-3 py-2 text-right font-mono font-medium tabular-nums">
-                      {formatIDR(total)}
-                    </td>
-                    <td className="px-3 py-2 text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <Link
-                          href={`/projects/${projectId}/items/${it.id}/edit`}
-                          className="rounded border border-transparent px-2 py-1 font-mono text-xs text-muted-foreground transition-colors hover:border-accent/40 hover:text-accent"
-                          aria-label={`Edit ${it.name}`}
-                        >
-                          edit
-                        </Link>
-                        <ItemDeleteButton
-                          id={it.id}
-                          projectId={projectId}
-                          name={it.name}
-                        />
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
+              {groups.map((g) => (
+                <GroupRows
+                  key={g.wbsCode ?? "no-wbs"}
+                  group={g}
+                  projectId={projectId}
+                />
+              ))}
             </tbody>
             <tfoot className="bg-muted/40">
               <tr>
                 <td
-                  colSpan={5}
-                  className="px-3 py-2 text-right font-mono text-xs uppercase tracking-wider text-muted-foreground"
+                  colSpan={4}
+                  className="px-3 py-3 text-right font-mono text-xs uppercase tracking-wider text-muted-foreground"
                 >
-                  Total
+                  Grand Total
                 </td>
-                <td className="px-3 py-2 text-right font-mono font-semibold tabular-nums text-accent">
+                <td className="px-3 py-3 text-right font-mono text-base font-semibold tabular-nums text-accent">
                   {formatIDR(grandTotal)}
                 </td>
                 <td></td>
@@ -192,5 +201,83 @@ export async function ItemsSection({ projectId }: { projectId: string }) {
 
       <ItemAddForm projectId={projectId} wbsOptions={wbsOptions} />
     </section>
+  );
+}
+
+function GroupRows({
+  group,
+  projectId,
+}: {
+  group: Group;
+  projectId: string;
+}) {
+  const headerLabel =
+    group.wbsCode === null
+      ? "Tanpa WBS"
+      : `${group.wbsCode} — ${group.wbsName ?? ""}`;
+
+  return (
+    <>
+      <tr className="border-t-2 border-border bg-muted/30">
+        <td colSpan={5} className="px-3 py-2">
+          <span className="font-mono text-[11px] uppercase tracking-wider text-accent">
+            {headerLabel}
+          </span>
+          <span className="ml-3 font-mono text-[10px] text-muted-foreground tabular-nums">
+            {group.items.length} item
+          </span>
+        </td>
+        <td></td>
+      </tr>
+      {group.items.map((it) => {
+        const total = calcTotal(it.volume, it.unitPrice);
+        return (
+          <tr
+            key={it.id}
+            className="border-t border-border hover:bg-muted/20"
+          >
+            <td className="px-3 py-2">{it.name}</td>
+            <td className="px-3 py-2 text-right font-mono tabular-nums">
+              {Number(it.volume).toLocaleString("id-ID")}
+            </td>
+            <td className="px-3 py-2 text-muted-foreground">{it.unit}</td>
+            <td className="px-3 py-2 text-right font-mono tabular-nums">
+              {formatIDR(it.unitPrice)}
+            </td>
+            <td className="px-3 py-2 text-right font-mono font-medium tabular-nums">
+              {formatIDR(total)}
+            </td>
+            <td className="px-3 py-2 text-right">
+              <div className="flex items-center justify-end gap-1">
+                <Link
+                  href={`/projects/${projectId}/items/${it.id}/edit`}
+                  className="rounded border border-transparent px-2 py-1 font-mono text-xs text-muted-foreground transition-colors hover:border-accent/40 hover:text-accent"
+                  aria-label={`Edit ${it.name}`}
+                >
+                  edit
+                </Link>
+                <ItemDeleteButton
+                  id={it.id}
+                  projectId={projectId}
+                  name={it.name}
+                />
+              </div>
+            </td>
+          </tr>
+        );
+      })}
+      <tr className="border-t border-border bg-muted/10">
+        <td
+          colSpan={4}
+          className="px-3 py-1.5 text-right font-mono text-[10px] uppercase tracking-wider text-muted-foreground"
+        >
+          Subtotal {group.wbsCode ?? "tanpa WBS"}
+        </td>
+        <td className="px-3 py-1.5 text-right font-mono text-xs font-medium tabular-nums">
+          {formatIDR(group.subtotal)}
+        </td>
+        <td></td>
+      </tr>
+    </>
   );
 }
