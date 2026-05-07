@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { asc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { ItemAddForm } from "./item-add-form";
@@ -152,11 +153,20 @@ export async function ItemsSection({ projectId }: { projectId: string }) {
                       {formatIDR(total)}
                     </td>
                     <td className="px-3 py-2 text-right">
-                      <ItemDeleteButton
-                        id={it.id}
-                        projectId={projectId}
-                        name={it.name}
-                      />
+                      <div className="flex items-center justify-end gap-1">
+                        <Link
+                          href={`/projects/${projectId}/items/${it.id}/edit`}
+                          className="rounded border border-transparent px-2 py-1 font-mono text-xs text-muted-foreground transition-colors hover:border-accent/40 hover:text-accent"
+                          aria-label={`Edit ${it.name}`}
+                        >
+                          edit
+                        </Link>
+                        <ItemDeleteButton
+                          id={it.id}
+                          projectId={projectId}
+                          name={it.name}
+                        />
+                      </div>
                     </td>
                   </tr>
                 );

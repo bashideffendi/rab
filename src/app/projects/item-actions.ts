@@ -69,6 +69,58 @@ export async function createProjectItem(
   return {};
 }
 
+// ─── UPDATE ──────────────────────────────────────────────────────────────────
+
+export type UpdateItemFormState = CreateItemFormState;
+
+export async function updateProjectItem(
+  itemId: string,
+  projectId: string,
+  _prev: UpdateItemFormState,
+  formData: FormData,
+): Promise<UpdateItemFormState> {
+  const wbsItemRaw = (formData.get("wbsItemId") ?? "").toString().trim();
+  const wbsItemId = wbsItemRaw ? wbsItemRaw : null;
+  const customName = (formData.get("name") ?? "").toString().trim();
+  const customUnit = (formData.get("unit") ?? "").toString().trim();
+  const volume = parseNum(formData.get("volume"));
+  const customUnitPrice = parseNum(formData.get("unitPrice"));
+
+  const fieldErrors: NonNullable<UpdateItemFormState["fieldErrors"]> = {};
+  if (!customName) fieldErrors.name = "Nama pekerjaan wajib diisi.";
+  else if (customName.length > 200)
+    fieldErrors.name = "Maksimal 200 karakter.";
+  if (!customUnit) fieldErrors.unit = "Satuan wajib diisi.";
+  if (!volume) fieldErrors.volume = "Volume harus angka positif.";
+  if (!customUnitPrice)
+    fieldErrors.unitPrice = "Harga satuan harus angka positif.";
+
+  if (Object.keys(fieldErrors).length > 0) {
+    return { fieldErrors };
+  }
+
+  try {
+    await db
+      .update(schema.projectItems)
+      .set({
+        wbsItemId,
+        customName,
+        customUnit,
+        customUnitPrice: customUnitPrice!,
+        volume: volume!,
+        updatedAt: new Date(),
+      })
+      .where(eq(schema.projectItems.id, itemId));
+  } catch (e) {
+    return {
+      error: e instanceof Error ? `Gagal simpan: ${e.message}` : "Gagal simpan.",
+    };
+  }
+
+  revalidatePath(`/projects/${projectId}`);
+  return {};
+}
+
 // ─── DELETE ──────────────────────────────────────────────────────────────────
 
 export async function deleteProjectItem(formData: FormData) {
