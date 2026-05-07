@@ -122,6 +122,14 @@ export default async function ProjectDetailPage({
               </Button>
             </Link>
             <Link
+              href={`/projects/${project.id}/ai-import`}
+              className="inline-block"
+            >
+              <Button variant="primary" size="sm">
+                ✨ AI Generate
+              </Button>
+            </Link>
+            <Link
               href={`/projects/${project.id}/breakdown`}
               className="inline-block"
             >
