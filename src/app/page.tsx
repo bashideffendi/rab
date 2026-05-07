@@ -40,12 +40,12 @@ export default function Home() {
               kompatibel dokumen tender pemerintah.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <button
-                disabled
-                className="rounded border border-border bg-muted px-5 py-2.5 text-sm font-medium text-muted-foreground"
+              <a
+                href="/projects"
+                className="rounded border border-accent bg-accent px-5 py-2.5 text-sm font-medium text-black hover:bg-accent/90"
               >
-                Mulai Hitung &mdash; Coming Soon
-              </button>
+                Buka Workspace &rarr;
+              </a>
               <a
                 href="#fitur"
                 className="rounded border border-border px-5 py-2.5 text-sm font-medium hover:border-accent hover:text-accent"

@@ -45,17 +45,37 @@ Secondary: konsultan perencana proyek pemerintah, auditor & APIP sebagai validat
 
 ## Local Development
 
+**Quickstart (Docker):**
+
 ```bash
 git clone https://github.com/bashideffendi/rabin.git
 cd rabin
 npm install
 cp .env.example .env.local
-# isi DATABASE_URL ke Postgres lokal/Railway
-npm run db:push    # sync schema (kalau Drizzle udah ada)
+
+# Spin up Postgres lokal
+docker compose up -d
+
+# Set di .env.local:
+#   DATABASE_URL="postgres://rabin:rabin@localhost:5432/rabin"
+
+# Apply schema
+npm run db:push
+
+# Run dev
 npm run dev
 ```
 
 Buka http://localhost:3000
+
+**Tanpa Docker** (Neon / Railway / Postgres existing):
+Set `DATABASE_URL` ke connection string milikmu, skip `docker compose up`.
+
+**Drizzle Studio** (DB browser GUI):
+
+```bash
+npm run db:studio
+```
 
 ## Environment Variables
 
