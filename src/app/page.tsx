@@ -11,7 +11,7 @@ export default async function Home() {
           <div className="flex items-center gap-2">
             <span className="font-mono text-sm text-accent">▲</span>
             <span className="font-semibold tracking-tight">RABin</span>
-            <span className="ml-2 rounded border border-border px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+            <span className="ml-2 rounded border border-border px-2 py-0.5 text-xs font-medium text-muted-foreground">
               Draft
             </span>
           </div>
@@ -51,7 +51,7 @@ export default async function Home() {
                 </a>
                 <a
                   href="/signup"
-                  className="rounded border border-accent px-3 py-1 text-accent hover:bg-accent hover:text-black"
+                  className="rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-accent/90"
                 >
                   Daftar
                 </a>
@@ -64,7 +64,7 @@ export default async function Home() {
       <main className="flex-1">
         <section className="mx-auto max-w-6xl px-6 py-20">
           <div className="max-w-3xl">
-            <p className="mb-4 font-mono text-xs uppercase tracking-widest text-accent">
+            <p className="mb-4 text-sm font-semibold text-accent">
               RAB Online &mdash; Indonesia
             </p>
             <h1 className="text-3xl font-bold leading-tight tracking-tight break-words md:text-5xl">
@@ -81,7 +81,7 @@ export default async function Home() {
             <div className="mt-8 flex flex-wrap gap-3">
               <a
                 href="/projects"
-                className="rounded border border-accent bg-accent px-5 py-2.5 text-sm font-medium text-black hover:bg-accent/90"
+                className="rounded-md bg-accent px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-accent/90"
               >
                 Mulai Bikin RAB &rarr;
               </a>
@@ -113,7 +113,7 @@ export default async function Home() {
                     <span className="font-mono text-xs text-muted-foreground">
                       0{i + 1}
                     </span>
-                    <span className="rounded border border-border px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                    <span className="rounded border border-border px-1.5 py-0.5 text-xs font-medium text-muted-foreground">
                       {f.tag}
                     </span>
                   </div>
@@ -140,7 +140,7 @@ export default async function Home() {
                   key={a.role}
                   className="rounded border border-border p-6"
                 >
-                  <p className="mb-2 font-mono text-xs uppercase tracking-widest text-accent">
+                  <p className="mb-2 text-sm font-semibold text-accent">
                     {a.role}
                   </p>
                   <p className="text-sm leading-relaxed text-muted-foreground">
@@ -171,9 +171,9 @@ export default async function Home() {
                       {r.version}
                     </span>
                     <span
-                      className={`rounded border px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider ${
+                      className={`rounded-md border px-2 py-0.5 text-xs font-medium ${
                         r.status === "now"
-                          ? "border-accent text-accent"
+                          ? "border-accent/40 bg-accent/5 text-accent"
                           : "border-border text-muted-foreground"
                       }`}
                     >

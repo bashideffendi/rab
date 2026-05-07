@@ -47,7 +47,7 @@ export default async function EditProjectPage({
       <AppShell>
         <section className="mx-auto max-w-3xl px-6 py-12">
           <div className="rounded border border-danger/40 bg-danger/5 p-6">
-            <p className="mb-2 font-mono text-xs uppercase tracking-widest text-danger">
+            <p className="mb-2 text-sm font-semibold text-danger">
               DB Error
             </p>
             <p className="text-sm text-foreground">{dbError}</p>
@@ -67,7 +67,7 @@ export default async function EditProjectPage({
         <header className="mb-8">
           <Link
             href={`/projects/${project.id}`}
-            className="font-mono text-xs uppercase tracking-widest text-muted-foreground hover:text-accent"
+            className="text-sm font-medium text-muted-foreground hover:text-accent"
           >
             ← {project.name}
           </Link>

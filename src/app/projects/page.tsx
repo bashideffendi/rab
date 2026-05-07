@@ -44,7 +44,7 @@ export default async function ProjectsPage() {
       <section className="mx-auto max-w-6xl px-6 py-12">
         <header className="mb-8 flex items-center justify-between">
           <div>
-            <p className="mb-1 font-mono text-xs uppercase tracking-widest text-accent">
+            <p className="mb-1 text-sm font-semibold text-accent">
               Workspace
             </p>
             <h1 className="text-2xl font-semibold tracking-tight">Projects</h1>
@@ -79,7 +79,7 @@ export default async function ProjectsPage() {
 function DbErrorState({ message }: { message: string }) {
   return (
     <div className="rounded border border-danger/40 bg-danger/5 p-6">
-      <p className="mb-2 font-mono text-xs uppercase tracking-widest text-danger">
+      <p className="mb-2 text-sm font-semibold text-danger">
         DB Error
       </p>
       <p className="mb-4 text-sm text-foreground">{message}</p>
@@ -97,7 +97,7 @@ npm run db:push`}
 function EmptyState() {
   return (
     <div className="flex flex-col items-center justify-center rounded border border-dashed border-border py-20 text-center">
-      <p className="mb-2 font-mono text-xs uppercase tracking-widest text-muted-foreground">
+      <p className="mb-2 text-sm font-medium text-muted-foreground">
         Workspace kosong
       </p>
       <h2 className="mb-1 text-lg font-semibold tracking-tight">
@@ -122,7 +122,7 @@ function ProjectsTable({
   return (
     <div className="overflow-hidden rounded border border-border">
       <table className="w-full text-sm">
-        <thead className="bg-muted/40 text-left font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+        <thead className="bg-muted/40 text-left text-xs font-medium text-muted-foreground">
           <tr>
             <th className="px-4 py-3 font-medium">Nama</th>
             <th className="px-4 py-3 font-medium">Klien</th>

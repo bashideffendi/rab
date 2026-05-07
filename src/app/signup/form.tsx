@@ -14,7 +14,7 @@ export function SignupForm() {
   if (state.message) {
     return (
       <div className="rounded border border-accent/40 bg-accent/5 p-4 text-sm text-foreground">
-        <p className="mb-2 font-mono text-xs uppercase tracking-widest text-accent">
+        <p className="mb-2 text-sm font-semibold text-accent">
           Cek Email
         </p>
         <p>{state.message}</p>

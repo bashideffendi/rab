@@ -31,7 +31,7 @@ export function WbsAddForm({ projectId }: { projectId: string }) {
       action={formAction}
       className="rounded border border-border bg-muted/30 p-4"
     >
-      <p className="mb-3 font-mono text-xs uppercase tracking-widest text-muted-foreground">
+      <p className="mb-3 text-sm font-medium text-muted-foreground">
         + Tambah item
       </p>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start">

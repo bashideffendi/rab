@@ -14,7 +14,7 @@ export default async function NewProjectPage() {
         <header className="mb-8">
           <Link
             href="/projects"
-            className="font-mono text-xs uppercase tracking-widest text-muted-foreground hover:text-accent"
+            className="text-sm font-medium text-muted-foreground hover:text-accent"
           >
             ← Projects
           </Link>

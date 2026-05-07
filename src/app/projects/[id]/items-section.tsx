@@ -173,7 +173,7 @@ export async function ItemsSection({ projectId }: { projectId: string }) {
     <section className="mt-12">
       <header className="mb-4 flex items-baseline justify-between">
         <div>
-          <p className="font-mono text-xs uppercase tracking-widest text-accent">
+          <p className="text-sm font-semibold text-accent">
             Item RAB
           </p>
           <h2 className="text-lg font-semibold tracking-tight">
@@ -181,7 +181,7 @@ export async function ItemsSection({ projectId }: { projectId: string }) {
           </h2>
         </div>
         <div className="text-right">
-          <p className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
+          <p className="text-sm font-medium text-muted-foreground">
             Total
           </p>
           <p className="font-mono text-lg font-semibold tabular-nums text-foreground">
@@ -201,7 +201,7 @@ export async function ItemsSection({ projectId }: { projectId: string }) {
       ) : (
         <div className="mb-4 overflow-x-auto rounded border border-border">
           <table className="w-full text-sm">
-            <thead className="bg-muted/40 text-left font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+            <thead className="bg-muted/40 text-left text-xs font-medium text-muted-foreground">
               <tr>
                 <th className="px-3 py-2 font-medium">Pekerjaan</th>
                 <th className="px-3 py-2 text-right font-medium">Volume</th>
@@ -224,7 +224,7 @@ export async function ItemsSection({ projectId }: { projectId: string }) {
               <tr>
                 <td
                   colSpan={4}
-                  className="px-3 py-3 text-right font-mono text-xs uppercase tracking-wider text-muted-foreground"
+                  className="px-3 py-3 text-right text-sm font-medium text-muted-foreground"
                 >
                   Grand Total
                 </td>
@@ -263,7 +263,7 @@ function GroupRows({
     <>
       <tr className="border-t-2 border-border bg-muted/30">
         <td colSpan={5} className="px-3 py-2">
-          <span className="font-mono text-[11px] uppercase tracking-wider text-accent">
+          <span className="text-xs font-semibold text-accent">
             {headerLabel}
           </span>
           <span className="ml-3 font-mono text-[10px] text-muted-foreground tabular-nums">
@@ -327,7 +327,7 @@ function GroupRows({
       <tr className="border-t border-border bg-muted/10">
         <td
           colSpan={4}
-          className="px-3 py-1.5 text-right font-mono text-[10px] uppercase tracking-wider text-muted-foreground"
+          className="px-3 py-1.5 text-right text-xs font-medium text-muted-foreground"
         >
           Subtotal {group.wbsCode ?? "tanpa WBS"}
         </td>

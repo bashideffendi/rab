@@ -51,7 +51,7 @@ export async function WbsSection({ projectId }: { projectId: string }) {
     <section className="mt-10">
       <header className="mb-4 flex items-baseline justify-between">
         <div>
-          <p className="font-mono text-xs uppercase tracking-widest text-accent">
+          <p className="text-sm font-semibold text-accent">
             WBS &mdash; Work Breakdown Structure
           </p>
           <h2 className="text-lg font-semibold tracking-tight">

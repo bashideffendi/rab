@@ -3,11 +3,11 @@ import { cn } from "@/lib/utils";
 type Tone = "default" | "draft" | "active" | "archived" | "accent";
 
 const tones: Record<Tone, string> = {
-  default: "border-border text-muted-foreground",
-  draft: "border-border text-muted-foreground",
-  active: "border-success/40 text-success",
-  archived: "border-muted-foreground/40 text-muted-foreground",
-  accent: "border-accent/40 text-accent",
+  default: "border-border text-muted-foreground bg-muted",
+  draft: "border-border text-muted-foreground bg-muted",
+  active: "border-success/30 text-success bg-success/5",
+  archived: "border-border text-muted-foreground bg-muted",
+  accent: "border-accent/30 text-accent bg-accent/5",
 };
 
 export function Badge({
@@ -22,7 +22,7 @@ export function Badge({
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded border px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wider",
+        "inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium",
         tones[tone],
         className,
       )}

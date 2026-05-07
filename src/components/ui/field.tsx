@@ -23,16 +23,16 @@ export function Field({
     <div className={cn("flex flex-col gap-1.5", className)}>
       <label
         htmlFor={htmlFor}
-        className="text-xs font-medium text-muted-foreground"
+        className="text-sm font-medium text-foreground"
       >
-        {label.toUpperCase()}
-        {required && <span className="ml-1 text-danger">*</span>}
+        {label}
+        {required && <span className="ml-0.5 text-danger">*</span>}
       </label>
       {children}
       {hint && !error && (
         <p className="text-xs text-muted-foreground">{hint}</p>
       )}
-      {error && <p className="text-xs text-danger">{error}</p>}
+      {error && <p className="text-xs font-medium text-danger">{error}</p>}
     </div>
   );
 }

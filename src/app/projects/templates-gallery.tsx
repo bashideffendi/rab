@@ -21,7 +21,7 @@ export async function TemplatesGallery() {
   return (
     <section className="mb-8">
       <header className="mb-4">
-        <p className="font-mono text-xs uppercase tracking-widest text-accent">
+        <p className="text-sm font-semibold text-accent">
           Template Siap Pakai
         </p>
         <h2 className="text-lg font-semibold tracking-tight">
@@ -40,7 +40,7 @@ export async function TemplatesGallery() {
             className="flex flex-col rounded border border-border bg-muted/20 p-4 transition-colors hover:border-accent/40"
           >
             <div className="mb-3 flex items-baseline justify-between">
-              <span className="font-mono text-[10px] uppercase tracking-wider text-accent">
+              <span className="text-xs font-semibold text-accent">
                 {(t.category && CATEGORY_LABELS[t.category]) ??
                   t.category ??
                   "Umum"}

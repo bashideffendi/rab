@@ -51,7 +51,7 @@ export function ItemAddForm({
       className="rounded border border-border bg-muted/30 p-4"
     >
       <div className="mb-3 flex items-center justify-between">
-        <p className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
+        <p className="text-sm font-medium text-muted-foreground">
           + Tambah item pekerjaan
         </p>
         {ahspHasData && (
@@ -192,14 +192,14 @@ function ModeToggle({
   onChange: (m: Mode) => void;
 }) {
   return (
-    <div className="flex overflow-hidden rounded border border-border font-mono text-[10px] uppercase tracking-wider">
+    <div className="flex overflow-hidden rounded border border-border text-xs font-medium">
       <button
         type="button"
         onClick={() => onChange("ahsp")}
         className={cn(
           "px-2.5 py-1 transition-colors",
           mode === "ahsp"
-            ? "bg-accent text-black"
+            ? "bg-accent text-white"
             : "bg-transparent text-muted-foreground hover:text-foreground",
         )}
       >
@@ -211,7 +211,7 @@ function ModeToggle({
         className={cn(
           "border-l border-border px-2.5 py-1 transition-colors",
           mode === "custom"
-            ? "bg-accent text-black"
+            ? "bg-accent text-white"
             : "bg-transparent text-muted-foreground hover:text-foreground",
         )}
       >

@@ -68,7 +68,7 @@ export default async function ProjectDetailPage({
       <AppShell>
         <section className="mx-auto max-w-3xl px-6 py-12">
           <div className="rounded border border-danger/40 bg-danger/5 p-6">
-            <p className="mb-2 font-mono text-xs uppercase tracking-widest text-danger">
+            <p className="mb-2 text-sm font-semibold text-danger">
               DB Error
             </p>
             <p className="text-sm text-foreground">{dbError}</p>
@@ -85,7 +85,7 @@ export default async function ProjectDetailPage({
       <section className="mx-auto max-w-3xl px-6 py-12">
         <Link
           href="/projects"
-          className="font-mono text-xs uppercase tracking-widest text-muted-foreground hover:text-accent"
+          className="text-sm font-medium text-muted-foreground hover:text-accent"
         >
           ← Projects
         </Link>
@@ -137,7 +137,7 @@ export default async function ProjectDetailPage({
 
         {project.notes && (
           <div className="mt-6 rounded border border-border p-4">
-            <p className="mb-2 font-mono text-xs uppercase tracking-widest text-muted-foreground">
+            <p className="mb-2 text-sm font-medium text-muted-foreground">
               Catatan
             </p>
             <p className="whitespace-pre-wrap text-sm text-foreground">
@@ -162,7 +162,7 @@ function DetailRow({
 }) {
   return (
     <div className="bg-background p-4">
-      <p className="mb-1 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+      <p className="mb-1 text-xs font-medium text-muted-foreground">
         {label}
       </p>
       <p className="text-sm text-foreground">{value ?? "—"}</p>

@@ -23,7 +23,7 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
                   Projects
                 </Link>
                 <span
-                  className="font-mono text-xs text-muted-foreground"
+                  className="hidden text-sm text-muted-foreground sm:inline"
                   title={user.email ?? undefined}
                 >
                   {user.email?.split("@")[0]}
@@ -37,7 +37,7 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
                 </Link>
                 <Link
                   href="/signup"
-                  className="rounded border border-accent px-3 py-1 text-accent hover:bg-accent hover:text-black"
+                  className="rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-accent/90"
                 >
                   Daftar
                 </Link>
@@ -47,9 +47,9 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </header>
       <main className="flex-1">{children}</main>
-      <footer className="border-t border-border px-6 py-4">
+      <footer className="border-t border-border bg-muted/30 px-6 py-4">
         <div className="mx-auto flex max-w-6xl items-center justify-between text-xs text-muted-foreground">
-          <p className="font-mono">rabin.masbash.id</p>
+          <p>rabin.masbash.id</p>
           <p>&copy; 2026 Bashid Effendi</p>
         </div>
       </footer>
