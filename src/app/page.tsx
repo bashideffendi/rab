@@ -85,12 +85,28 @@ export default async function Home() {
                   rinci, transparan, sesuai standar.
                 </span>
               </h1>
-              <p className="mt-6 max-w-2xl text-lg leading-relaxed text-muted-foreground">
-                Hitung anggaran biaya konstruksi berbasis Analisis Harga Satuan
-                Pekerjaan (AHSP) resmi dari Permen PUPR, dengan harga yang
-                menyesuaikan daerah proyek. Hasil siap diekspor ke Excel atau
-                PDF, lengkap dengan time schedule.
+              <p className="mt-6 max-w-2xl text-base leading-relaxed text-muted-foreground md:text-lg">
+                Platform RAB online dengan referensi resmi, perhitungan
+                regional yang akurat, dan otomasi yang mempercepat kerja.
               </p>
+              <ul className="mt-6 grid max-w-2xl gap-3 sm:grid-cols-2">
+                <HeroBullet
+                  title="AHSP 2026 Permen PUPR"
+                  desc="Koefisien resmi versi terbaru — dapat dilacak ke pasal sumber."
+                />
+                <HeroBullet
+                  title="Harga menyesuaikan IKK BPS"
+                  desc="Indeks Kemahalan Konstruksi per provinsi diterapkan otomatis."
+                />
+                <HeroBullet
+                  title="Generate RAB dengan AI"
+                  desc="Upload gambar kerja PDF — AI susun draft WBS dan estimasi volume."
+                />
+                <HeroBullet
+                  title="Export Excel & PDF profesional"
+                  desc="Multi-sheet Excel dan PDF rapi — siap dilampirkan ke kontrak."
+                />
+              </ul>
               <div className="mt-8 flex flex-wrap items-center gap-4">
                 <Link
                   href={user ? "/projects" : "/signup"}
@@ -113,10 +129,10 @@ export default async function Home() {
 
             {/* Stats banner */}
             <div className="mt-16 grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-border bg-border md:grid-cols-4">
-              <Stat label="Item AHSP" value="2.669+" />
-              <Stat label="Provinsi (IKK)" value="34" />
-              <Stat label="Sumber Resmi" value="PUPR · DJBK" />
-              <Stat label="Format Export" value="Excel · PDF" />
+              <Stat label="AHSP 2026" value="2.669+" />
+              <Stat label="IKK BPS" value="34 Provinsi" />
+              <Stat label="Sumber" value="Permen PUPR" />
+              <Stat label="Export" value="Excel · PDF" />
             </div>
           </div>
         </section>
@@ -300,31 +316,63 @@ function Stat({ label, value }: { label: string; value: string }) {
   );
 }
 
+function HeroBullet({ title, desc }: { title: string; desc: string }) {
+  return (
+    <li className="flex items-start gap-3">
+      <span
+        aria-hidden="true"
+        className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-accent/10"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="12"
+          height="12"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="3"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="text-accent"
+        >
+          <polyline points="20 6 9 17 4 12" />
+        </svg>
+      </span>
+      <div>
+        <p className="text-sm font-semibold text-foreground">{title}</p>
+        <p className="mt-0.5 text-sm leading-snug text-muted-foreground">
+          {desc}
+        </p>
+      </div>
+    </li>
+  );
+}
+
 const features = [
   {
     icon: "📚",
-    title: "Library AHSP 2.669+ item",
-    desc: "Database analisis harga satuan pekerjaan dari Permen PUPR dan SE DJBK. Cari berdasarkan kata kunci atau kode — koefisien dan referensi resmi langsung tersedia.",
+    title: "AHSP 2026 Permen PUPR",
+    desc: "Library 2.669+ item dari Analisis Harga Satuan Pekerjaan versi 2026 — Permen PUPR dan SE DJBK. Tiap item dapat dilacak ke pasal sumber resmi.",
   },
   {
     icon: "📍",
-    title: "Harga sesuai daerah",
-    desc: "Indeks Kemahalan Konstruksi (IKK) dari BPS per provinsi diterapkan otomatis. Anggaran proyek di Aceh, Batam, atau Papua menyesuaikan kondisi pasar setempat.",
-  },
-  {
-    icon: "📅",
-    title: "Time Schedule + Gantt",
-    desc: "Tentukan minggu mulai dan durasi setiap pekerjaan. Bobot pekerjaan dihitung otomatis dari nilai item. Visualisasi Gantt langsung tersedia.",
-  },
-  {
-    icon: "📊",
-    title: "Export Excel & PDF",
-    desc: "Hasil RAB lengkap dengan rekapitulasi, terbilang, dan PPN — siap diunduh dalam Excel multi-sheet atau PDF profesional. Langsung kirim ke klien.",
+    title: "Harga regional via IKK BPS",
+    desc: "Indeks Kemahalan Konstruksi BPS per provinsi (34 wilayah) diterapkan otomatis. Anggaran di Aceh, Batam, atau Papua menyesuaikan kondisi pasar setempat.",
   },
   {
     icon: "✨",
-    title: "Generate AI dari gambar kerja",
-    desc: "Upload gambar kerja PDF (denah, tampak, potongan). AI membaca dan mengusulkan item RAB beserta estimasi volume. Review dan terapkan dalam beberapa klik.",
+    title: "Generate RAB dengan AI",
+    desc: "Upload gambar kerja PDF (denah, tampak, potongan). AI membaca dan menyusun draft WBS lengkap dengan estimasi volume. Review dan terapkan dalam beberapa klik.",
+  },
+  {
+    icon: "📊",
+    title: "Export Excel & PDF profesional",
+    desc: "Hasil RAB lengkap dengan rekapitulasi, terbilang, dan PPN — Excel multi-sheet atau PDF rapi siap dilampirkan ke kontrak atau dokumen tender.",
+  },
+  {
+    icon: "📅",
+    title: "Time Schedule + Gantt Chart",
+    desc: "Tentukan minggu mulai dan durasi tiap pekerjaan. Bobot dihitung otomatis dari nilai item. Visualisasi Gantt tersedia tanpa setup tambahan.",
   },
   {
     icon: "📁",
