@@ -5,7 +5,9 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input, Select, Textarea } from "@/components/ui/input";
 import { Field } from "@/components/ui/field";
+import { AlamatPicker } from "@/components/ui/alamat-picker";
 import { createProject, type CreateProjectFormState } from "../actions";
+import { titleCaseOnBlur } from "@/lib/text-format";
 
 type RegionOption = {
   id: string;
@@ -41,6 +43,7 @@ export function NewProjectForm({
           maxLength={200}
           placeholder="Mis. Renovasi Rumah Jl. Mawar atau Bangun Ruko 2 Lantai"
           aria-invalid={state.fieldErrors?.name ? true : undefined}
+          onBlur={titleCaseOnBlur}
         />
       </Field>
 
@@ -70,6 +73,7 @@ export function NewProjectForm({
           name="opd"
           placeholder="Mis. Bapak Andi, atau PT Maju Bersama"
           maxLength={200}
+          onBlur={titleCaseOnBlur}
         />
       </Field>
 
@@ -83,6 +87,7 @@ export function NewProjectForm({
           name="ownerName"
           placeholder="Mis. nama kamu sendiri"
           maxLength={200}
+          onBlur={titleCaseOnBlur}
         />
       </Field>
 
@@ -101,14 +106,9 @@ export function NewProjectForm({
         <Field
           label="Alamat Lengkap"
           htmlFor="alamat"
-          hint="Opsional."
+          hint="Opsional. Cari di peta atau ketik manual."
         >
-          <Input
-            id="alamat"
-            name="alamat"
-            placeholder="Jl. / desa / kelurahan"
-            maxLength={300}
-          />
+          <AlamatPicker id="alamat" />
         </Field>
       </div>
 

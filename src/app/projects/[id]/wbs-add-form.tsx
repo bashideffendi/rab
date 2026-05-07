@@ -8,6 +8,7 @@ import {
   createWbsItem,
   type CreateWbsFormState,
 } from "../wbs-actions";
+import { titleCaseOnBlur } from "@/lib/text-format";
 
 const initialState: CreateWbsFormState = {};
 
@@ -59,6 +60,7 @@ export function WbsAddForm({ projectId }: { projectId: string }) {
               name="name"
               placeholder="Contoh: Galian tanah pondasi"
               maxLength={200}
+              onBlur={titleCaseOnBlur}
             />
           </Field>
         </div>

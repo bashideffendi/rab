@@ -1,7 +1,7 @@
 import { asc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { WbsAddForm } from "./wbs-add-form";
-import { WbsDeleteButton } from "./wbs-delete-button";
+import { WbsRow } from "./wbs-row";
 
 type WbsRow = {
   id: string;
@@ -75,22 +75,14 @@ export async function WbsSection({ projectId }: { projectId: string }) {
       ) : (
         <ol className="mb-4 overflow-hidden rounded border border-border">
           {items.map((it) => (
-            <li
+            <WbsRow
               key={it.id}
-              className="flex items-center gap-4 border-b border-border bg-background px-4 py-3 last:border-b-0 hover:bg-muted/30"
-              style={{ paddingLeft: `${1 + it.level * 1.5}rem` }}
-            >
-              <span className="shrink-0 rounded border border-border bg-muted/40 px-1.5 py-0.5 font-mono text-xs text-muted-foreground tabular-nums">
-                {it.code}
-              </span>
-              <span className="flex-1 text-sm">{it.name}</span>
-              <WbsDeleteButton
-                id={it.id}
-                projectId={projectId}
-                code={it.code}
-                name={it.name}
-              />
-            </li>
+              id={it.id}
+              code={it.code}
+              name={it.name}
+              level={it.level}
+              projectId={projectId}
+            />
           ))}
         </ol>
       )}

@@ -200,6 +200,30 @@ export default async function ProjectDetailPage({
           />
         </div>
 
+        {project.lat && project.lng && (
+          <div className="mb-6 overflow-hidden rounded-md border border-border bg-card shadow-sm">
+            <div className="flex items-center justify-between gap-2 border-b border-border bg-muted/30 px-3 py-2 text-xs">
+              <span className="font-medium text-muted-foreground">
+                📍 Peta Lokasi
+              </span>
+              <a
+                href={`https://www.google.com/maps?q=${project.lat},${project.lng}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-muted-foreground hover:text-accent"
+              >
+                Buka di Google Maps ↗
+              </a>
+            </div>
+            <iframe
+              title="Peta lokasi proyek"
+              src={`https://www.openstreetmap.org/export/embed.html?bbox=${Number(project.lng) - 0.005},${Number(project.lat) - 0.003},${Number(project.lng) + 0.005},${Number(project.lat) + 0.003}&layer=mapnik&marker=${project.lat},${project.lng}`}
+              className="h-64 w-full border-0"
+              loading="lazy"
+            />
+          </div>
+        )}
+
         <div className="mb-6 rounded-md border border-border bg-card p-3 text-xs text-muted-foreground shadow-sm">
           <span className="font-medium">Created:</span>{" "}
           {formatDate(project.createdAt)}

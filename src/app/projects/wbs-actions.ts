@@ -106,6 +106,100 @@ export async function createWbsItem(
   return {};
 }
 
+// ─── UPDATE ──────────────────────────────────────────────────────────────────
+
+export type UpdateWbsFormState = {
+  error?: string;
+  fieldErrors?: Partial<Record<"code" | "name", string>>;
+  success?: boolean;
+};
+
+export async function updateWbsItem(
+  id: string,
+  projectId: string,
+  _prev: UpdateWbsFormState,
+  formData: FormData,
+): Promise<UpdateWbsFormState> {
+  const code = (formData.get("code") ?? "").toString().trim();
+  const name = (formData.get("name") ?? "").toString().trim();
+
+  if (!code) {
+    return { fieldErrors: { code: "Code wajib." } };
+  }
+  if (!CODE_RE.test(code)) {
+    return {
+      fieldErrors: {
+        code: "Format: angka dipisah titik. Contoh: 1, 1.1, 1.2.3.",
+      },
+    };
+  }
+  if (!name) {
+    return { fieldErrors: { name: "Nama wajib." } };
+  }
+  if (name.length > 200) {
+    return { fieldErrors: { name: "Maks 200 karakter." } };
+  }
+
+  const user = await requireUser();
+  try {
+    await verifyProjectOwnership(projectId, user.id);
+  } catch (e) {
+    return {
+      error:
+        e instanceof Error ? e.message : "Gak punya akses ke project ini.",
+    };
+  }
+
+  const { level, parentCode } = parseWbsCode(code);
+
+  let parentId: string | null = null;
+  try {
+    if (parentCode) {
+      const parentRows = await db
+        .select({ id: schema.wbsItems.id })
+        .from(schema.wbsItems)
+        .where(
+          and(
+            eq(schema.wbsItems.projectId, projectId),
+            eq(schema.wbsItems.code, parentCode),
+          ),
+        )
+        .limit(1);
+      if (!parentRows[0]) {
+        return {
+          fieldErrors: {
+            code: `Parent code "${parentCode}" belum ada.`,
+          },
+        };
+      }
+      parentId = parentRows[0].id;
+    }
+
+    await db
+      .update(schema.wbsItems)
+      .set({ code, name, level, parentId })
+      .where(
+        and(
+          eq(schema.wbsItems.id, id),
+          eq(schema.wbsItems.projectId, projectId),
+        ),
+      );
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Gagal update WBS.";
+    if (/duplicate|unique/i.test(msg)) {
+      return {
+        fieldErrors: {
+          code: `Code "${code}" udah dipakai item lain di project ini.`,
+        },
+      };
+    }
+    return { error: `Gagal: ${msg}` };
+  }
+
+  revalidatePath(`/projects/${projectId}`);
+  return { success: true };
+}
+
 // ─── DELETE ──────────────────────────────────────────────────────────────────
 
 export async function deleteWbsItem(formData: FormData) {

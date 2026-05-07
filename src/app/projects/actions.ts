@@ -44,6 +44,19 @@ function parseInt0OrPositive(
   return n;
 }
 
+function parseCoord(
+  v: FormDataEntryValue | null,
+  min: number,
+  max: number,
+): string | null {
+  if (v == null) return null;
+  const s = v.toString().trim();
+  if (!s) return null;
+  const n = Number(s.replace(",", "."));
+  if (!Number.isFinite(n) || n < min || n > max) return null;
+  return n.toFixed(7);
+}
+
 export async function createProject(
   _prev: CreateProjectFormState,
   formData: FormData,
@@ -56,6 +69,8 @@ export async function createProject(
   const regionRaw = (formData.get("regionId") ?? "").toString().trim();
   const regionId = regionRaw ? regionRaw : null;
   const alamat = (formData.get("alamat") ?? "").toString().trim() || null;
+  const lat = parseCoord(formData.get("lat"), -90, 90);
+  const lng = parseCoord(formData.get("lng"), -180, 180);
   const tahunRaw = (formData.get("tahun") ?? "").toString().trim();
   const tahun = tahunRaw ? Number(tahunRaw) : null;
   const ppnPercent = parsePercent(formData.get("ppnPercent"), "11.00");
@@ -86,6 +101,8 @@ export async function createProject(
         notes,
         regionId,
         alamat,
+        lat,
+        lng,
         tahun,
         ppnPercent,
         overheadPercent,
@@ -127,6 +144,8 @@ export async function updateProject(
   const regionRaw = (formData.get("regionId") ?? "").toString().trim();
   const regionId = regionRaw ? regionRaw : null;
   const alamat = (formData.get("alamat") ?? "").toString().trim() || null;
+  const lat = parseCoord(formData.get("lat"), -90, 90);
+  const lng = parseCoord(formData.get("lng"), -180, 180);
   const tahunRaw = (formData.get("tahun") ?? "").toString().trim();
   const tahun = tahunRaw ? Number(tahunRaw) : null;
   const ppnPercent = parsePercent(formData.get("ppnPercent"), "11.00");
@@ -159,6 +178,8 @@ export async function updateProject(
         status,
         regionId,
         alamat,
+        lat,
+        lng,
         tahun,
         ppnPercent,
         overheadPercent,
@@ -215,6 +236,8 @@ export async function duplicateProject(formData: FormData) {
       notes: source.notes,
       tahun: source.tahun,
       alamat: source.alamat,
+      lat: source.lat,
+      lng: source.lng,
       ppnPercent: source.ppnPercent,
       overheadPercent: source.overheadPercent,
       dibulatkanKe: source.dibulatkanKe,

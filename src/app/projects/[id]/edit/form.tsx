@@ -5,8 +5,10 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea, Select } from "@/components/ui/input";
 import { Field } from "@/components/ui/field";
+import { AlamatPicker } from "@/components/ui/alamat-picker";
 import { updateProject, type UpdateProjectFormState } from "../../actions";
 import type { schema } from "@/db";
+import { titleCaseOnBlur } from "@/lib/text-format";
 
 type ProjectRow = typeof schema.projects.$inferSelect;
 
@@ -43,6 +45,7 @@ export function EditProjectForm({
           autoFocus
           defaultValue={project.name}
           maxLength={200}
+          onBlur={titleCaseOnBlur}
         />
       </Field>
 
@@ -84,6 +87,7 @@ export function EditProjectForm({
           name="opd"
           defaultValue={project.opd ?? ""}
           maxLength={200}
+          onBlur={titleCaseOnBlur}
         />
       </Field>
 
@@ -97,6 +101,7 @@ export function EditProjectForm({
           name="ownerName"
           defaultValue={project.ownerName ?? ""}
           maxLength={200}
+          onBlur={titleCaseOnBlur}
         />
       </Field>
 
@@ -112,12 +117,16 @@ export function EditProjectForm({
             max={2100}
           />
         </Field>
-        <Field label="Alamat Lengkap" htmlFor="alamat">
-          <Input
+        <Field
+          label="Alamat Lengkap"
+          htmlFor="alamat"
+          hint="Cari di peta atau ketik manual."
+        >
+          <AlamatPicker
             id="alamat"
-            name="alamat"
             defaultValue={project.alamat ?? ""}
-            maxLength={300}
+            defaultLat={project.lat ?? ""}
+            defaultLng={project.lng ?? ""}
           />
         </Field>
       </div>

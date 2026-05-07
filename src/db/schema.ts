@@ -92,6 +92,8 @@ export const projects = pgTable(
     // Phase 1 — RAB calc + project metadata expansion (rabestimator parity)
     tahun: integer("tahun"),
     alamat: text("alamat"),
+    lat: numeric("lat", { precision: 10, scale: 7 }),
+    lng: numeric("lng", { precision: 10, scale: 7 }),
     ppnPercent: numeric("ppn_percent", { precision: 5, scale: 2 })
       .notNull()
       .default("11.00"),
