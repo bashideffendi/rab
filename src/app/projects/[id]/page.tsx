@@ -196,48 +196,6 @@ export default async function ProjectDetailPage({
           </div>
         </header>
 
-        {/* === AI Generate Hero Card === */}
-        <Link
-          href={`/projects/${project.id}/ai-import`}
-          className="group mb-6 block overflow-hidden rounded-xl border border-accent/30 bg-gradient-to-br from-accent/10 via-accent/5 to-card shadow-sm transition-all hover:border-accent/60 hover:shadow-md"
-        >
-          <div className="flex flex-col gap-5 p-5 md:flex-row md:items-center md:p-6">
-            <div className="flex shrink-0 items-center justify-center rounded-lg bg-accent/15 p-3 text-3xl md:h-16 md:w-16">
-              ✨
-            </div>
-            <div className="flex-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-full border border-accent/40 bg-card px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-accent">
-                  AI Generate
-                </span>
-                <span className="font-mono text-[10px] text-muted-foreground">
-                  Claude Sonnet 4.5 · Vision
-                </span>
-              </div>
-              <h2 className="mt-1.5 text-base font-bold tracking-tight md:text-lg">
-                Generate draft RAB dari gambar kerja PDF
-              </h2>
-              <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                Upload denah, tampak, dan potongan dalam satu PDF — AI baca
-                dimensi tertulis, susun WBS standar, dan estimasi volume per
-                item. Cocokkan dengan AHSP, lalu review per baris sebelum
-                disimpan ke project.
-              </p>
-              <div className="mt-3 flex flex-wrap items-center gap-3 text-xs">
-                <FeatureChip text="Denah · Tampak · Potongan" />
-                <FeatureChip text="Auto WBS standar" />
-                <FeatureChip text="Match AHSP otomatis" />
-              </div>
-            </div>
-            <div className="shrink-0">
-              <span className="inline-flex items-center gap-2 rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white shadow-sm transition-transform group-hover:translate-x-0.5">
-                Mulai Generate
-                <span aria-hidden="true">→</span>
-              </span>
-            </div>
-          </div>
-        </Link>
-
         {/* === Metadata Grid === */}
         <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <MetaCard label="Klien / Pemilik" value={project.opd} icon="👤" />
@@ -310,6 +268,48 @@ export default async function ProjectDetailPage({
             </p>
           </div>
         )}
+
+        {/* === AI Generate Hero Card === */}
+        <Link
+          href={`/projects/${project.id}/ai-import`}
+          className="group mt-10 block overflow-hidden rounded-xl border border-accent/30 bg-gradient-to-br from-accent/10 via-accent/5 to-card shadow-sm transition-all hover:border-accent/60 hover:shadow-md"
+        >
+          <div className="flex flex-col gap-5 p-5 md:flex-row md:items-center md:p-6">
+            <div className="flex shrink-0 items-center justify-center rounded-lg bg-accent/15 p-3 text-3xl md:h-16 md:w-16">
+              ✨
+            </div>
+            <div className="flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="rounded-full border border-accent/40 bg-card px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-accent">
+                  AI Generate
+                </span>
+                <span className="font-mono text-[10px] text-muted-foreground">
+                  Claude Sonnet 4.5 · Vision
+                </span>
+              </div>
+              <h2 className="mt-1.5 text-base font-bold tracking-tight md:text-lg">
+                Generate draft WBS & item RAB dari gambar kerja PDF
+              </h2>
+              <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                Upload denah, tampak, dan potongan dalam satu PDF — AI baca
+                dimensi tertulis, susun WBS standar, dan estimasi volume per
+                item. Cocokkan dengan AHSP, lalu review per baris sebelum
+                disimpan ke project.
+              </p>
+              <div className="mt-3 flex flex-wrap items-center gap-3 text-xs">
+                <FeatureChip text="Denah · Tampak · Potongan" />
+                <FeatureChip text="Auto WBS standar" />
+                <FeatureChip text="Match AHSP otomatis" />
+              </div>
+            </div>
+            <div className="shrink-0">
+              <span className="inline-flex items-center gap-2 rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white shadow-sm transition-transform group-hover:translate-x-0.5">
+                Mulai Generate
+                <span aria-hidden="true">→</span>
+              </span>
+            </div>
+          </div>
+        </Link>
 
         <WbsSection projectId={project.id} />
         <ItemsSection
