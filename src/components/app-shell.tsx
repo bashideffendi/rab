@@ -1,6 +1,13 @@
 import Link from "next/link";
+import { createClient } from "@/lib/supabase/server";
+import { LogoutButton } from "./logout-button";
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+export async function AppShell({ children }: { children: React.ReactNode }) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   return (
     <div className="flex flex-1 flex-col">
       <header className="border-b border-border px-6 py-4">
@@ -10,12 +17,32 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <span className="font-semibold tracking-tight">RABin</span>
           </Link>
           <nav className="flex items-center gap-6 text-sm text-muted-foreground">
-            <Link href="/projects" className="hover:text-foreground">
-              Projects
-            </Link>
-            <Link href="/" className="hover:text-foreground">
-              Home
-            </Link>
+            {user ? (
+              <>
+                <Link href="/projects" className="hover:text-foreground">
+                  Projects
+                </Link>
+                <span
+                  className="font-mono text-xs text-muted-foreground"
+                  title={user.email ?? undefined}
+                >
+                  {user.email?.split("@")[0]}
+                </span>
+                <LogoutButton />
+              </>
+            ) : (
+              <>
+                <Link href="/login" className="hover:text-foreground">
+                  Login
+                </Link>
+                <Link
+                  href="/signup"
+                  className="rounded border border-accent px-3 py-1 text-accent hover:bg-accent hover:text-black"
+                >
+                  Daftar
+                </Link>
+              </>
+            )}
           </nav>
         </div>
       </header>
