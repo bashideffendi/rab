@@ -62,6 +62,9 @@ docker compose up -d
 # Apply schema
 npm run db:push
 
+# Seed baseline AHSP samples + materials + harga (optional)
+npm run db:seed
+
 # Run dev
 npm run dev
 ```
@@ -76,6 +79,8 @@ Set `DATABASE_URL` ke connection string milikmu, skip `docker compose up`.
 ```bash
 npm run db:studio
 ```
+
+**Seed data note:** `npm run db:seed` populate 1 region (Nasional) + 16 materials + 6 AHSP items + komponen + harga representatif 2025. **Data ilustratif** berdasarkan format Permen PUPR No. 1/2022 — verify dengan dokumen resmi sebelum dipakai untuk RAB production. Seed idempotent: skip kalau sudah dijalankan.
 
 ## Environment Variables
 
