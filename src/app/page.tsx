@@ -96,7 +96,7 @@ export default async function Home() {
                 />
                 <HeroBullet
                   title="Generate RAB dengan AI"
-                  desc="Upload gambar kerja PDF — AI susun draft WBS dan estimasi volume."
+                  desc="Upload gambar kerja PDF — AI susun Draft WBS dan estimasi volume."
                 />
                 <HeroBullet
                   title="Export Excel & PDF profesional"
@@ -358,7 +358,7 @@ const features = [
   {
     icon: "✨",
     title: "Generate RAB dengan AI",
-    desc: "Upload gambar kerja PDF (denah, tampak, potongan). AI membaca dan menyusun draft WBS lengkap dengan estimasi volume. Review dan terapkan dalam beberapa klik.",
+    desc: "Upload gambar kerja PDF (denah, tampak, potongan). AI membaca dan menyusun Draft WBS lengkap dengan estimasi volume. Review dan terapkan dalam beberapa klik.",
   },
   {
     icon: "📊",

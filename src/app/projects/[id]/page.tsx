@@ -109,7 +109,9 @@ export default async function ProjectDetailPage({
                     {projectTypeLabel(project.projectType)}
                   </span>
                 )}
-                <Badge tone={project.status}>{project.status}</Badge>
+                <Badge tone={project.status}>
+                  {project.status.charAt(0).toUpperCase() + project.status.slice(1)}
+                </Badge>
                 {project.tahun && (
                   <Badge tone="default">Tahun {project.tahun}</Badge>
                 )}
@@ -297,7 +299,7 @@ export default async function ProjectDetailPage({
               </div>
 
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground md:text-base">
-                Generate draft WBS dan item RAB langsung dari gambar kerja
+                Generate Draft WBS dan item RAB langsung dari gambar kerja
                 PDF. AI baca dimensi tertulis di denah, tampak, dan potongan,
                 lalu susun struktur pekerjaan standar dengan estimasi volume
                 per item.

@@ -39,11 +39,11 @@ export default async function AIImportPage({
             AI Generate dari Gambar Kerja
           </p>
           <h1 className="mt-1.5 text-2xl font-bold tracking-tight md:text-3xl">
-            Upload PDF gambar kerja, AI susun draft RAB
+            Upload PDF Gambar Kerja, AI Susun Draft RAB
           </h1>
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
             Unggah PDF gambar kerja — AI akan baca denah, tampak, dan
-            potongan, lalu menghasilkan draft WBS beserta estimasi volume per
+            potongan, lalu menghasilkan Draft WBS beserta estimasi volume per
             item.
           </p>
         </header>

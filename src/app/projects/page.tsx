@@ -221,7 +221,9 @@ function ProjectsTable({
                 </Link>
                 {/* Mobile: status + date inline since columns hidden */}
                 <div className="mt-1.5 flex items-center gap-3 text-xs lg:hidden">
-                  <Badge tone={p.status}>{p.status}</Badge>
+                  <Badge tone={p.status}>
+                    {p.status.charAt(0).toUpperCase() + p.status.slice(1)}
+                  </Badge>
                   <span className="font-mono text-muted-foreground tabular-nums">
                     {formatDate(p.updatedAt)}
                   </span>
