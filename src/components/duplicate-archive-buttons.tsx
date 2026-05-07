@@ -27,11 +27,11 @@ export function DuplicateButton({
       variant={compact ? "ghost" : "secondary"}
       size="sm"
       disabled={pending}
-      className={compact ? "h-8 w-8 px-0" : undefined}
+      className={compact ? "h-10 w-10 px-0" : undefined}
       aria-label="Duplikasi project"
     >
       {compact ? (
-        <CopyIcon size={16} />
+        <CopyIcon size={20} />
       ) : pending ? (
         "Menggandakan…"
       ) : (
@@ -84,14 +84,14 @@ export function ArchiveButton({
       variant={compact ? "ghost" : "secondary"}
       size="sm"
       disabled={pending}
-      className={compact ? "h-8 w-8 px-0" : undefined}
+      className={compact ? "h-10 w-10 px-0" : undefined}
       aria-label={label}
     >
       {compact ? (
         isArchived ? (
-          <ArchiveRestoreIcon size={16} />
+          <ArchiveRestoreIcon size={20} />
         ) : (
-          <ArchiveIcon size={16} />
+          <ArchiveIcon size={20} />
         )
       ) : pending ? (
         "…"

@@ -35,13 +35,13 @@ export function DeleteProjectButton({
       disabled={pending}
       className={
         compact
-          ? "h-8 w-8 px-0 text-muted-foreground hover:bg-danger/10 hover:text-danger"
+          ? "h-10 w-10 px-0 text-muted-foreground hover:bg-danger/10 hover:text-danger"
           : undefined
       }
       aria-label="Hapus project"
     >
       {compact ? (
-        <TrashIcon size={16} />
+        <TrashIcon size={20} />
       ) : pending ? (
         "Menghapus…"
       ) : (

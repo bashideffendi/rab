@@ -234,17 +234,17 @@ function ProjectsTable({
                 {formatDate(p.updatedAt)}
               </td>
               <td className="px-4 py-3">
-                <div className="flex items-center justify-end gap-0.5">
+                <div className="flex items-center justify-end gap-1">
                   <Tooltip content="Edit data project">
                     <Link href={`/projects/${p.id}/edit`}>
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
-                        className="h-8 w-8 px-0"
+                        className="h-10 w-10 px-0"
                         aria-label="Edit project"
                       >
-                        <PencilIcon size={16} />
+                        <PencilIcon size={20} />
                       </Button>
                     </Link>
                   </Tooltip>
