@@ -72,10 +72,10 @@ export default async function Home() {
 
       <main className="flex-1">
         {/* Hero */}
-        <section className="px-6 py-20 md:py-28">
+        <section className="px-6 pt-10 pb-16 md:pt-14 md:pb-20">
           <div className="mx-auto max-w-6xl">
             <div className="max-w-3xl">
-              <p className="mb-5 text-xs font-semibold uppercase tracking-[0.18em] text-accent">
+              <p className="mb-4 text-xs font-semibold uppercase tracking-[0.18em] text-accent">
                 RAB Online · Konstruksi Indonesia
               </p>
               <h1 className="text-4xl font-bold leading-[1.1] tracking-tight md:text-6xl">
@@ -85,11 +85,7 @@ export default async function Home() {
                   rinci, transparan, sesuai standar.
                 </span>
               </h1>
-              <p className="mt-6 max-w-2xl text-base leading-relaxed text-muted-foreground md:text-lg">
-                Platform RAB online dengan referensi resmi, perhitungan
-                regional yang akurat, dan otomasi yang mempercepat kerja.
-              </p>
-              <ul className="mt-6 grid max-w-2xl gap-3 sm:grid-cols-2">
+              <ul className="mt-8 grid max-w-2xl gap-3 sm:grid-cols-2">
                 <HeroBullet
                   title="AHSP 2026 Permen PUPR"
                   desc="Koefisien resmi versi terbaru — dapat dilacak ke pasal sumber."
