@@ -1,36 +1,84 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# RABin
 
-## Getting Started
+> Hitung RAB yang bisa dipertanggungjawabkan — tiap angka punya jejak ke regulasi sumbernya.
 
-First, run the development server:
+**Status:** Draft (foundation scaffolded)
+**Live:** https://rabin.masbash.id _(belum deploy)_
+**Repo:** https://github.com/bashideffendi/rabin _(belum push)_
+**Stack:** Next.js 16, React 19, Tailwind v4, Postgres, Drizzle ORM, shadcn/ui
+
+---
+
+## What
+
+RABin adalah tools online untuk menyusun Rencana Anggaran Biaya (RAB) konstruksi yang transparan dan bisa dipertanggungjawabkan.
+
+Fokus:
+
+1. **Trace-to-source** — tiap koefisien AHSP & harga material punya link ke regulasi sumber (Permen PUPR, SNI, e-katalog LKPP).
+2. **Regional pricing** — harga material per kabupaten/kota dari HSPK pemda + BPS, bukan flat nasional.
+3. **Red flag engine** — auto-warning kalau koefisien menyimpang signifikan dari standar PUPR atau harga di atas median e-katalog.
+4. **Audit trail** — version history & comment thread per item, snapshot tiap revisi.
+5. **Tender-ready output** — Excel + PDF formatnya cocok lampiran SPSE & BAP audit.
+
+Target user primer: **PPK & Tim Teknis OPD** yang harus susun RAB lulus verifikasi.
+Secondary: konsultan perencana proyek pemerintah, auditor & APIP sebagai validator.
+
+## Roadmap
+
+**v1 (MVP, ~4 minggu)**
+- Project + WBS + item management
+- AHSP database baseline (PUPR + SNI), read-only, source-traced
+- Calculator inti (pilih AHSP, input volume)
+- Trace-to-source link
+- Export Excel basic
+
+**v2 (~8 minggu)**
+- Regional pricing (HSPK kabupaten + BPS)
+- Red flag engine basic (rule-based)
+- Audit trail / version history
+
+**v3+**
+- PDF tender-ready
+- SiRUP integration (linking ke SIRUP-Audit project)
+- Multi-user collaboration & comments
+
+## Local Development
 
 ```bash
+git clone https://github.com/bashideffendi/rabin.git
+cd rabin
+npm install
+cp .env.example .env.local
+# isi DATABASE_URL ke Postgres lokal/Railway
+npm run db:push    # sync schema (kalau Drizzle udah ada)
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Buka http://localhost:3000
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Environment Variables
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Var | Required | Default | Keterangan |
+|---|---|---|---|
+| `DATABASE_URL` | Yes | - | Postgres connection string |
+| `NEXT_PUBLIC_APP_URL` | No | `http://localhost:3000` | Public app URL |
 
-## Learn More
+## Deploy
 
-To learn more about Next.js, take a look at the following resources:
+- **Platform**: Railway (Next.js + Postgres add-on)
+- **URL**: https://rabin.masbash.id
+- **Auto-deploy**: setiap push ke `main`
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Tech Stack
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- Next.js 16 (App Router, Turbopack)
+- React 19
+- Tailwind CSS v4
+- shadcn/ui (dark default, mono untuk numerik)
+- PostgreSQL + Drizzle ORM
+- Hosting: Railway
 
-## Deploy on Vercel
+## License
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Personal project. © Bashid Effendi 2026.

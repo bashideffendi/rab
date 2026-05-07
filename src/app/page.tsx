@@ -1,65 +1,238 @@
-import Image from "next/image";
-
 export default function Home() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="flex flex-1 flex-col">
+      <header className="border-b border-border px-6 py-4">
+        <div className="mx-auto flex max-w-6xl items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-sm text-accent">▲</span>
+            <span className="font-semibold tracking-tight">RABin</span>
+            <span className="ml-2 rounded border border-border px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+              Draft
+            </span>
+          </div>
+          <nav className="flex items-center gap-6 text-sm text-muted-foreground">
+            <a href="#fitur" className="hover:text-foreground">
+              Fitur
+            </a>
+            <a href="#untuk-siapa" className="hover:text-foreground">
+              Untuk Siapa
+            </a>
+            <a href="#roadmap" className="hover:text-foreground">
+              Roadmap
+            </a>
+          </nav>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+      </header>
+
+      <main className="flex-1">
+        <section className="mx-auto max-w-6xl px-6 py-20">
+          <div className="max-w-3xl">
+            <p className="mb-4 font-mono text-xs uppercase tracking-widest text-accent">
+              RAB Online &mdash; Indonesia
+            </p>
+            <h1 className="text-3xl font-bold leading-tight tracking-tight break-words md:text-5xl">
+              Hitung RAB yang bisa{" "}
+              <span className="text-accent">dipertanggung&shy;jawabkan.</span>
+            </h1>
+            <p className="mt-6 max-w-2xl text-lg leading-relaxed text-muted-foreground">
+              Tiap koefisien & harga punya jejak ke regulasi sumbernya. Harga
+              material regional per kabupaten. Anomali ke-flag otomatis. Output
+              kompatibel dokumen tender pemerintah.
+            </p>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <button
+                disabled
+                className="rounded border border-border bg-muted px-5 py-2.5 text-sm font-medium text-muted-foreground"
+              >
+                Mulai Hitung &mdash; Coming Soon
+              </button>
+              <a
+                href="#fitur"
+                className="rounded border border-border px-5 py-2.5 text-sm font-medium hover:border-accent hover:text-accent"
+              >
+                Lihat Fitur
+              </a>
+            </div>
+          </div>
+        </section>
+
+        <section
+          id="fitur"
+          className="border-t border-border bg-muted/30 px-6 py-20"
+        >
+          <div className="mx-auto max-w-6xl">
+            <h2 className="mb-12 text-2xl font-semibold tracking-tight">
+              5 hal yang gak ada di tools RAB lain
+            </h2>
+            <div className="grid gap-px overflow-hidden rounded border border-border bg-border md:grid-cols-2 lg:grid-cols-3">
+              {features.map((f, i) => (
+                <div
+                  key={f.title}
+                  className="bg-background p-6 transition-colors hover:bg-muted/50"
+                >
+                  <div className="mb-3 flex items-baseline justify-between">
+                    <span className="font-mono text-xs text-muted-foreground">
+                      0{i + 1}
+                    </span>
+                    <span className="rounded border border-border px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                      {f.tag}
+                    </span>
+                  </div>
+                  <h3 className="mb-2 font-semibold tracking-tight">
+                    {f.title}
+                  </h3>
+                  <p className="text-sm leading-relaxed text-muted-foreground">
+                    {f.desc}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section id="untuk-siapa" className="px-6 py-20">
+          <div className="mx-auto max-w-6xl">
+            <h2 className="mb-12 text-2xl font-semibold tracking-tight">
+              Untuk siapa
+            </h2>
+            <div className="grid gap-6 md:grid-cols-3">
+              {audiences.map((a) => (
+                <div
+                  key={a.role}
+                  className="rounded border border-border p-6"
+                >
+                  <p className="mb-2 font-mono text-xs uppercase tracking-widest text-accent">
+                    {a.role}
+                  </p>
+                  <p className="text-sm leading-relaxed text-muted-foreground">
+                    {a.note}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section
+          id="roadmap"
+          className="border-t border-border bg-muted/30 px-6 py-20"
+        >
+          <div className="mx-auto max-w-6xl">
+            <h2 className="mb-12 text-2xl font-semibold tracking-tight">
+              Roadmap
+            </h2>
+            <div className="space-y-px overflow-hidden rounded border border-border bg-border">
+              {roadmap.map((r) => (
+                <div
+                  key={r.version}
+                  className="flex flex-col gap-2 bg-background p-5 md:flex-row md:items-center md:gap-8"
+                >
+                  <div className="flex w-32 shrink-0 items-center gap-3">
+                    <span className="font-mono text-sm font-semibold text-accent">
+                      {r.version}
+                    </span>
+                    <span
+                      className={`rounded border px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider ${
+                        r.status === "now"
+                          ? "border-accent text-accent"
+                          : "border-border text-muted-foreground"
+                      }`}
+                    >
+                      {r.status === "now" ? "Active" : "Planned"}
+                    </span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">{r.items}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
       </main>
+
+      <footer className="border-t border-border px-6 py-8">
+        <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-2 text-xs text-muted-foreground md:flex-row md:items-center">
+          <p className="font-mono">
+            rabin.masbash.id &mdash; bagian dari{" "}
+            <a
+              href="https://masbash.id"
+              className="text-accent hover:underline"
+            >
+              masbash.id
+            </a>{" "}
+            ecosystem
+          </p>
+          <p>&copy; 2026 Bashid Effendi</p>
+        </div>
+      </footer>
     </div>
   );
 }
+
+const features = [
+  {
+    tag: "Trace",
+    title: "Trace-to-source",
+    desc: "Tiap koefisien & harga ada link langsung ke Permen PUPR, SNI, atau e-katalog LKPP. Klik, lihat sumbernya.",
+  },
+  {
+    tag: "Region",
+    title: "Harga regional per kabupaten",
+    desc: "Harga material dari HSPK pemda + BPS regional. Bukan flat nasional yang gak masuk akal.",
+  },
+  {
+    tag: "Anomaly",
+    title: "Red flag engine",
+    desc: "Auto-warning kalau koefisien menyimpang dari standar PUPR atau harga di atas median e-katalog.",
+  },
+  {
+    tag: "Audit",
+    title: "Audit trail native",
+    desc: "Version history, snapshot tiap revisi, comment thread per item. Reviewer lihat siapa ubah apa.",
+  },
+  {
+    tag: "Output",
+    title: "Tender-ready export",
+    desc: "Excel + PDF dengan kolom referensi regulasi siap lampiran SPSE atau dokumen audit BPK.",
+  },
+  {
+    tag: "Soon",
+    title: "SiRUP integration",
+    desc: "Tarik paket dari SiRUP, generate template RAB-nya. Ekosistem dengan tools audit lain.",
+  },
+];
+
+const audiences = [
+  {
+    role: "PPK & Tim Teknis OPD",
+    note: "Susun RAB yang lulus verifikasi tanpa takut salah audit. Tiap angka udah ada referensi regulasinya.",
+  },
+  {
+    role: "Konsultan Perencana",
+    note: "Bikin RAB proyek pemerintah dengan format yang langsung kompatibel dokumen tender.",
+  },
+  {
+    role: "Auditor & APIP",
+    note: "Validasi RAB klien dengan referensi regulasi yang udah ke-link, plus indikator anomali otomatis.",
+  },
+];
+
+const roadmap = [
+  {
+    version: "v1",
+    status: "now" as const,
+    items:
+      "Project + WBS, AHSP database baseline (PUPR + SNI), calculator inti, trace-to-source, export Excel.",
+  },
+  {
+    version: "v2",
+    status: "next" as const,
+    items:
+      "Regional pricing per kabupaten, red flag engine rule-based, audit trail & version history.",
+  },
+  {
+    version: "v3",
+    status: "next" as const,
+    items:
+      "PDF tender-ready, SiRUP integration, multi-user collaboration, comment thread.",
+  },
+];
