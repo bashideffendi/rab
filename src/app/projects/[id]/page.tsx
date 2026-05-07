@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DeleteProjectButton } from "@/components/delete-project-button";
 import { formatDate } from "@/lib/utils";
+import { WbsSection } from "./wbs-section";
 
 export const dynamic = "force-dynamic";
 
@@ -106,17 +107,7 @@ export default async function ProjectDetailPage({
           </div>
         )}
 
-        <section className="mt-10 rounded border border-dashed border-border p-8 text-center">
-          <p className="mb-1 font-mono text-xs uppercase tracking-widest text-muted-foreground">
-            WBS & Items
-          </p>
-          <p className="mb-1 text-sm text-foreground">
-            Belum ada struktur WBS untuk project ini.
-          </p>
-          <p className="text-xs text-muted-foreground">
-            Editor WBS + item RAB hadir di iterasi berikutnya.
-          </p>
-        </section>
+        <WbsSection projectId={project.id} />
       </section>
     </AppShell>
   );

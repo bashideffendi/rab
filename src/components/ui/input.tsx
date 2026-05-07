@@ -1,10 +1,13 @@
 import { cn } from "@/lib/utils";
 
-export type InputProps = React.InputHTMLAttributes<HTMLInputElement>;
+export type InputProps = React.InputHTMLAttributes<HTMLInputElement> & {
+  ref?: React.Ref<HTMLInputElement>;
+};
 
-export function Input({ className, ...props }: InputProps) {
+export function Input({ className, ref, ...props }: InputProps) {
   return (
     <input
+      ref={ref}
       className={cn(
         "w-full rounded border border-border bg-muted/40 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground",
         "focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent",
