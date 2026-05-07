@@ -269,6 +269,9 @@ export const projectItems = pgTable(
       scale: 2,
     }), // nullable — kalau pake AHSP, price dihitung dari komponen × harga
     volume: numeric("volume", { precision: 18, scale: 4 }).notNull(),
+    // Time Schedule fields (Phase 5)
+    startWeek: integer("start_week"), // 1-based, NULL = belum di-schedule
+    durationWeeks: integer("duration_weeks"), // jumlah minggu pengerjaan
     regionOverrideId: uuid("region_override_id").references(() => regions.id, {
       onDelete: "set null",
     }),

@@ -50,6 +50,13 @@
       "when": 1778160346934,
       "tag": "0006_add_phase1_project_fields",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1778166770168,
+      "tag": "0007_add_schedule_fields",
+      "breakpoints": true
     }
   ]
 }

@@ -137,6 +137,11 @@ export default async function ProjectDetailPage({
                 ✨ AI Generate
               </Button>
             </Link>
+            <Link href={`/projects/${project.id}/schedule`}>
+              <Button variant="secondary" size="sm">
+                📅 Schedule
+              </Button>
+            </Link>
             <Link href={`/projects/${project.id}/breakdown`}>
               <Button variant="secondary" size="sm">
                 📊 Breakdown
