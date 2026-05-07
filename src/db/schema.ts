@@ -72,8 +72,11 @@ export const projects = pgTable(
   "projects",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    // Supabase auth.users.id — gak FK karena auth.users gak ke-manage Drizzle.
+    // Nullable untuk backward compat data lama; new rows always populated.
+    userId: uuid("user_id"),
     name: text("name").notNull(),
-    opd: text("opd"), // OPD/instansi (e.g., "Dinas PU Batam")
+    opd: text("opd"),
     ownerName: text("owner_name"),
     regionId: uuid("region_id").references(() => regions.id, {
       onDelete: "set null",
@@ -87,7 +90,10 @@ export const projects = pgTable(
       .notNull()
       .defaultNow(),
   },
-  (t) => [index("projects_status_idx").on(t.status)],
+  (t) => [
+    index("projects_status_idx").on(t.status),
+    index("projects_user_idx").on(t.userId),
+  ],
 );
 
 // ─────────────────────────────────────────────────────────────────────────────

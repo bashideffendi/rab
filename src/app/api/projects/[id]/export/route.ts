@@ -6,6 +6,7 @@ import {
   type ExportItem,
   type ExportProject,
 } from "@/lib/excel-export";
+import { getCurrentUser, verifyProjectOwnership } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -65,6 +66,23 @@ export async function GET(
   context: { params: Promise<{ id: string }> },
 ) {
   const { id } = await context.params;
+
+  const user = await getCurrentUser();
+  if (!user) {
+    return new Response(JSON.stringify({ error: "Login dulu." }), {
+      status: 401,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  try {
+    await verifyProjectOwnership(id, user.id);
+  } catch {
+    return new Response(
+      JSON.stringify({ error: "Project gak ditemukan atau bukan milikmu." }),
+      { status: 404, headers: { "Content-Type": "application/json" } },
+    );
+  }
 
   let project: ExportProject | null = null;
   let items: ExportItem[] = [];

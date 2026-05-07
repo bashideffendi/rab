@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { and, eq, isNull, lte, or, gte, desc } from "drizzle-orm";
 import { db, schema } from "@/db";
+import { requireUser, verifyProjectOwnership } from "@/lib/auth";
 
 const NUM_RE = /^\d+(\.\d+)?$/;
 
@@ -118,6 +119,16 @@ export async function createProjectItem(
 
   if (!volume) {
     return { fieldErrors: { volume: "Volume harus angka positif." } };
+  }
+
+  const user = await requireUser();
+  try {
+    await verifyProjectOwnership(projectId, user.id);
+  } catch (e) {
+    return {
+      error:
+        e instanceof Error ? e.message : "Gak punya akses ke project ini.",
+    };
   }
 
   // ─── AHSP mode ────────────────────────────────────────────────────────────
@@ -242,6 +253,16 @@ export async function updateProjectItem(
     return { fieldErrors };
   }
 
+  const user = await requireUser();
+  try {
+    await verifyProjectOwnership(projectId, user.id);
+  } catch (e) {
+    return {
+      error:
+        e instanceof Error ? e.message : "Gak punya akses ke project ini.",
+    };
+  }
+
   try {
     await db
       .update(schema.projectItems)
@@ -253,7 +274,12 @@ export async function updateProjectItem(
         volume: volume!,
         updatedAt: new Date(),
       })
-      .where(eq(schema.projectItems.id, itemId));
+      .where(
+        and(
+          eq(schema.projectItems.id, itemId),
+          eq(schema.projectItems.projectId, projectId),
+        ),
+      );
   } catch (e) {
     return {
       error: e instanceof Error ? `Gagal simpan: ${e.message}` : "Gagal simpan.",
@@ -272,6 +298,15 @@ export async function deleteProjectItem(formData: FormData) {
   if (!id || !projectId) {
     throw new Error("Item ID atau project ID hilang.");
   }
-  await db.delete(schema.projectItems).where(eq(schema.projectItems.id, id));
+  const user = await requireUser();
+  await verifyProjectOwnership(projectId, user.id);
+  await db
+    .delete(schema.projectItems)
+    .where(
+      and(
+        eq(schema.projectItems.id, id),
+        eq(schema.projectItems.projectId, projectId),
+      ),
+    );
   revalidatePath(`/projects/${projectId}`);
 }

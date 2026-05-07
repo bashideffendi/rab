@@ -4,6 +4,7 @@ import { and, asc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { AppShell } from "@/components/app-shell";
 import { EditItemForm } from "./form";
+import { requireUser, verifyProjectOwnership } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -53,6 +54,7 @@ export default async function EditItemPage({
 }: {
   params: Promise<{ id: string; itemId: string }>;
 }) {
+  const user = await requireUser();
   const { id, itemId } = await params;
 
   let item: ItemRow | null = null;
@@ -60,6 +62,7 @@ export default async function EditItemPage({
   let projectName: string | null = null;
   let dbError: string | null = null;
   try {
+    await verifyProjectOwnership(id, user.id);
     [item, wbsOptions, projectName] = await Promise.all([
       loadItem(id, itemId),
       loadWbs(id),

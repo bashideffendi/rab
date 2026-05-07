@@ -2,8 +2,9 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
+import { requireUser } from "@/lib/auth";
 
 const PROJECT_STATUSES = ["draft", "active", "archived"] as const;
 type ProjectStatus = (typeof PROJECT_STATUSES)[number];
@@ -39,11 +40,13 @@ export async function createProject(
     return { fieldErrors: { name: "Nama project maksimal 200 karakter." } };
   }
 
+  const user = await requireUser();
+
   let inserted: { id: string } | undefined;
   try {
     const rows = await db
       .insert(schema.projects)
-      .values({ name, opd, ownerName, notes })
+      .values({ userId: user.id, name, opd, ownerName, notes })
       .returning({ id: schema.projects.id });
     inserted = rows[0];
   } catch (e) {
@@ -88,11 +91,15 @@ export async function updateProject(
     return { fieldErrors: { status: "Status tidak valid." } };
   }
 
+  const user = await requireUser();
+
   try {
     await db
       .update(schema.projects)
       .set({ name, opd, ownerName, notes, status, updatedAt: new Date() })
-      .where(eq(schema.projects.id, id));
+      .where(
+        and(eq(schema.projects.id, id), eq(schema.projects.userId, user.id)),
+      );
   } catch (e) {
     return {
       error:
@@ -114,7 +121,12 @@ export async function deleteProject(formData: FormData) {
   if (!id) {
     throw new Error("Project ID hilang.");
   }
-  await db.delete(schema.projects).where(eq(schema.projects.id, id));
+  const user = await requireUser();
+  await db
+    .delete(schema.projects)
+    .where(
+      and(eq(schema.projects.id, id), eq(schema.projects.userId, user.id)),
+    );
   revalidatePath("/projects");
   redirect("/projects");
 }

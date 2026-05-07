@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { and, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
+import { requireUser, verifyProjectOwnership } from "@/lib/auth";
 
 const CODE_RE = /^\d+(\.\d+)*$/;
 
@@ -44,6 +45,16 @@ export async function createWbsItem(
   }
   if (name.length > 200) {
     return { fieldErrors: { name: "Nama maksimal 200 karakter." } };
+  }
+
+  const user = await requireUser();
+  try {
+    await verifyProjectOwnership(projectId, user.id);
+  } catch (e) {
+    return {
+      error:
+        e instanceof Error ? e.message : "Gak punya akses ke project ini.",
+    };
   }
 
   const { level, parentCode } = parseWbsCode(code);
@@ -103,6 +114,15 @@ export async function deleteWbsItem(formData: FormData) {
   if (!id || !projectId) {
     throw new Error("WBS ID atau project ID hilang.");
   }
-  await db.delete(schema.wbsItems).where(eq(schema.wbsItems.id, id));
+  const user = await requireUser();
+  await verifyProjectOwnership(projectId, user.id);
+  await db
+    .delete(schema.wbsItems)
+    .where(
+      and(
+        eq(schema.wbsItems.id, id),
+        eq(schema.wbsItems.projectId, projectId),
+      ),
+    );
   revalidatePath(`/projects/${projectId}`);
 }

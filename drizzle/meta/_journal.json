@@ -15,6 +15,13 @@
       "when": 1778135389259,
       "tag": "0001_add_custom_unit_price",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1778140735937,
+      "tag": "0002_add_user_id_to_projects",
+      "breakpoints": true
     }
   ]
 }

@@ -1,14 +1,15 @@
 import Link from "next/link";
-import { desc } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { AppShell } from "@/components/app-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/utils";
+import { requireUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
-async function loadProjects() {
+async function loadProjects(userId: string) {
   return db
     .select({
       id: schema.projects.id,
@@ -19,15 +20,17 @@ async function loadProjects() {
       updatedAt: schema.projects.updatedAt,
     })
     .from(schema.projects)
+    .where(eq(schema.projects.userId, userId))
     .orderBy(desc(schema.projects.updatedAt))
     .limit(200);
 }
 
 export default async function ProjectsPage() {
+  const user = await requireUser();
   let projects: Awaited<ReturnType<typeof loadProjects>> = [];
   let dbError: string | null = null;
   try {
-    projects = await loadProjects();
+    projects = await loadProjects(user.id);
   } catch (e) {
     dbError =
       e instanceof Error

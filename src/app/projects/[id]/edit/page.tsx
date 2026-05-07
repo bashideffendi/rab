@@ -1,19 +1,23 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { AppShell } from "@/components/app-shell";
 import { EditProjectForm } from "./form";
+import { requireUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 type ProjectRow = typeof schema.projects.$inferSelect;
 
-async function loadProject(id: string): Promise<ProjectRow | null> {
+async function loadProject(
+  id: string,
+  userId: string,
+): Promise<ProjectRow | null> {
   const rows = await db
     .select()
     .from(schema.projects)
-    .where(eq(schema.projects.id, id))
+    .where(and(eq(schema.projects.id, id), eq(schema.projects.userId, userId)))
     .limit(1);
   return rows[0] ?? null;
 }
@@ -23,12 +27,13 @@ export default async function EditProjectPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const user = await requireUser();
   const { id } = await params;
 
   let project: ProjectRow | null = null;
   let dbError: string | null = null;
   try {
-    project = await loadProject(id);
+    project = await loadProject(id, user.id);
   } catch (e) {
     dbError =
       e instanceof Error
