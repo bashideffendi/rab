@@ -91,8 +91,8 @@ export default async function ProjectDetailPage({
         </header>
 
         <div className="grid gap-px overflow-hidden rounded border border-border bg-border md:grid-cols-2">
-          <DetailRow label="OPD / Instansi" value={project.opd} />
-          <DetailRow label="PPK / Owner" value={project.ownerName} />
+          <DetailRow label="Klien / Pemilik" value={project.opd} />
+          <DetailRow label="Penanggung Jawab" value={project.ownerName} />
           <DetailRow label="Created" value={formatDate(project.createdAt)} />
           <DetailRow label="Updated" value={formatDate(project.updatedAt)} />
         </div>

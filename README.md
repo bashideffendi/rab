@@ -1,28 +1,33 @@
 # RABin
 
-> Hitung RAB yang bisa dipertanggungjawabkan — tiap angka punya jejak ke regulasi sumbernya.
+> Hitung RAB rumah, renovasi, atau proyek konstruksi — rinci dan transparan, buat siapa aja.
 
-**Status:** Draft (foundation scaffolded)
+**Status:** Draft
 **Live:** https://rabin.masbash.id _(belum deploy)_
 **Repo:** https://github.com/bashideffendi/rabin _(belum push)_
-**Stack:** Next.js 16, React 19, Tailwind v4, Postgres, Drizzle ORM, shadcn/ui
+**Stack:** Next.js 16, React 19, Tailwind v4, Postgres, Drizzle ORM
 
 ---
 
 ## What
 
-RABin adalah tools online untuk menyusun Rencana Anggaran Biaya (RAB) konstruksi yang transparan dan bisa dipertanggungjawabkan.
+RABin adalah kalkulator RAB online buat siapa aja yang lagi nyusun anggaran konstruksi — pemilik rumah yang mau bangun/renovasi, konsultan perencana, kontraktor, estimator.
 
-Fokus:
+Yang bedain dari kalkulator RAB lain:
 
-1. **Trace-to-source** — tiap koefisien AHSP & harga material punya link ke regulasi sumber (Permen PUPR, SNI, e-katalog LKPP).
-2. **Regional pricing** — harga material per kabupaten/kota dari HSPK pemda + BPS, bukan flat nasional.
-3. **Red flag engine** — auto-warning kalau koefisien menyimpang signifikan dari standar PUPR atau harga di atas median e-katalog.
-4. **Audit trail** — version history & comment thread per item, snapshot tiap revisi.
-5. **Tender-ready output** — Excel + PDF formatnya cocok lampiran SPSE & BAP audit.
+1. **Tiap angka jelas asalnya** — koefisien & harga material punya referensi ke standar resmi (Permen PUPR, SNI), klik untuk lihat sumbernya. Gak asal nempelin angka.
+2. **Harga ngikut daerahmu** — pasir di Batam beda sama Aceh. Harga otomatis pakai data daerah (planned: HSPK pemda + BPS regional).
+3. **Peringatan harga aneh** — kalau ada item yang melenceng jauh dari pasaran, ada warning otomatis (planned).
+4. **Riwayat perubahan** — RAB direvisi? Ada catatan kapan & apanya (planned).
+5. **Export Excel & PDF rapi** — siap kirim ke kontraktor atau lampiran kontrak (planned).
 
-Target user primer: **PPK & Tim Teknis OPD** yang harus susun RAB lulus verifikasi.
-Secondary: konsultan perencana proyek pemerintah, auditor & APIP sebagai validator.
+Target user:
+
+- **Pemilik rumah / proyek pribadi** — mau bangun atau renovasi, mau tau detail biar gak ditipu kontraktor.
+- **Konsultan perencana** — bikin RAB profesional dengan referensi yang bisa dipertanggungjawabkan ke klien.
+- **Kontraktor / estimator** — submit penawaran konsisten dan transparan.
+
+Secondary (bonus): PPK proyek pemerintah, auditor / APIP — output formatnya kompatibel dokumen tender SPSE.
 
 ## Roadmap
 

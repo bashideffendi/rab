@@ -95,8 +95,8 @@ function EmptyState() {
         Belum ada project
       </h2>
       <p className="mb-6 max-w-sm text-sm text-muted-foreground">
-        Mulai dengan bikin project pertama. Tiap project punya WBS sendiri dan
-        item RAB yang trace ke regulasi sumbernya.
+        Mulai bikin project pertama. Tiap project punya struktur pekerjaan
+        sendiri dan rincian RAB yang transparan.
       </p>
       <Link href="/projects/new">
         <Button variant="primary">+ Project Baru</Button>
@@ -116,8 +116,8 @@ function ProjectsTable({
         <thead className="bg-muted/40 text-left font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
           <tr>
             <th className="px-4 py-3 font-medium">Nama</th>
-            <th className="px-4 py-3 font-medium">OPD</th>
-            <th className="px-4 py-3 font-medium">Owner</th>
+            <th className="px-4 py-3 font-medium">Klien</th>
+            <th className="px-4 py-3 font-medium">PIC</th>
             <th className="px-4 py-3 font-medium">Status</th>
             <th className="px-4 py-3 text-right font-medium">Updated</th>
           </tr>

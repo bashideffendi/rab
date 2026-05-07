@@ -28,33 +28,33 @@ export function NewProjectForm() {
           name="name"
           autoFocus
           maxLength={200}
-          placeholder="Contoh: Pembangunan Jembatan Sungai X"
+          placeholder="Mis. Renovasi Rumah Jl. Mawar atau Bangun Ruko 2 Lantai"
           aria-invalid={state.fieldErrors?.name ? true : undefined}
         />
       </Field>
 
       <Field
-        label="OPD / Instansi"
+        label="Klien / Pemilik Proyek"
         htmlFor="opd"
-        hint="Optional. Contoh: Dinas PUPR Kota Batam."
+        hint="Opsional. Buat siapa RAB ini? Kalau bikin sendiri, kosongin aja."
       >
         <Input
           id="opd"
           name="opd"
-          placeholder="Dinas PUPR Kota Batam"
+          placeholder="Mis. Bapak Andi, atau PT Maju Bersama"
           maxLength={200}
         />
       </Field>
 
       <Field
-        label="PPK / Owner"
+        label="Penanggung Jawab"
         htmlFor="ownerName"
-        hint="Optional. Nama PPK atau penanggung jawab."
+        hint="Opsional. Nama yang nyusun atau PIC proyek."
       >
         <Input
           id="ownerName"
           name="ownerName"
-          placeholder="Nama lengkap PPK"
+          placeholder="Mis. nama kamu sendiri"
           maxLength={200}
         />
       </Field>
@@ -62,7 +62,7 @@ export function NewProjectForm() {
       <Field
         label="Catatan"
         htmlFor="notes"
-        hint="Optional. Tujuan, lokasi singkat, sumber dana."
+        hint="Opsional. Tujuan singkat, lokasi, atau hal penting lain."
       >
         <Textarea id="notes" name="notes" rows={3} maxLength={2000} />
       </Field>

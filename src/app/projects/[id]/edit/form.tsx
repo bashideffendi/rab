@@ -41,7 +41,11 @@ export function EditProjectForm({ project }: { project: ProjectRow }) {
         </Select>
       </Field>
 
-      <Field label="OPD / Instansi" htmlFor="opd">
+      <Field
+        label="Klien / Pemilik Proyek"
+        htmlFor="opd"
+        hint="Buat siapa RAB ini? Kosongin aja kalau bikin sendiri."
+      >
         <Input
           id="opd"
           name="opd"
@@ -50,7 +54,11 @@ export function EditProjectForm({ project }: { project: ProjectRow }) {
         />
       </Field>
 
-      <Field label="PPK / Owner" htmlFor="ownerName">
+      <Field
+        label="Penanggung Jawab"
+        htmlFor="ownerName"
+        hint="Nama yang nyusun atau PIC proyek."
+      >
         <Input
           id="ownerName"
           name="ownerName"

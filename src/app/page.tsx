@@ -31,20 +31,22 @@ export default function Home() {
               RAB Online &mdash; Indonesia
             </p>
             <h1 className="text-3xl font-bold leading-tight tracking-tight break-words md:text-5xl">
-              Hitung RAB yang bisa{" "}
-              <span className="text-accent">dipertanggung&shy;jawabkan.</span>
+              Hitung RAB rumah, renovasi,
+              <br />
+              atau proyek konstruksi —{" "}
+              <span className="text-accent">rinci & transparan.</span>
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-relaxed text-muted-foreground">
-              Tiap koefisien & harga punya jejak ke regulasi sumbernya. Harga
-              material regional per kabupaten. Anomali ke-flag otomatis. Output
-              kompatibel dokumen tender pemerintah.
+              Tiap angka jelas asalnya. Harga ngikut daerahmu. Peringatan
+              otomatis kalau ada item yang harganya gak wajar. Buat siapa aja
+              — pemilik rumah, konsultan, kontraktor.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <a
                 href="/projects"
                 className="rounded border border-accent bg-accent px-5 py-2.5 text-sm font-medium text-black hover:bg-accent/90"
               >
-                Buka Workspace &rarr;
+                Mulai Bikin RAB &rarr;
               </a>
               <a
                 href="#fitur"
@@ -62,7 +64,7 @@ export default function Home() {
         >
           <div className="mx-auto max-w-6xl">
             <h2 className="mb-12 text-2xl font-semibold tracking-tight">
-              5 hal yang gak ada di tools RAB lain
+              Apa bedanya sama kalkulator RAB lain?
             </h2>
             <div className="grid gap-px overflow-hidden rounded border border-border bg-border md:grid-cols-2 lg:grid-cols-3">
               {features.map((f, i) => (
@@ -170,49 +172,49 @@ export default function Home() {
 
 const features = [
   {
-    tag: "Trace",
-    title: "Trace-to-source",
-    desc: "Tiap koefisien & harga ada link langsung ke Permen PUPR, SNI, atau e-katalog LKPP. Klik, lihat sumbernya.",
+    tag: "Transparan",
+    title: "Tiap angka jelas asalnya",
+    desc: "Koefisien & harga punya referensi ke standar resmi (Permen PUPR, SNI). Klik, lihat sumbernya — gak asal nempelin angka.",
   },
   {
-    tag: "Region",
-    title: "Harga regional per kabupaten",
-    desc: "Harga material dari HSPK pemda + BPS regional. Bukan flat nasional yang gak masuk akal.",
+    tag: "Lokal",
+    title: "Harga ngikut daerahmu",
+    desc: "Pasir di Batam beda sama di Aceh, semen juga. Harga otomatis pakai data daerah, bukan flat nasional.",
   },
   {
-    tag: "Anomaly",
-    title: "Red flag engine",
-    desc: "Auto-warning kalau koefisien menyimpang dari standar PUPR atau harga di atas median e-katalog.",
+    tag: "Cek wajar",
+    title: "Peringatan harga aneh",
+    desc: "Kalau ada item yang harganya melenceng jauh dari pasaran, ada warning otomatis. Biar gak ke-mark-up tanpa sadar.",
   },
   {
-    tag: "Audit",
-    title: "Audit trail native",
-    desc: "Version history, snapshot tiap revisi, comment thread per item. Reviewer lihat siapa ubah apa.",
+    tag: "Riwayat",
+    title: "Catatan perubahan",
+    desc: "RAB direvisi? Ada riwayat kapan & apanya yang diubah. Kalau ditanya pas meeting, gampang jawabnya.",
   },
   {
-    tag: "Output",
-    title: "Tender-ready export",
-    desc: "Excel + PDF dengan kolom referensi regulasi siap lampiran SPSE atau dokumen audit BPK.",
+    tag: "Export",
+    title: "Excel & PDF rapi",
+    desc: "Hasil siap dikirim ke kontraktor, dilampirin ke kontrak, atau dibawa ke meeting. Format profesional, langsung pakai.",
   },
   {
     tag: "Soon",
-    title: "SiRUP integration",
-    desc: "Tarik paket dari SiRUP, generate template RAB-nya. Ekosistem dengan tools audit lain.",
+    title: "Template proyek",
+    desc: "Mulai dari template umum (rumah 1 lantai, renovasi dapur, ruko 2 lantai) biar gak mulai dari nol.",
   },
 ];
 
 const audiences = [
   {
-    role: "PPK & Tim Teknis OPD",
-    note: "Susun RAB yang lulus verifikasi tanpa takut salah audit. Tiap angka udah ada referensi regulasinya.",
+    role: "Pemilik Rumah / Proyek",
+    note: "Mau bangun atau renovasi? Bikin RAB sendiri biar tau detailnya sebelum kontraktor masuk. Lebih kebal dari mark-up.",
   },
   {
     role: "Konsultan Perencana",
-    note: "Bikin RAB proyek pemerintah dengan format yang langsung kompatibel dokumen tender.",
+    note: "Bikin RAB profesional dengan referensi yang bisa kamu pertanggungjawabkan ke klien. Hemat waktu, gak harus mulai dari Excel kosong.",
   },
   {
-    role: "Auditor & APIP",
-    note: "Validasi RAB klien dengan referensi regulasi yang udah ke-link, plus indikator anomali otomatis.",
+    role: "Kontraktor & Estimator",
+    note: "Submit penawaran konsisten dan transparan. Klien lebih percaya kalau angkanya bisa dijelasin sumbernya.",
   },
 ];
 
@@ -221,18 +223,18 @@ const roadmap = [
     version: "v1",
     status: "now" as const,
     items:
-      "Project + WBS, AHSP database baseline (PUPR + SNI), calculator inti, trace-to-source, export Excel.",
+      "Bikin project, struktur pekerjaan, kalkulator RAB pakai AHSP standar atau item custom, total otomatis.",
   },
   {
     version: "v2",
     status: "next" as const,
     items:
-      "Regional pricing per kabupaten, red flag engine rule-based, audit trail & version history.",
+      "Harga material per daerah (kabupaten/kota), peringatan harga aneh otomatis, riwayat perubahan.",
   },
   {
     version: "v3",
     status: "next" as const,
     items:
-      "PDF tender-ready, SiRUP integration, multi-user collaboration, comment thread.",
+      "Export Excel & PDF rapi, template proyek umum (rumah, renovasi, ruko), berbagi RAB ke kontraktor.",
   },
 ];

@@ -13,9 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "RABin — Hitung RAB yang bisa dipertanggungjawabkan",
+  title: "RABin — Hitung RAB rumah, renovasi, atau proyek konstruksi",
   description:
-    "RAB online dengan trace-to-source ke regulasi PUPR/SNI, harga material regional per kabupaten, dan red flag engine. Untuk PPK, konsultan, auditor.",
+    "Kalkulator RAB online buat siapa aja: pemilik rumah, konsultan, kontraktor. Tiap angka jelas asalnya, harga ngikut daerahmu, peringatan harga aneh otomatis.",
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
   ),

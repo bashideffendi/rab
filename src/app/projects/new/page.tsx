@@ -19,7 +19,7 @@ export default function NewProjectPage() {
             Project Baru
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Cuma butuh nama untuk mulai. Detail lain bisa diisi belakangan.
+            Cuma butuh nama. Sisanya opsional, bisa diisi belakangan.
           </p>
         </header>
         <NewProjectForm />
