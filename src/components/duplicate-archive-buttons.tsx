@@ -6,6 +6,12 @@ import {
   toggleArchiveProject,
 } from "@/app/projects/actions";
 import { Button } from "@/components/ui/button";
+import { Tooltip } from "@/components/ui/tooltip";
+import {
+  ArchiveIcon,
+  ArchiveRestoreIcon,
+  CopyIcon,
+} from "@/components/ui/icons";
 
 export function DuplicateButton({
   id,
@@ -15,7 +21,26 @@ export function DuplicateButton({
   compact?: boolean;
 }) {
   const [pending, start] = useTransition();
-  return (
+  const button = (
+    <Button
+      type="submit"
+      variant={compact ? "ghost" : "secondary"}
+      size="sm"
+      disabled={pending}
+      className={compact ? "h-8 w-8 px-0" : undefined}
+      aria-label="Duplikasi project"
+    >
+      {compact ? (
+        <CopyIcon size={16} />
+      ) : pending ? (
+        "Menggandakan…"
+      ) : (
+        "Duplikat"
+      )}
+    </Button>
+  );
+
+  const form = (
     <form
       action={(fd) => {
         start(() => {
@@ -24,18 +49,18 @@ export function DuplicateButton({
       }}
     >
       <input type="hidden" name="id" value={id} />
-      <Button
-        type="submit"
-        variant={compact ? "ghost" : "secondary"}
-        size="sm"
-        disabled={pending}
-        className={compact ? "px-2.5" : undefined}
-        title="Duplikasi project beserta WBS dan item RAB"
-      >
-        {pending ? "Menggandakan…" : "Duplikat"}
-      </Button>
+      {button}
     </form>
   );
+
+  if (compact) {
+    return (
+      <Tooltip content={pending ? "Menggandakan…" : "Duplikat project"}>
+        {form}
+      </Tooltip>
+    );
+  }
+  return form;
 }
 
 export function ArchiveButton({
@@ -48,7 +73,35 @@ export function ArchiveButton({
   compact?: boolean;
 }) {
   const [pending, start] = useTransition();
-  return (
+  const label = isArchived ? "Aktifkan" : "Arsipkan";
+  const tooltipText = isArchived
+    ? "Pindahkan ke daftar aktif"
+    : "Arsipkan project (data tetap tersimpan)";
+
+  const button = (
+    <Button
+      type="submit"
+      variant={compact ? "ghost" : "secondary"}
+      size="sm"
+      disabled={pending}
+      className={compact ? "h-8 w-8 px-0" : undefined}
+      aria-label={label}
+    >
+      {compact ? (
+        isArchived ? (
+          <ArchiveRestoreIcon size={16} />
+        ) : (
+          <ArchiveIcon size={16} />
+        )
+      ) : pending ? (
+        "…"
+      ) : (
+        label
+      )}
+    </Button>
+  );
+
+  const form = (
     <form
       action={(fd) => {
         start(() => {
@@ -62,20 +115,12 @@ export function ArchiveButton({
         name="archive"
         value={isArchived ? "false" : "true"}
       />
-      <Button
-        type="submit"
-        variant={compact ? "ghost" : "secondary"}
-        size="sm"
-        disabled={pending}
-        className={compact ? "px-2.5" : undefined}
-        title={
-          isArchived
-            ? "Pindahkan kembali ke daftar aktif"
-            : "Arsipkan project (data tetap tersimpan)"
-        }
-      >
-        {pending ? "…" : isArchived ? "Aktifkan" : "Arsipkan"}
-      </Button>
+      {button}
     </form>
   );
+
+  if (compact) {
+    return <Tooltip content={tooltipText}>{form}</Tooltip>;
+  }
+  return form;
 }

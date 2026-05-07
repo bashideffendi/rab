@@ -9,6 +9,8 @@ import {
   ArchiveButton,
 } from "@/components/duplicate-archive-buttons";
 import { DeleteProjectButton } from "@/components/delete-project-button";
+import { Tooltip } from "@/components/ui/tooltip";
+import { PencilIcon } from "@/components/ui/icons";
 import { formatDate } from "@/lib/utils";
 import { requireUser } from "@/lib/auth";
 import { TemplatesGallery } from "./templates-gallery";
@@ -233,17 +235,19 @@ function ProjectsTable({
               </td>
               <td className="px-4 py-3">
                 <div className="flex items-center justify-end gap-0.5">
-                  <Link href={`/projects/${p.id}/edit`}>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="px-2.5"
-                      title="Edit data project"
-                    >
-                      Edit
-                    </Button>
-                  </Link>
+                  <Tooltip content="Edit data project">
+                    <Link href={`/projects/${p.id}/edit`}>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 px-0"
+                        aria-label="Edit project"
+                      >
+                        <PencilIcon size={16} />
+                      </Button>
+                    </Link>
+                  </Tooltip>
                   <DuplicateButton id={p.id} compact />
                   <ArchiveButton
                     id={p.id}

@@ -2,6 +2,8 @@
 
 import { useRef, useTransition } from "react";
 import { Button } from "@/components/ui/button";
+import { Tooltip } from "@/components/ui/tooltip";
+import { TrashIcon } from "@/components/ui/icons";
 import { deleteProject } from "@/app/projects/actions";
 
 export function DeleteProjectButton({
@@ -24,24 +26,43 @@ export function DeleteProjectButton({
     startTransition(() => formRef.current?.requestSubmit());
   }
 
-  return (
+  const button = (
+    <Button
+      type="button"
+      variant={compact ? "ghost" : "danger"}
+      size="sm"
+      onClick={handleClick}
+      disabled={pending}
+      className={
+        compact
+          ? "h-8 w-8 px-0 text-muted-foreground hover:bg-danger/10 hover:text-danger"
+          : undefined
+      }
+      aria-label="Hapus project"
+    >
+      {compact ? (
+        <TrashIcon size={16} />
+      ) : pending ? (
+        "Menghapus…"
+      ) : (
+        "Hapus"
+      )}
+    </Button>
+  );
+
+  const form = (
     <form ref={formRef} action={deleteProject}>
       <input type="hidden" name="id" value={id} />
-      <Button
-        type="button"
-        variant={compact ? "ghost" : "danger"}
-        size="sm"
-        onClick={handleClick}
-        disabled={pending}
-        className={
-          compact
-            ? "px-2.5 text-danger hover:bg-danger/10 hover:text-danger"
-            : undefined
-        }
-        title="Hapus project secara permanen"
-      >
-        {pending ? "Menghapus…" : "Hapus"}
-      </Button>
+      {button}
     </form>
   );
+
+  if (compact) {
+    return (
+      <Tooltip content={pending ? "Menghapus…" : "Hapus project"}>
+        {form}
+      </Tooltip>
+    );
+  }
+  return form;
 }
