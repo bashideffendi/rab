@@ -50,22 +50,38 @@ export default async function AIImportPage({
 
         {/* Info card: model + cara kerja */}
         <section className="mb-6 overflow-hidden rounded-xl border border-accent/30 bg-gradient-to-br from-accent/5 via-card to-card shadow-sm">
-          <div className="flex items-center gap-3 border-b border-border bg-accent/10 px-5 py-3">
-            <span className="text-2xl">🤖</span>
+          <div className="flex items-center justify-between border-b border-accent/20 bg-accent/5 px-5 py-2.5">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-accent">
+              ⚡ Powered by Anthropic
+            </span>
+            <span className="hidden font-mono text-[10px] text-muted-foreground sm:inline">
+              Vision · Tool Use · Bahasa Indonesia
+            </span>
+          </div>
+          <div className="flex items-center gap-5 px-5 py-5 md:px-6">
+            <div className="flex shrink-0 items-center justify-center rounded-2xl border border-accent/30 bg-gradient-to-br from-accent/20 to-accent/5 p-4 shadow-sm">
+              <RobotIcon />
+            </div>
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-accent">
-                Powered by Anthropic Claude
-              </p>
-              <p className="text-sm font-bold tracking-tight">
-                Claude Sonnet 4.5 — Vision + Tool Use
+              <div className="flex flex-wrap items-baseline gap-3">
+                <h2 className="text-xl font-bold tracking-tight md:text-2xl">
+                  Claude Sonnet 4.5
+                </h2>
+                <span className="rounded-md border border-accent/40 bg-accent/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-accent">
+                  Vision AI
+                </span>
+              </div>
+              <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+                Model multimodal terbaru Anthropic untuk membaca gambar kerja
+                konstruksi dan menghasilkan struktur RAB yang siap di-review.
               </p>
             </div>
           </div>
-          <div className="grid gap-4 p-5 md:grid-cols-3">
+          <div className="grid gap-4 border-t border-border p-5 md:grid-cols-3 md:p-6">
             <InfoBlock
               num="01"
               title="Baca gambar kerja"
-              desc="Sonnet menganalisa denah, tampak, potongan, dan detail. Membaca dimensi tertulis (panjang, lebar, tinggi) untuk hitung volume kasar."
+              desc="Sonnet menganalisa denah, tampak, potongan, dan detail. Membaca dimensi tertulis (panjang, lebar, tinggi) untuk menghitung volume kasar."
             />
             <InfoBlock
               num="02"
@@ -141,6 +157,93 @@ export default async function AIImportPage({
         </section>
       </section>
     </AppShell>
+  );
+}
+
+function RobotIcon() {
+  return (
+    <svg
+      width="48"
+      height="48"
+      viewBox="0 0 48 48"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+      className="text-accent"
+    >
+      <line
+        x1="24"
+        y1="4"
+        x2="24"
+        y2="9"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+      />
+      <circle cx="24" cy="3.5" r="1.8" fill="currentColor" />
+      <rect
+        x="8"
+        y="9"
+        width="32"
+        height="26"
+        rx="6"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        fill="currentColor"
+        fillOpacity="0.08"
+      />
+      <circle cx="17" cy="20" r="2.6" fill="currentColor" />
+      <circle cx="31" cy="20" r="2.6" fill="currentColor" />
+      <line
+        x1="17"
+        y1="28"
+        x2="31"
+        y2="28"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+      />
+      <rect
+        x="3"
+        y="17"
+        width="4"
+        height="10"
+        rx="1.5"
+        stroke="currentColor"
+        strokeWidth="2"
+        fill="currentColor"
+        fillOpacity="0.15"
+      />
+      <rect
+        x="41"
+        y="17"
+        width="4"
+        height="10"
+        rx="1.5"
+        stroke="currentColor"
+        strokeWidth="2"
+        fill="currentColor"
+        fillOpacity="0.15"
+      />
+      <line
+        x1="13"
+        y1="38"
+        x2="35"
+        y2="38"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+      />
+      <line
+        x1="20"
+        y1="42"
+        x2="28"
+        y2="42"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+      />
+    </svg>
   );
 }
 

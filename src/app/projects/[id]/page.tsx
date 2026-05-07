@@ -141,10 +141,10 @@ export default async function ProjectDetailPage({
             )}
           </div>
 
-          {/* Primary actions */}
+          {/* View / Export actions — semua secondary biar konsisten */}
           <div className="flex flex-wrap gap-2 border-t border-border bg-muted/20 px-6 py-3 md:px-7">
             <a href={`/api/projects/${project.id}/export`} download>
-              <Button variant="primary" size="sm">
+              <Button variant="secondary" size="sm">
                 ↓ Excel
               </Button>
             </a>
@@ -153,13 +153,8 @@ export default async function ProjectDetailPage({
               target="_blank"
               rel="noopener"
             >
-              <Button variant="primary" size="sm">
+              <Button variant="secondary" size="sm">
                 ↓ PDF
-              </Button>
-            </Link>
-            <Link href={`/projects/${project.id}/ai-import`}>
-              <Button variant="primary" size="sm">
-                ✨ AI Generate
               </Button>
             </Link>
             <Link href={`/projects/${project.id}/schedule`}>
@@ -174,10 +169,10 @@ export default async function ProjectDetailPage({
             </Link>
           </div>
 
-          {/* Secondary actions */}
+          {/* Manage actions — semua secondary, delete di kanan */}
           <div className="flex flex-wrap items-center gap-2 border-t border-border px-6 py-3 md:px-7">
             <Link href={`/projects/${project.id}/edit`}>
-              <Button variant="ghost" size="sm">
+              <Button variant="secondary" size="sm">
                 Edit
               </Button>
             </Link>
@@ -274,36 +269,49 @@ export default async function ProjectDetailPage({
           href={`/projects/${project.id}/ai-import`}
           className="group mt-10 block overflow-hidden rounded-xl border border-accent/30 bg-gradient-to-br from-accent/10 via-accent/5 to-card shadow-sm transition-all hover:border-accent/60 hover:shadow-md"
         >
-          <div className="flex flex-col gap-5 p-5 md:flex-row md:items-center md:p-6">
-            <div className="flex shrink-0 items-center justify-center rounded-lg bg-accent/15 p-3 text-3xl md:h-16 md:w-16">
-              ✨
+          {/* Branding header strip */}
+          <div className="flex items-center justify-between border-b border-accent/20 bg-accent/5 px-6 py-2.5">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-accent">
+              ⚡ Powered by Anthropic
+            </span>
+            <span className="hidden font-mono text-[10px] text-muted-foreground sm:inline">
+              Vision · Tool Use · Bahasa Indonesia
+            </span>
+          </div>
+
+          <div className="flex flex-col gap-5 p-6 md:flex-row md:items-center md:p-7">
+            {/* Robot icon panel */}
+            <div className="flex shrink-0 items-center justify-center rounded-2xl border border-accent/30 bg-gradient-to-br from-accent/20 to-accent/5 p-4 shadow-sm md:h-24 md:w-24">
+              <RobotIcon />
             </div>
+
             <div className="flex-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-full border border-accent/40 bg-card px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-accent">
-                  AI Generate
-                </span>
-                <span className="font-mono text-[10px] text-muted-foreground">
-                  Claude Sonnet 4.5 · Vision
+              {/* Model name — emphasis utama */}
+              <div className="flex flex-wrap items-baseline gap-3">
+                <h2 className="text-xl font-bold tracking-tight md:text-2xl">
+                  Claude Sonnet 4.5
+                </h2>
+                <span className="rounded-md border border-accent/40 bg-accent/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-accent">
+                  Vision AI
                 </span>
               </div>
-              <h2 className="mt-1.5 text-base font-bold tracking-tight md:text-lg">
-                Generate draft WBS & item RAB dari gambar kerja PDF
-              </h2>
-              <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                Upload denah, tampak, dan potongan dalam satu PDF — AI baca
-                dimensi tertulis, susun WBS standar, dan estimasi volume per
-                item. Cocokkan dengan AHSP, lalu review per baris sebelum
-                disimpan ke project.
+
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground md:text-base">
+                Generate draft WBS dan item RAB langsung dari gambar kerja
+                PDF. AI baca dimensi tertulis di denah, tampak, dan potongan,
+                lalu susun struktur pekerjaan standar dengan estimasi volume
+                per item.
               </p>
-              <div className="mt-3 flex flex-wrap items-center gap-3 text-xs">
+
+              <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs">
                 <FeatureChip text="Denah · Tampak · Potongan" />
                 <FeatureChip text="Auto WBS standar" />
                 <FeatureChip text="Match AHSP otomatis" />
               </div>
             </div>
+
             <div className="shrink-0">
-              <span className="inline-flex items-center gap-2 rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white shadow-sm transition-transform group-hover:translate-x-0.5">
+              <span className="inline-flex items-center gap-2 rounded-md bg-accent px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-transform group-hover:translate-x-0.5">
                 Mulai Generate
                 <span aria-hidden="true">→</span>
               </span>
@@ -346,6 +354,99 @@ function MetaCard({
         {value ?? <span className="italic text-muted-foreground">—</span>}
       </p>
     </div>
+  );
+}
+
+function RobotIcon() {
+  return (
+    <svg
+      width="48"
+      height="48"
+      viewBox="0 0 48 48"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+      className="text-accent"
+    >
+      {/* Antenna */}
+      <line
+        x1="24"
+        y1="4"
+        x2="24"
+        y2="9"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+      />
+      <circle cx="24" cy="3.5" r="1.8" fill="currentColor" />
+      {/* Head */}
+      <rect
+        x="8"
+        y="9"
+        width="32"
+        height="26"
+        rx="6"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        fill="currentColor"
+        fillOpacity="0.08"
+      />
+      {/* Eyes */}
+      <circle cx="17" cy="20" r="2.6" fill="currentColor" />
+      <circle cx="31" cy="20" r="2.6" fill="currentColor" />
+      {/* Mouth */}
+      <line
+        x1="17"
+        y1="28"
+        x2="31"
+        y2="28"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+      />
+      {/* Side ears */}
+      <rect
+        x="3"
+        y="17"
+        width="4"
+        height="10"
+        rx="1.5"
+        stroke="currentColor"
+        strokeWidth="2"
+        fill="currentColor"
+        fillOpacity="0.15"
+      />
+      <rect
+        x="41"
+        y="17"
+        width="4"
+        height="10"
+        rx="1.5"
+        stroke="currentColor"
+        strokeWidth="2"
+        fill="currentColor"
+        fillOpacity="0.15"
+      />
+      {/* Body strip */}
+      <line
+        x1="13"
+        y1="38"
+        x2="35"
+        y2="38"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+      />
+      <line
+        x1="20"
+        y1="42"
+        x2="28"
+        y2="42"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+      />
+    </svg>
   );
 }
 
