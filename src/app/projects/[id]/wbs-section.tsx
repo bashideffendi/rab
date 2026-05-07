@@ -51,11 +51,11 @@ export async function WbsSection({ projectId }: { projectId: string }) {
     <section className="mt-10">
       <header className="mb-4 flex items-baseline justify-between">
         <div>
-          <p className="text-sm font-semibold text-accent">
-            WBS &mdash; Work Breakdown Structure
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-accent">
+            Work Breakdown Structure
           </p>
-          <h2 className="text-lg font-semibold tracking-tight">
-            Struktur pekerjaan
+          <h2 className="mt-1 text-lg font-bold tracking-tight">
+            Struktur Pekerjaan
           </h2>
         </div>
         <span className="font-mono text-xs text-muted-foreground tabular-nums">
@@ -68,9 +68,11 @@ export async function WbsSection({ projectId }: { projectId: string }) {
           {dbError}
         </div>
       ) : items.length === 0 ? (
-        <p className="mb-4 rounded border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-          Belum ada item WBS. Mulai dengan code level-1 (mis. <code>1</code>),
-          baru lanjut ke sub-item (<code>1.1</code>, <code>1.2</code>).
+        <p className="mb-4 rounded-md border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+          Belum ada struktur WBS. Mulai dengan kode level pertama (
+          <code className="font-mono">1</code>), kemudian lanjutkan ke
+          sub-item (<code className="font-mono">1.1</code>,{" "}
+          <code className="font-mono">1.2</code>, dst).
         </p>
       ) : (
         <ol className="mb-4 overflow-hidden rounded border border-border">

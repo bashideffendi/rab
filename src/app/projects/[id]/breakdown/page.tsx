@@ -185,13 +185,15 @@ export default async function BreakdownPage({
 
         <header className="mt-2 mb-6 flex items-start justify-between gap-4">
           <div>
-            <p className="text-sm font-semibold text-accent">Breakdown</p>
-            <h1 className="text-2xl font-semibold tracking-tight">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-accent">
+              Breakdown
+            </p>
+            <h1 className="mt-1.5 text-2xl font-bold tracking-tight">
               Kebutuhan Material & Tenaga
             </h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Total agregat semua komponen dari item RAB. Berguna buat belanja
-              material + estimasi kebutuhan tenaga.
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              Agregat seluruh komponen dari item RAB. Berguna untuk perencanaan
+              belanja material dan estimasi kebutuhan tenaga kerja.
             </p>
           </div>
           <a href={`/api/projects/${project.id}/export`} download>
@@ -203,8 +205,8 @@ export default async function BreakdownPage({
 
         {rows.length === 0 ? (
           <p className="rounded-md border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-            Belum ada item AHSP di project ini. Tambah item RAB pakai mode AHSP
-            di halaman project.
+            Belum ada item AHSP di project ini. Tambahkan item RAB
+            menggunakan mode AHSP di halaman project terlebih dahulu.
           </p>
         ) : (
           <>

@@ -33,11 +33,15 @@ export function WbsAddForm({ projectId }: { projectId: string }) {
       className="rounded border border-border bg-muted/30 p-4"
     >
       <p className="mb-3 text-sm font-medium text-muted-foreground">
-        + Tambah item
+        + Tambah Item WBS
       </p>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
         <div className="sm:w-32">
-          <Field label="Code" htmlFor="wbs-code" error={state.fieldErrors?.code}>
+          <Field
+            label="Kode"
+            htmlFor="wbs-code"
+            error={state.fieldErrors?.code}
+          >
             <Input
               ref={codeRef}
               id="wbs-code"
@@ -51,14 +55,14 @@ export function WbsAddForm({ projectId }: { projectId: string }) {
         </div>
         <div className="flex-1">
           <Field
-            label="Nama pekerjaan"
+            label="Nama Pekerjaan"
             htmlFor="wbs-name"
             error={state.fieldErrors?.name}
           >
             <Input
               id="wbs-name"
               name="name"
-              placeholder="Contoh: Galian tanah pondasi"
+              placeholder="Contoh: Galian Tanah Pondasi"
               maxLength={200}
               onBlur={titleCaseOnBlur}
             />

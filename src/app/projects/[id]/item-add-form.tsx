@@ -80,7 +80,7 @@ export function ItemAddForm({
     >
       <div className="mb-3 flex items-center justify-between">
         <p className="text-sm font-medium text-muted-foreground">
-          + Tambah item pekerjaan
+          + Tambah Item Pekerjaan
         </p>
         {ahspHasData && <ModeToggle mode={mode} onChange={setMode} />}
       </div>
@@ -112,7 +112,7 @@ export function ItemAddForm({
               label="AHSP"
               htmlFor="item-ahsp"
               error={state.fieldErrors?.ahspItemId}
-              hint="Cari berdasarkan nama atau kode. Nama, satuan, harga di-snapshot saat disimpan."
+              hint="Cari berdasarkan nama atau kode. Nama, satuan, dan harga di-snapshot saat disimpan."
             >
               <AhspPicker
                 id="item-ahsp"

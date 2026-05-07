@@ -4,6 +4,11 @@ import { db, schema } from "@/db";
 import { AppShell } from "@/components/app-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  DuplicateButton,
+  ArchiveButton,
+} from "@/components/duplicate-archive-buttons";
+import { DeleteProjectButton } from "@/components/delete-project-button";
 import { formatDate } from "@/lib/utils";
 import { requireUser } from "@/lib/auth";
 import { TemplatesGallery } from "./templates-gallery";
@@ -18,6 +23,7 @@ async function loadProjects(userId: string, archived: boolean) {
       opd: schema.projects.opd,
       ownerName: schema.projects.ownerName,
       status: schema.projects.status,
+      isArchived: schema.projects.isArchived,
       updatedAt: schema.projects.updatedAt,
     })
     .from(schema.projects)
@@ -59,15 +65,18 @@ export default async function ProjectsPage({
             <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-accent">
               Workspace
             </p>
-            <h1 className="text-3xl font-bold tracking-tight">
-              Project Saya
+            <h1 className="flex items-center gap-3 text-3xl font-bold tracking-tight">
+              {isArchivedTab ? "Arsip Project" : "Project Saya"}
+              {projects.length > 0 && (
+                <span className="rounded-md border border-border bg-muted/50 px-2.5 py-1 text-base font-semibold tabular-nums text-muted-foreground">
+                  {projects.length}
+                </span>
+              )}
             </h1>
             <p className="mt-1.5 text-sm text-muted-foreground">
               {isArchivedTab
-                ? `${projects.length} project diarsipkan.`
-                : projects.length === 0
-                  ? "Belum ada project. Mulai dengan bikin project pertama."
-                  : `${projects.length} project aktif.`}
+                ? "Project yang sudah diarsipkan. Bisa diaktifkan kembali kapan saja."
+                : "Kelola semua project RAB dalam satu workspace."}
             </p>
           </div>
           <Link href="/projects/new">
@@ -106,7 +115,7 @@ export default async function ProjectsPage({
 
             {!isArchivedTab && <TemplatesGallery />}
             {projects.length === 0 ? (
-              <EmptyState />
+              <EmptyState isArchived={isArchivedTab} />
             ) : (
               <ProjectsTable projects={projects} />
             )}
@@ -135,20 +144,34 @@ npm run db:push`}
   );
 }
 
-function EmptyState() {
+function EmptyState({ isArchived }: { isArchived: boolean }) {
+  if (isArchived) {
+    return (
+      <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border bg-muted/20 py-20 text-center">
+        <span className="mb-3 text-4xl">📦</span>
+        <h2 className="mb-2 text-lg font-bold tracking-tight">
+          Belum ada project diarsipkan
+        </h2>
+        <p className="max-w-md text-sm leading-relaxed text-muted-foreground">
+          Project yang diarsipkan dari tab Aktif akan muncul di sini. Arsip
+          membantu menjaga workspace tetap rapi tanpa menghapus data.
+        </p>
+      </div>
+    );
+  }
   return (
     <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border bg-muted/20 py-20 text-center">
       <span className="mb-3 text-4xl">📋</span>
       <h2 className="mb-2 text-lg font-bold tracking-tight">
-        Mulai project pertama
+        Workspace masih kosong
       </h2>
       <p className="mb-6 max-w-md text-sm leading-relaxed text-muted-foreground">
         Setiap project memiliki struktur pekerjaan (WBS) dan rincian RAB
-        sendiri. Pilih item dari library AHSP atau bikin custom — total dan
-        rekapitulasi otomatis terhitung.
+        sendiri. Pilih item dari library AHSP atau buat custom — total dan
+        rekapitulasi terhitung otomatis.
       </p>
       <Link href="/projects/new">
-        <Button variant="primary">+ Buat Project Baru</Button>
+        <Button variant="primary">+ Buat Project Pertama</Button>
       </Link>
     </div>
   );
@@ -164,11 +187,12 @@ function ProjectsTable({
       <table className="w-full text-sm">
         <thead className="bg-muted/50 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           <tr>
-            <th className="px-4 py-3">Nama Project</th>
-            <th className="px-4 py-3">Klien</th>
-            <th className="px-4 py-3">PIC</th>
-            <th className="px-4 py-3">Status</th>
-            <th className="px-4 py-3 text-right">Diperbarui</th>
+            <th className="px-4 py-3">Project</th>
+            <th className="hidden px-4 py-3 lg:table-cell">Status</th>
+            <th className="hidden px-4 py-3 text-right md:table-cell">
+              Diperbarui
+            </th>
+            <th className="px-4 py-3 text-right">Aksi</th>
           </tr>
         </thead>
         <tbody>
@@ -180,22 +204,58 @@ function ProjectsTable({
               <td className="px-4 py-3">
                 <Link
                   href={`/projects/${p.id}`}
-                  className="font-medium text-foreground hover:text-accent"
+                  className="block hover:text-accent"
                 >
-                  {p.name}
+                  <p className="font-medium text-foreground">{p.name}</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    {p.opd ?? "—"}
+                    {p.ownerName ? (
+                      <>
+                        <span className="mx-1.5">·</span>
+                        PIC: {p.ownerName}
+                      </>
+                    ) : null}
+                  </p>
                 </Link>
+                {/* Mobile: status + date inline since columns hidden */}
+                <div className="mt-1.5 flex items-center gap-3 text-xs lg:hidden">
+                  <Badge tone={p.status}>{p.status}</Badge>
+                  <span className="font-mono text-muted-foreground tabular-nums">
+                    {formatDate(p.updatedAt)}
+                  </span>
+                </div>
               </td>
-              <td className="px-4 py-3 text-muted-foreground">
-                {p.opd ?? "—"}
-              </td>
-              <td className="px-4 py-3 text-muted-foreground">
-                {p.ownerName ?? "—"}
-              </td>
-              <td className="px-4 py-3">
+              <td className="hidden px-4 py-3 lg:table-cell">
                 <Badge tone={p.status}>{p.status}</Badge>
               </td>
-              <td className="px-4 py-3 text-right font-mono text-xs text-muted-foreground tabular-nums">
+              <td className="hidden px-4 py-3 text-right font-mono text-xs text-muted-foreground tabular-nums md:table-cell">
                 {formatDate(p.updatedAt)}
+              </td>
+              <td className="px-4 py-3">
+                <div className="flex items-center justify-end gap-0.5">
+                  <Link href={`/projects/${p.id}/edit`}>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="px-2.5"
+                      title="Edit data project"
+                    >
+                      Edit
+                    </Button>
+                  </Link>
+                  <DuplicateButton id={p.id} compact />
+                  <ArchiveButton
+                    id={p.id}
+                    isArchived={p.isArchived}
+                    compact
+                  />
+                  <DeleteProjectButton
+                    id={p.id}
+                    projectName={p.name}
+                    compact
+                  />
+                </div>
               </td>
             </tr>
           ))}

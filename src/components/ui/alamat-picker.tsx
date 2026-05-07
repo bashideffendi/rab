@@ -143,7 +143,8 @@ export function AlamatPicker({
           )}
           {!loading && results.length === 0 && value.trim().length >= 4 && (
             <div className="px-3 py-3 text-xs text-muted-foreground">
-              Tidak ketemu di peta. Coba nama lain atau ketik manual aja.
+              Lokasi tidak ditemukan di peta. Coba kata kunci lain atau
+              ketikkan alamat secara manual.
             </div>
           )}
           {!loading && results.length > 0 && (
@@ -165,8 +166,8 @@ export function AlamatPicker({
             </ul>
           )}
           <div className="border-t border-border bg-muted/30 px-3 py-1.5 text-[10px] italic text-muted-foreground">
-            Pakai data OpenStreetMap. Hasil mungkin gak persis — pilih yg
-            paling deket atau ketik manual.
+            Sumber data: OpenStreetMap. Hasil mungkin tidak presisi — pilih
+            yang paling dekat atau ketikkan secara manual.
           </div>
         </div>
       )}

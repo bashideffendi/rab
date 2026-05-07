@@ -89,19 +89,23 @@ export default async function SchedulePage({
         </Link>
 
         <header className="mt-2 mb-6">
-          <p className="text-sm font-semibold text-accent">Time Schedule</p>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            Jadwal pekerjaan + Gantt Chart
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-accent">
+            Time Schedule
+          </p>
+          <h1 className="mt-1.5 text-2xl font-bold tracking-tight">
+            Jadwal Pekerjaan & Gantt Chart
           </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Atur durasi & minggu mulai per item RAB. Bobot dihitung otomatis dari
-            persentase total project. Gantt chart update real-time di bawah.
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+            Tentukan minggu mulai dan durasi pengerjaan setiap item. Bobot
+            pekerjaan dihitung otomatis berdasarkan persentase nilai terhadap
+            total project. Gantt chart diperbarui secara real-time.
           </p>
         </header>
 
         {items.length === 0 ? (
           <div className="rounded-md border border-dashed border-border bg-card p-8 text-center text-sm text-muted-foreground shadow-sm">
-            Belum ada item RAB di project ini. Tambahkan item dulu di{" "}
+            Belum ada item RAB di project ini. Tambahkan item terlebih dahulu
+            di{" "}
             <Link
               href={`/projects/${project.id}`}
               className="text-accent hover:underline"

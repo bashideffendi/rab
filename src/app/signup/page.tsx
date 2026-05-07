@@ -28,8 +28,8 @@ export default async function SignupPage({
             Daftar Gratis
           </h1>
           <p className="mb-8 text-sm text-muted-foreground">
-            Cukup email dan password. Tidak perlu kartu kredit, bisa langsung
-            mulai bikin RAB.
+            Cukup email dan password. Tidak perlu kartu kredit — langsung
+            mulai menyusun RAB setelah daftar.
           </p>
           <SignupForm />
           <p className="mt-6 text-center text-sm text-muted-foreground">

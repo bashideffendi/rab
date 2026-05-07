@@ -21,15 +21,15 @@ export async function TemplatesGallery() {
   return (
     <section className="mb-8">
       <header className="mb-4">
-        <p className="text-sm font-semibold text-accent">
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-accent">
           Template Siap Pakai
         </p>
-        <h2 className="text-lg font-semibold tracking-tight">
-          Mulai cepat dari template
+        <h2 className="mt-1 text-lg font-bold tracking-tight">
+          Mulai dengan Template
         </h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Pilih template yang mirip proyek-mu — WBS &amp; item RAB udah siap,
-          tinggal sesuaikan volume/harga.
+        <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+          Pilih template yang sesuai jenis proyek — WBS dan item RAB sudah
+          tersedia, tinggal sesuaikan volume dan harga.
         </p>
       </header>
 
@@ -37,10 +37,10 @@ export async function TemplatesGallery() {
         {templates.map((t) => (
           <div
             key={t.id}
-            className="flex flex-col rounded border border-border bg-muted/20 p-4 transition-colors hover:border-accent/40"
+            className="flex flex-col rounded-md border border-border bg-card p-4 shadow-sm transition-colors hover:border-accent/40"
           >
             <div className="mb-3 flex items-baseline justify-between">
-              <span className="text-xs font-semibold text-accent">
+              <span className="rounded border border-accent/40 bg-accent/5 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-accent">
                 {(t.category && CATEGORY_LABELS[t.category]) ??
                   t.category ??
                   "Umum"}
@@ -58,7 +58,7 @@ export async function TemplatesGallery() {
                 size="sm"
                 className="w-full"
               >
-                Pakai Template →
+                Gunakan Template →
               </Button>
             </form>
           </div>

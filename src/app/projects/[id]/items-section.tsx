@@ -179,20 +179,20 @@ export async function ItemsSection({
 
   return (
     <section className="mt-12">
-      <header className="mb-4 flex items-baseline justify-between">
+      <header className="mb-4 flex items-baseline justify-between gap-4">
         <div>
-          <p className="text-sm font-semibold text-accent">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-accent">
             Item RAB
           </p>
-          <h2 className="text-lg font-semibold tracking-tight">
-            Daftar pekerjaan
+          <h2 className="mt-1 text-lg font-bold tracking-tight">
+            Daftar Pekerjaan
           </h2>
         </div>
         <div className="text-right">
-          <p className="text-sm font-medium text-muted-foreground">
-            Total dibulatkan
+          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            Total Dibulatkan
           </p>
-          <p className="font-mono text-lg font-semibold tabular-nums text-foreground">
+          <p className="font-mono text-lg font-bold tabular-nums text-foreground">
             {formatIDR(items.length > 0 ? dibulatkan : 0)}
           </p>
         </div>
@@ -203,8 +203,9 @@ export async function ItemsSection({
           {dbError}
         </div>
       ) : items.length === 0 ? (
-        <p className="mb-4 rounded border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-          Belum ada item. Tambahkan pekerjaan pertama di bawah.
+        <p className="mb-4 rounded-md border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+          Belum ada item RAB. Tambahkan pekerjaan pertama melalui form di
+          bawah.
         </p>
       ) : (
         <div className="mb-4 overflow-x-auto rounded-md border border-border bg-card shadow-sm">
