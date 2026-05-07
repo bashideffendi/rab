@@ -86,7 +86,7 @@ export default async function ProjectDetailPage({
 
   return (
     <AppShell>
-      <section className="mx-auto max-w-3xl px-6 py-12">
+      <section className="mx-auto max-w-5xl px-6 py-8">
         <Link
           href="/projects"
           className="text-sm font-medium text-muted-foreground hover:text-accent"
@@ -94,19 +94,30 @@ export default async function ProjectDetailPage({
           ← Projects
         </Link>
 
-        <header className="mb-8 mt-2 flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight">
-              {project.name}
-            </h1>
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              <Badge tone={project.status}>{project.status}</Badge>
-              <span className="font-mono text-[10px] text-muted-foreground">
-                {project.id.slice(0, 8)}
-              </span>
+        {/* === Project Header === */}
+        <header className="mb-6 mt-3 rounded-lg border border-border bg-card p-6 shadow-sm">
+          <div className="mb-4 flex items-start justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight">
+                {project.name}
+              </h1>
+              <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                <Badge tone={project.status}>{project.status}</Badge>
+                {project.regionName && (
+                  <Badge tone="accent">📍 {project.regionName}</Badge>
+                )}
+                {project.tahun && (
+                  <Badge tone="default">Tahun {project.tahun}</Badge>
+                )}
+                <span className="font-mono text-muted-foreground">
+                  {project.id.slice(0, 8)}
+                </span>
+              </div>
             </div>
           </div>
-          <div className="flex shrink-0 flex-wrap gap-2">
+
+          {/* Primary actions */}
+          <div className="mb-3 flex flex-wrap gap-2">
             <a href={`/api/projects/${project.id}/export`} download>
               <Button variant="primary" size="sm">
                 ↓ Excel
@@ -121,24 +132,22 @@ export default async function ProjectDetailPage({
                 ↓ PDF
               </Button>
             </Link>
-            <Link
-              href={`/projects/${project.id}/ai-import`}
-              className="inline-block"
-            >
+            <Link href={`/projects/${project.id}/ai-import`}>
               <Button variant="primary" size="sm">
                 ✨ AI Generate
               </Button>
             </Link>
-            <Link
-              href={`/projects/${project.id}/breakdown`}
-              className="inline-block"
-            >
+            <Link href={`/projects/${project.id}/breakdown`}>
               <Button variant="secondary" size="sm">
-                Breakdown
+                📊 Breakdown
               </Button>
             </Link>
+          </div>
+
+          {/* Secondary actions */}
+          <div className="flex flex-wrap gap-2 border-t border-border pt-3">
             <Link href={`/projects/${project.id}/edit`}>
-              <Button variant="secondary" size="sm">
+              <Button variant="ghost" size="sm">
                 Edit
               </Button>
             </Link>
@@ -147,32 +156,51 @@ export default async function ProjectDetailPage({
               id={project.id}
               isArchived={project.isArchived}
             />
-            <DeleteProjectButton id={project.id} projectName={project.name} />
+            <div className="ml-auto">
+              <DeleteProjectButton
+                id={project.id}
+                projectName={project.name}
+              />
+            </div>
           </div>
         </header>
 
-        <div className="grid gap-px overflow-hidden rounded border border-border bg-border md:grid-cols-2">
-          <DetailRow label="Klien / Pemilik" value={project.opd} />
-          <DetailRow label="Penanggung Jawab" value={project.ownerName} />
-          <DetailRow
+        {/* === Metadata Grid === */}
+        <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <MetaCard label="Klien / Pemilik" value={project.opd} icon="👤" />
+          <MetaCard
+            label="Penanggung Jawab"
+            value={project.ownerName}
+            icon="✍️"
+          />
+          <MetaCard
             label="Lokasi"
             value={
               project.regionName
-                ? project.regionIkk
-                  ? `${project.regionName} · IKK ${project.regionIkk}`
-                  : `${project.regionName} · IKK belum ada`
+                ? `${project.regionName}${project.regionIkk ? ` · IKK ${project.regionIkk}` : ""}`
                 : null
             }
+            icon="📍"
           />
-          <DetailRow label="Tahun" value={project.tahun?.toString() ?? null} />
-          <DetailRow label="Alamat" value={project.alamat} />
-          <DetailRow
-            label="PPN / Overhead"
-            value={`PPN ${project.ppnPercent}% · Overhead ${project.overheadPercent}%`}
+          <MetaCard label="Alamat" value={project.alamat} icon="🏠" />
+          <MetaCard
+            label="Tahun"
+            value={project.tahun?.toString() ?? null}
+            icon="📅"
           />
-          <DetailRow label="Status" value={project.status} />
-          <DetailRow label="Created" value={formatDate(project.createdAt)} />
-          <DetailRow label="Updated" value={formatDate(project.updatedAt)} />
+          <MetaCard
+            label="Konfigurasi RAB"
+            value={`PPN ${project.ppnPercent}% · Overhead ${project.overheadPercent}% · Bulat ${project.dibulatkanKe.toLocaleString("id-ID")}`}
+            icon="⚙️"
+          />
+        </div>
+
+        <div className="mb-6 rounded-md border border-border bg-card p-3 text-xs text-muted-foreground shadow-sm">
+          <span className="font-medium">Created:</span>{" "}
+          {formatDate(project.createdAt)}
+          <span className="mx-3">·</span>
+          <span className="font-medium">Updated:</span>{" "}
+          {formatDate(project.updatedAt)}
         </div>
 
         {project.notes && (
@@ -198,19 +226,24 @@ export default async function ProjectDetailPage({
   );
 }
 
-function DetailRow({
+function MetaCard({
   label,
   value,
+  icon,
 }: {
   label: string;
   value: string | null;
+  icon: string;
 }) {
   return (
-    <div className="bg-background p-4">
-      <p className="mb-1 text-xs font-medium text-muted-foreground">
-        {label}
+    <div className="rounded-md border border-border bg-card p-4 shadow-sm">
+      <p className="mb-1 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+        <span>{icon}</span>
+        <span>{label}</span>
       </p>
-      <p className="text-sm text-foreground">{value ?? "—"}</p>
+      <p className="text-sm font-medium text-foreground">
+        {value ?? <span className="text-muted-foreground italic">—</span>}
+      </p>
     </div>
   );
 }

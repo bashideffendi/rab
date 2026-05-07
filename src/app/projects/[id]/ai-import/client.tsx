@@ -1,9 +1,11 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/input";
 import { applyAiExtraction } from "@/app/projects/ai-actions";
+
+const STORAGE_PREFIX = "rabin:ai-extraction:";
 
 type AhspMatch = {
   ahspId: string;
@@ -59,6 +61,47 @@ export function AIImportClient({ projectId }: { projectId: string }) {
   );
   const [pendingApply, startApply] = useTransition();
   const fileRef = useRef<HTMLInputElement>(null);
+  const storageKey = `${STORAGE_PREFIX}${projectId}`;
+
+  // Restore from localStorage on mount — biar gak ke-cost ulang kalau refresh
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (!saved) return;
+      const parsed = JSON.parse(saved) as {
+        extracted: ExtractResponse;
+        itemStates: Array<[string, ItemState]>;
+        savedAt: number;
+      };
+      // Skip kalau >24 jam (data stale)
+      if (Date.now() - parsed.savedAt > 24 * 60 * 60 * 1000) {
+        localStorage.removeItem(storageKey);
+        return;
+      }
+      setExtracted(parsed.extracted);
+      setItemStates(new Map(parsed.itemStates));
+      setPhase("preview");
+    } catch {
+      // ignore parse errors
+    }
+  }, [storageKey]);
+
+  // Persist extracted + itemStates to localStorage tiap kali change
+  useEffect(() => {
+    if (!extracted) return;
+    try {
+      localStorage.setItem(
+        storageKey,
+        JSON.stringify({
+          extracted,
+          itemStates: Array.from(itemStates.entries()),
+          savedAt: Date.now(),
+        }),
+      );
+    } catch {
+      // localStorage might be full, ignore
+    }
+  }, [extracted, itemStates, storageKey]);
 
   function itemKey(wbsCode: string, itemIdx: number): string {
     return `${wbsCode}::${itemIdx}`;
@@ -167,6 +210,10 @@ export function AIImportClient({ projectId }: { projectId: string }) {
     fd.append("payload", JSON.stringify({ wbs: wbsPayload }));
 
     startApply(() => {
+      // Clear localStorage on apply success (next render is redirect anyway)
+      try {
+        localStorage.removeItem(storageKey);
+      } catch {}
       applyAiExtraction(fd);
     });
   }
@@ -234,6 +281,11 @@ export function AIImportClient({ projectId }: { projectId: string }) {
       <div className="rounded-md border border-accent/30 bg-accent-soft p-4">
         <p className="mb-1 text-sm font-semibold text-accent">Ringkasan</p>
         <p className="text-sm text-foreground">{extracted.projectSummary}</p>
+        <p className="mt-2 text-xs italic text-muted-foreground">
+          ℹ Mode <strong>merge</strong>: items hasil AI akan <strong>
+          ditambah</strong> ke project (gak menghapus item yang sudah ada).
+          WBS dengan kode sama di-reuse.
+        </p>
         <div className="mt-2 flex flex-wrap gap-3 text-xs text-muted-foreground">
           {extracted.estimatedFloorAreaM2 != null && (
             <span>
@@ -369,12 +421,21 @@ export function AIImportClient({ projectId }: { projectId: string }) {
               variant="ghost"
               size="md"
               onClick={() => {
+                if (
+                  !confirm(
+                    "Buang hasil ekstraksi ini? (Bakal hilang dari cache, harus generate ulang dengan biaya AI)",
+                  )
+                )
+                  return;
+                try {
+                  localStorage.removeItem(storageKey);
+                } catch {}
                 setPhase("upload");
                 setExtracted(null);
                 setError(null);
               }}
             >
-              Batal
+              Batal &amp; Buang
             </Button>
             <Button
               type="button"

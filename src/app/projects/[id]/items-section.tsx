@@ -218,16 +218,16 @@ export async function ItemsSection({
           Belum ada item. Tambahkan pekerjaan pertama di bawah.
         </p>
       ) : (
-        <div className="mb-4 overflow-x-auto rounded border border-border">
+        <div className="mb-4 overflow-x-auto rounded-md border border-border bg-card shadow-sm">
           <table className="w-full text-sm">
-            <thead className="bg-muted/40 text-left text-xs font-medium text-muted-foreground">
+            <thead className="bg-muted text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               <tr>
-                <th className="px-3 py-2 font-medium">Pekerjaan</th>
-                <th className="px-3 py-2 text-right font-medium">Volume</th>
-                <th className="px-3 py-2 font-medium">Sat</th>
-                <th className="px-3 py-2 text-right font-medium">Harga Sat</th>
-                <th className="px-3 py-2 text-right font-medium">Total</th>
-                <th className="px-3 py-2"></th>
+                <th className="px-3 py-3 font-semibold">Pekerjaan</th>
+                <th className="px-3 py-3 text-right font-semibold">Volume</th>
+                <th className="px-3 py-3 font-semibold">Sat</th>
+                <th className="px-3 py-3 text-right font-semibold">Harga Sat</th>
+                <th className="px-3 py-3 text-right font-semibold">Total</th>
+                <th className="w-20 px-3 py-3 font-semibold">Aksi</th>
               </tr>
             </thead>
             <tbody>
@@ -338,16 +338,13 @@ function GroupRows({
 
   return (
     <>
-      <tr className="border-t-2 border-border bg-muted/30">
-        <td colSpan={5} className="px-3 py-2">
-          <span className="text-xs font-semibold text-accent">
-            {headerLabel}
-          </span>
-          <span className="ml-3 font-mono text-[10px] text-muted-foreground tabular-nums">
+      <tr className="border-t-2 border-accent/30 bg-accent/10">
+        <td colSpan={6} className="px-3 py-2.5">
+          <span className="text-sm font-bold text-accent">{headerLabel}</span>
+          <span className="ml-3 rounded-full bg-accent/20 px-2 py-0.5 text-xs font-medium text-accent">
             {group.items.length} item
           </span>
         </td>
-        <td></td>
       </tr>
       {group.items.map((it) => {
         const total = calcTotal(it.volume, it.unitPrice);
@@ -382,11 +379,11 @@ function GroupRows({
             <td className="px-3 py-2 text-right font-mono font-medium tabular-nums">
               {formatIDR(total)}
             </td>
-            <td className="px-3 py-2 text-right">
+            <td className="w-20 px-3 py-2">
               <div className="flex items-center justify-end gap-1">
                 <Link
                   href={`/projects/${projectId}/items/${it.id}/edit`}
-                  className="rounded border border-transparent px-2 py-1 font-mono text-xs text-muted-foreground transition-colors hover:border-accent/40 hover:text-accent"
+                  className="rounded border border-transparent px-1.5 py-1 text-xs text-muted-foreground transition-colors hover:border-accent/40 hover:text-accent"
                   aria-label={`Edit ${it.name}`}
                 >
                   edit
@@ -401,17 +398,17 @@ function GroupRows({
           </tr>
         );
       })}
-      <tr className="border-t border-border bg-muted/10">
+      <tr className="border-t border-border bg-muted/30">
         <td
           colSpan={4}
-          className="px-3 py-1.5 text-right text-xs font-medium text-muted-foreground"
+          className="px-3 py-2 text-right text-xs font-semibold text-muted-foreground"
         >
           Subtotal {group.wbsCode ?? "tanpa WBS"}
         </td>
-        <td className="px-3 py-1.5 text-right font-mono text-xs font-medium tabular-nums">
+        <td className="px-3 py-2 text-right font-mono text-sm font-bold tabular-nums text-foreground">
           {formatIDR(group.subtotal)}
         </td>
-        <td></td>
+        <td className="w-20"></td>
       </tr>
     </>
   );
