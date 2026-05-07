@@ -356,7 +356,7 @@ const features = [
     desc: "Indeks Kemahalan Konstruksi BPS per provinsi (34 wilayah) diterapkan otomatis. Anggaran di Aceh, Batam, atau Papua menyesuaikan kondisi pasar setempat.",
   },
   {
-    icon: "✨",
+    icon: "🤖",
     title: "Generate RAB dengan AI",
     desc: "Upload gambar kerja PDF (denah, tampak, potongan). AI membaca dan menyusun Draft WBS lengkap dengan estimasi volume. Review dan terapkan dalam beberapa klik.",
   },
