@@ -57,6 +57,11 @@ export const regions = pgTable(
     parentId: uuid("parent_id").references((): AnyPgColumn => regions.id, {
       onDelete: "set null",
     }),
+    // Indeks Kemahalan Konstruksi (IKK) — multiplier konstruksi vs nasional.
+    // Nasional ≈ 100. NULL berarti belum ada data → fallback ke 1 (= nasional).
+    ikk: numeric("ikk", { precision: 7, scale: 2 }),
+    ikkYear: integer("ikk_year"),
+    ikkSource: text("ikk_source"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

@@ -19,16 +19,20 @@ const NATIONAL_REGION_CODE = "ID";
 
 /**
  * Hitung unit price dari AHSP item:
- *  sum atas komponen: koefisien * harga_terbaru_material
- * Harga prefer regionId match; fallback ke nasional (region NULL atau code "ID").
+ *  base = sum atas komponen: koefisien × harga_terbaru_material
+ *  final = base × (region.ikk / 100) kalau projectRegionId dan region.ikk ada,
+ *          else fallback × 1 (= nasional).
  *
- * Returns: { price: string, missingMaterials: string[] }
- * Kalau ada material tanpa harga, balikkin di missingMaterials supaya UI bisa
- * kasih warning.
+ * Returns: { price: string, missingMaterials: string[], multiplier: number }
  */
 async function calculateAhspUnitPrice(
   ahspItemId: string,
-): Promise<{ price: string; missingMaterials: string[] }> {
+  projectRegionId: string | null,
+): Promise<{
+  price: string;
+  missingMaterials: string[];
+  multiplier: number;
+}> {
   const components = await db
     .select({
       coefficient: schema.ahspComponents.coefficient,
@@ -43,7 +47,7 @@ async function calculateAhspUnitPrice(
     .where(eq(schema.ahspComponents.ahspItemId, ahspItemId));
 
   if (components.length === 0) {
-    return { price: "0", missingMaterials: [] };
+    return { price: "0", missingMaterials: [], multiplier: 1 };
   }
 
   // Ambil region nasional (fallback)
@@ -94,7 +98,24 @@ async function calculateAhspUnitPrice(
     }
   }
 
-  return { price: total.toFixed(2), missingMaterials: missing };
+  // Apply IKK multiplier kalau project punya region yang udah ada IKK-nya.
+  let multiplier = 1;
+  if (projectRegionId) {
+    const region = await db
+      .select({ ikk: schema.regions.ikk })
+      .from(schema.regions)
+      .where(eq(schema.regions.id, projectRegionId))
+      .limit(1);
+    if (region[0]?.ikk) {
+      const ikkNum = Number(region[0].ikk);
+      if (Number.isFinite(ikkNum) && ikkNum > 0) {
+        multiplier = ikkNum / 100;
+      }
+    }
+  }
+
+  total = total * multiplier;
+  return { price: total.toFixed(2), missingMaterials: missing, multiplier };
 }
 
 // ─── CREATE ──────────────────────────────────────────────────────────────────
@@ -140,8 +161,9 @@ export async function createProjectItem(
       };
     }
 
-    // Snapshot: ambil AHSP master, hitung harga, simpan ke custom_* sebagai
-    // freeze. Master changes nanti gak propagate (audit-safe).
+    // Snapshot: ambil AHSP master, hitung harga (dengan IKK regional kalau
+    // project punya region), simpan ke custom_* sebagai freeze. Master
+    // changes nanti gak propagate (audit-safe).
     const ahsp = await db
       .select({
         name: schema.ahspItems.name,
@@ -155,8 +177,17 @@ export async function createProjectItem(
       return { fieldErrors: { ahspItemId: "AHSP tidak ditemukan." } };
     }
 
-    const { price, missingMaterials } =
-      await calculateAhspUnitPrice(ahspItemId);
+    // Get project's regionId untuk IKK multiplier
+    const projectRow = await db
+      .select({ regionId: schema.projects.regionId })
+      .from(schema.projects)
+      .where(eq(schema.projects.id, projectId))
+      .limit(1);
+
+    const { price, missingMaterials } = await calculateAhspUnitPrice(
+      ahspItemId,
+      projectRow[0]?.regionId ?? null,
+    );
 
     try {
       await db.insert(schema.projectItems).values({

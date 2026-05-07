@@ -32,6 +32,8 @@ export async function createProject(
   const ownerName =
     (formData.get("ownerName") ?? "").toString().trim() || null;
   const notes = (formData.get("notes") ?? "").toString().trim() || null;
+  const regionRaw = (formData.get("regionId") ?? "").toString().trim();
+  const regionId = regionRaw ? regionRaw : null;
 
   if (!name) {
     return { fieldErrors: { name: "Nama project wajib diisi." } };
@@ -46,7 +48,7 @@ export async function createProject(
   try {
     const rows = await db
       .insert(schema.projects)
-      .values({ userId: user.id, name, opd, ownerName, notes })
+      .values({ userId: user.id, name, opd, ownerName, notes, regionId })
       .returning({ id: schema.projects.id });
     inserted = rows[0];
   } catch (e) {
@@ -80,6 +82,8 @@ export async function updateProject(
     (formData.get("ownerName") ?? "").toString().trim() || null;
   const notes = (formData.get("notes") ?? "").toString().trim() || null;
   const status = formData.get("status");
+  const regionRaw = (formData.get("regionId") ?? "").toString().trim();
+  const regionId = regionRaw ? regionRaw : null;
 
   if (!name) {
     return { fieldErrors: { name: "Nama project wajib diisi." } };
@@ -96,7 +100,15 @@ export async function updateProject(
   try {
     await db
       .update(schema.projects)
-      .set({ name, opd, ownerName, notes, status, updatedAt: new Date() })
+      .set({
+        name,
+        opd,
+        ownerName,
+        notes,
+        status,
+        regionId,
+        updatedAt: new Date(),
+      })
       .where(
         and(eq(schema.projects.id, id), eq(schema.projects.userId, user.id)),
       );

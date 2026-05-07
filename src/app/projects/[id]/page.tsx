@@ -14,17 +14,34 @@ import { ItemsSection } from "./items-section";
 export const dynamic = "force-dynamic";
 
 type ProjectRow = typeof schema.projects.$inferSelect;
+type ProjectWithRegion = ProjectRow & {
+  regionName: string | null;
+  regionIkk: string | null;
+};
 
 async function loadProject(
   id: string,
   userId: string,
-): Promise<ProjectRow | null> {
+): Promise<ProjectWithRegion | null> {
   const rows = await db
-    .select()
+    .select({
+      project: schema.projects,
+      regionName: schema.regions.name,
+      regionIkk: schema.regions.ikk,
+    })
     .from(schema.projects)
+    .leftJoin(
+      schema.regions,
+      eq(schema.regions.id, schema.projects.regionId),
+    )
     .where(and(eq(schema.projects.id, id), eq(schema.projects.userId, userId)))
     .limit(1);
-  return rows[0] ?? null;
+  if (!rows[0]) return null;
+  return {
+    ...rows[0].project,
+    regionName: rows[0].regionName,
+    regionIkk: rows[0].regionIkk,
+  };
 }
 
 export default async function ProjectDetailPage({
@@ -103,6 +120,17 @@ export default async function ProjectDetailPage({
         <div className="grid gap-px overflow-hidden rounded border border-border bg-border md:grid-cols-2">
           <DetailRow label="Klien / Pemilik" value={project.opd} />
           <DetailRow label="Penanggung Jawab" value={project.ownerName} />
+          <DetailRow
+            label="Lokasi"
+            value={
+              project.regionName
+                ? project.regionIkk
+                  ? `${project.regionName} · IKK ${project.regionIkk}`
+                  : `${project.regionName} · IKK belum ada`
+                : null
+            }
+          />
+          <DetailRow label="Status" value={project.status} />
           <DetailRow label="Created" value={formatDate(project.createdAt)} />
           <DetailRow label="Updated" value={formatDate(project.updatedAt)} />
         </div>

@@ -5,6 +5,7 @@ import { db, schema } from "@/db";
 import { AppShell } from "@/components/app-shell";
 import { EditProjectForm } from "./form";
 import { requireUser } from "@/lib/auth";
+import { loadProvinsiOptions } from "@/lib/queries/regions";
 
 export const dynamic = "force-dynamic";
 
@@ -58,6 +59,8 @@ export default async function EditProjectPage({
 
   if (!project) notFound();
 
+  const regionOptions = await loadProvinsiOptions().catch(() => []);
+
   return (
     <AppShell>
       <section className="mx-auto max-w-2xl px-6 py-12">
@@ -72,7 +75,7 @@ export default async function EditProjectPage({
             Edit Project
           </h1>
         </header>
-        <EditProjectForm project={project} />
+        <EditProjectForm project={project} regionOptions={regionOptions} />
       </section>
     </AppShell>
   );

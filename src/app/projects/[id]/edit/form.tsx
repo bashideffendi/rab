@@ -10,9 +10,22 @@ import type { schema } from "@/db";
 
 type ProjectRow = typeof schema.projects.$inferSelect;
 
+type RegionOption = {
+  id: string;
+  code: string;
+  name: string;
+  ikk: string | null;
+};
+
 const initialState: UpdateProjectFormState = {};
 
-export function EditProjectForm({ project }: { project: ProjectRow }) {
+export function EditProjectForm({
+  project,
+  regionOptions,
+}: {
+  project: ProjectRow;
+  regionOptions: RegionOption[];
+}) {
   const action = updateProject.bind(null, project.id);
   const [state, formAction, pending] = useActionState(action, initialState);
 
@@ -38,6 +51,26 @@ export function EditProjectForm({ project }: { project: ProjectRow }) {
           <option value="draft">draft</option>
           <option value="active">active</option>
           <option value="archived">archived</option>
+        </Select>
+      </Field>
+
+      <Field
+        label="Lokasi (Provinsi)"
+        htmlFor="regionId"
+        hint="Bikin harga material ngikut daerah. Kosongin = harga nasional."
+      >
+        <Select
+          id="regionId"
+          name="regionId"
+          defaultValue={project.regionId ?? ""}
+        >
+          <option value="">— pilih provinsi —</option>
+          {regionOptions.map((r) => (
+            <option key={r.id} value={r.id}>
+              {r.name}
+              {r.ikk ? ` · IKK ${r.ikk}` : ""}
+            </option>
+          ))}
         </Select>
       </Field>
 

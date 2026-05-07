@@ -1,10 +1,13 @@
 import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
 import { NewProjectForm } from "./form";
+import { loadProvinsiOptions } from "@/lib/queries/regions";
 
 export const dynamic = "force-dynamic";
 
-export default function NewProjectPage() {
+export default async function NewProjectPage() {
+  const regionOptions = await loadProvinsiOptions().catch(() => []);
+
   return (
     <AppShell>
       <section className="mx-auto max-w-2xl px-6 py-12">
@@ -22,7 +25,7 @@ export default function NewProjectPage() {
             Cuma butuh nama. Sisanya opsional, bisa diisi belakangan.
           </p>
         </header>
-        <NewProjectForm />
+        <NewProjectForm regionOptions={regionOptions} />
       </section>
     </AppShell>
   );

@@ -3,13 +3,24 @@
 import { useActionState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Input, Textarea } from "@/components/ui/input";
+import { Input, Select, Textarea } from "@/components/ui/input";
 import { Field } from "@/components/ui/field";
 import { createProject, type CreateProjectFormState } from "../actions";
 
+type RegionOption = {
+  id: string;
+  code: string;
+  name: string;
+  ikk: string | null;
+};
+
 const initialState: CreateProjectFormState = {};
 
-export function NewProjectForm() {
+export function NewProjectForm({
+  regionOptions,
+}: {
+  regionOptions: RegionOption[];
+}) {
   const [state, formAction, pending] = useActionState(
     createProject,
     initialState,
@@ -31,6 +42,22 @@ export function NewProjectForm() {
           placeholder="Mis. Renovasi Rumah Jl. Mawar atau Bangun Ruko 2 Lantai"
           aria-invalid={state.fieldErrors?.name ? true : undefined}
         />
+      </Field>
+
+      <Field
+        label="Lokasi (Provinsi)"
+        htmlFor="regionId"
+        hint="Opsional. Bikin harga material ngikut daerah. Kosongin = harga nasional default."
+      >
+        <Select id="regionId" name="regionId" defaultValue="">
+          <option value="">— pilih provinsi (opsional) —</option>
+          {regionOptions.map((r) => (
+            <option key={r.id} value={r.id}>
+              {r.name}
+              {r.ikk ? ` · IKK ${r.ikk}` : ""}
+            </option>
+          ))}
+        </Select>
       </Field>
 
       <Field
