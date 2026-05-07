@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { toTitleCaseId } from "@/lib/text-format";
+import { MapPickerModal } from "./map-picker-modal";
 
 type Place = {
   display_name: string;
@@ -11,8 +12,8 @@ type Place = {
 };
 
 /**
- * Alamat picker dengan typeahead OpenStreetMap (Nominatim API).
- * Free, no API key. Rate limit 1 req/sec — debounced 600ms.
+ * Alamat picker — typeahead OpenStreetMap (Nominatim) + tombol
+ * "Pilih di Peta" yang buka modal interaktif Leaflet (click-to-pin).
  *
  * Submit 3 fields: alamat (text), lat (numeric), lng (numeric).
  */
@@ -43,9 +44,10 @@ export function AlamatPicker({
   const [results, setResults] = useState<Place[]>([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
+  const [mapOpen, setMapOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Debounced search via Nominatim
+  // Debounced typeahead search
   useEffect(() => {
     if (!open || !value || value.trim().length < 4) {
       setResults([]);
@@ -98,99 +100,130 @@ export function AlamatPicker({
     setLng("");
   }
 
+  function handleMapConfirm(
+    newLat: string,
+    newLng: string,
+    newAddress: string,
+  ) {
+    setLat(newLat);
+    setLng(newLng);
+    if (newAddress) setValue(newAddress);
+    setMapOpen(false);
+  }
+
   const hasLocation = !!(lat && lng);
 
   return (
-    <div ref={containerRef} className="relative">
-      <input
-        type="text"
-        id={id}
-        name={name}
-        value={value}
-        onChange={(e) => {
-          setValue(e.target.value);
-          setOpen(true);
-          // Kalau alamat dirubah manual, anggap lat/lng stale → clear
-          if (lat || lng) clearLocation();
-        }}
-        onFocus={() => setOpen(true)}
-        onBlur={(e) => {
-          // Apply title case kalau gak ada koordinat (alamat manual)
-          if (!hasLocation) {
-            const formatted = toTitleCaseId(e.currentTarget.value);
-            if (formatted !== e.currentTarget.value) {
-              e.currentTarget.value = formatted;
-              setValue(formatted);
-            }
-          }
-        }}
-        placeholder={placeholder}
-        className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground shadow-sm transition-colors focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
-        maxLength={300}
-        autoComplete="off"
-        required={required}
-      />
-      <input type="hidden" name={latName} value={lat} />
-      <input type="hidden" name={lngName} value={lng} />
-
-      {/* Dropdown hasil */}
-      {open && (loading || results.length > 0 || value.trim().length >= 4) && (
-        <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-72 overflow-auto rounded-md border border-border bg-card shadow-lg">
-          {loading && (
-            <div className="px-3 py-2 text-xs text-muted-foreground">
-              Cari di OpenStreetMap…
-            </div>
-          )}
-          {!loading && results.length === 0 && value.trim().length >= 4 && (
-            <div className="px-3 py-3 text-xs text-muted-foreground">
-              Lokasi tidak ditemukan di peta. Coba kata kunci lain atau
-              ketikkan alamat secara manual.
-            </div>
-          )}
-          {!loading && results.length > 0 && (
-            <ul className="divide-y divide-border">
-              {results.map((p) => (
-                <li key={p.place_id}>
-                  <button
-                    type="button"
-                    onClick={() => pick(p)}
-                    className="flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left transition-colors hover:bg-muted"
-                  >
-                    <span className="text-sm">{p.display_name}</span>
-                    <span className="font-mono text-[10px] text-muted-foreground">
-                      📍 {Number(p.lat).toFixed(4)}, {Number(p.lon).toFixed(4)}
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-          <div className="border-t border-border bg-muted/30 px-3 py-1.5 text-[10px] italic text-muted-foreground">
-            Sumber data: OpenStreetMap. Hasil mungkin tidak presisi — pilih
-            yang paling dekat atau ketikkan secara manual.
-          </div>
-        </div>
-      )}
-
-      {/* Status koordinat */}
-      {hasLocation && (
-        <div className="mt-1.5 flex items-center justify-between gap-2 text-[11px]">
-          <span className="text-accent">
-            ✓ Lokasi tersimpan:{" "}
-            <span className="font-mono">
-              {Number(lat).toFixed(5)}, {Number(lng).toFixed(5)}
-            </span>
-          </span>
-          <a
-            href={`https://www.google.com/maps?q=${lat},${lng}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-muted-foreground hover:text-accent"
+    <>
+      <div ref={containerRef} className="relative">
+        <div className="flex gap-2">
+          <input
+            type="text"
+            id={id}
+            name={name}
+            value={value}
+            onChange={(e) => {
+              setValue(e.target.value);
+              setOpen(true);
+              if (lat || lng) clearLocation();
+            }}
+            onFocus={() => setOpen(true)}
+            onBlur={(e) => {
+              if (!hasLocation) {
+                const formatted = toTitleCaseId(e.currentTarget.value);
+                if (formatted !== e.currentTarget.value) {
+                  e.currentTarget.value = formatted;
+                  setValue(formatted);
+                }
+              }
+            }}
+            placeholder={placeholder}
+            className="flex-1 rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground shadow-sm transition-colors focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+            maxLength={300}
+            autoComplete="off"
+            required={required}
+          />
+          <button
+            type="button"
+            onClick={() => setMapOpen(true)}
+            className="shrink-0 rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-muted-foreground shadow-sm transition-colors hover:border-accent hover:text-accent"
+            title="Buka peta interaktif untuk pilih lokasi"
           >
-            Buka di Google Maps ↗
-          </a>
+            🗺️ Peta
+          </button>
         </div>
-      )}
-    </div>
+        <input type="hidden" name={latName} value={lat} />
+        <input type="hidden" name={lngName} value={lng} />
+
+        {/* Typeahead dropdown */}
+        {open &&
+          (loading || results.length > 0 || value.trim().length >= 4) && (
+            <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-72 overflow-auto rounded-md border border-border bg-card shadow-lg">
+              {loading && (
+                <div className="px-3 py-2 text-xs text-muted-foreground">
+                  Cari di OpenStreetMap…
+                </div>
+              )}
+              {!loading &&
+                results.length === 0 &&
+                value.trim().length >= 4 && (
+                  <div className="px-3 py-3 text-xs text-muted-foreground">
+                    Lokasi tidak ditemukan. Coba kata kunci lain, ketik
+                    manual, atau pakai tombol{" "}
+                    <span className="font-medium">🗺️ Peta</span> di kanan.
+                  </div>
+                )}
+              {!loading && results.length > 0 && (
+                <ul className="divide-y divide-border">
+                  {results.map((p) => (
+                    <li key={p.place_id}>
+                      <button
+                        type="button"
+                        onClick={() => pick(p)}
+                        className="flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left transition-colors hover:bg-muted"
+                      >
+                        <span className="text-sm">{p.display_name}</span>
+                        <span className="font-mono text-[10px] text-muted-foreground">
+                          📍 {Number(p.lat).toFixed(4)},{" "}
+                          {Number(p.lon).toFixed(4)}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+
+        {/* Status koordinat */}
+        {hasLocation && (
+          <div className="mt-1.5 flex items-center justify-between gap-2 text-[11px]">
+            <span className="text-accent">
+              ✓ Lokasi tersimpan:{" "}
+              <span className="font-mono">
+                {Number(lat).toFixed(5)}, {Number(lng).toFixed(5)}
+              </span>
+            </span>
+            <a
+              href={`https://www.google.com/maps?q=${lat},${lng}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-muted-foreground hover:text-accent"
+            >
+              Buka di Google Maps ↗
+            </a>
+          </div>
+        )}
+      </div>
+
+      <MapPickerModal
+        open={mapOpen}
+        initialLat={lat}
+        initialLng={lng}
+        initialAddress={value}
+        onClose={() => setMapOpen(false)}
+        onConfirm={handleMapConfirm}
+      />
+    </>
   );
 }

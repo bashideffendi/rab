@@ -64,6 +64,13 @@
       "when": 1778167970168,
       "tag": "0008_add_project_coordinates",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1778169770168,
+      "tag": "0009_add_project_type_luas",
+      "breakpoints": true
     }
   ]
 }

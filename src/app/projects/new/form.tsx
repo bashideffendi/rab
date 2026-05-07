@@ -8,6 +8,7 @@ import { Field } from "@/components/ui/field";
 import { AlamatPicker } from "@/components/ui/alamat-picker";
 import { createProject, type CreateProjectFormState } from "../actions";
 import { titleCaseOnBlur } from "@/lib/text-format";
+import { PROJECT_TYPES } from "@/lib/project-types";
 
 type RegionOption = {
   id: string;
@@ -49,31 +50,95 @@ export function NewProjectForm({
         />
       </Field>
 
-      <Field
-        label="Lokasi (Provinsi)"
-        htmlFor="regionId"
-        required
-        error={state.fieldErrors?.regionId}
-        hint="Wajib diisi — Indeks Kemahalan Konstruksi (IKK) menyesuaikan harga material per provinsi."
-      >
-        <Select
-          id="regionId"
-          name="regionId"
-          defaultValue=""
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Field
+          label="Jenis Project"
+          htmlFor="projectType"
           required
-          aria-invalid={state.fieldErrors?.regionId ? true : undefined}
+          error={state.fieldErrors?.projectType}
+          hint="Tipe bangunan atau pekerjaan konstruksi."
         >
-          <option value="" disabled>
-            — pilih provinsi —
-          </option>
-          {regionOptions.map((r) => (
-            <option key={r.id} value={r.id}>
-              {r.name}
-              {r.ikk ? ` · IKK ${r.ikk}` : ""}
+          <Select
+            id="projectType"
+            name="projectType"
+            defaultValue=""
+            required
+            aria-invalid={state.fieldErrors?.projectType ? true : undefined}
+          >
+            <option value="" disabled>
+              — pilih jenis —
             </option>
-          ))}
-        </Select>
-      </Field>
+            {PROJECT_TYPES.map((t) => (
+              <option key={t.value} value={t.value}>
+                {t.icon} {t.label}
+              </option>
+            ))}
+          </Select>
+        </Field>
+
+        <Field
+          label="Lokasi (Provinsi)"
+          htmlFor="regionId"
+          required
+          error={state.fieldErrors?.regionId}
+          hint="Indeks Kemahalan Konstruksi (IKK) menyesuaikan harga material."
+        >
+          <Select
+            id="regionId"
+            name="regionId"
+            defaultValue=""
+            required
+            aria-invalid={state.fieldErrors?.regionId ? true : undefined}
+          >
+            <option value="" disabled>
+              — pilih provinsi —
+            </option>
+            {regionOptions.map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.name}
+                {r.ikk ? ` · IKK ${r.ikk}` : ""}
+              </option>
+            ))}
+          </Select>
+        </Field>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Field
+          label="Luas Tanah (m²)"
+          htmlFor="luasTanah"
+          error={state.fieldErrors?.luasTanah}
+          hint="Opsional. Untuk proyek dengan tanah."
+        >
+          <Input
+            id="luasTanah"
+            name="luasTanah"
+            type="number"
+            inputMode="decimal"
+            step="0.01"
+            min="0"
+            placeholder="Mis. 120"
+            className="font-mono text-right"
+          />
+        </Field>
+        <Field
+          label="Luas Bangunan (m²)"
+          htmlFor="luasBangunan"
+          error={state.fieldErrors?.luasBangunan}
+          hint="Opsional. Total luas lantai bangunan."
+        >
+          <Input
+            id="luasBangunan"
+            name="luasBangunan"
+            type="number"
+            inputMode="decimal"
+            step="0.01"
+            min="0"
+            placeholder="Mis. 80"
+            className="font-mono text-right"
+          />
+        </Field>
+      </div>
 
       <Field
         label="Klien / Pemilik Proyek"

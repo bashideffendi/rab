@@ -24,7 +24,10 @@ type ProjectField =
   | "opd"
   | "ownerName"
   | "tahun"
-  | "alamat";
+  | "alamat"
+  | "projectType"
+  | "luasTanah"
+  | "luasBangunan";
 
 export type CreateProjectFormState = {
   error?: string;
@@ -65,6 +68,20 @@ function parseCoord(
   return n.toFixed(7);
 }
 
+function parseLuas(v: FormDataEntryValue | null): {
+  value: string | null;
+  invalid: boolean;
+} {
+  if (v == null) return { value: null, invalid: false };
+  const s = v.toString().trim();
+  if (!s) return { value: null, invalid: false };
+  const n = Number(s.replace(",", "."));
+  if (!Number.isFinite(n) || n < 0 || n > 10_000_000) {
+    return { value: null, invalid: true };
+  }
+  return { value: n.toFixed(2), invalid: false };
+}
+
 export async function createProject(
   _prev: CreateProjectFormState,
   formData: FormData,
@@ -77,6 +94,9 @@ export async function createProject(
   const alamat = (formData.get("alamat") ?? "").toString().trim();
   const lat = parseCoord(formData.get("lat"), -90, 90);
   const lng = parseCoord(formData.get("lng"), -180, 180);
+  const projectType = (formData.get("projectType") ?? "").toString().trim();
+  const luasTanahParsed = parseLuas(formData.get("luasTanah"));
+  const luasBangunanParsed = parseLuas(formData.get("luasBangunan"));
   const tahunRaw = (formData.get("tahun") ?? "").toString().trim();
   const tahunNum = tahunRaw ? Number(tahunRaw) : NaN;
   const ppnPercent = parsePercent(formData.get("ppnPercent"), "11.00");
@@ -94,6 +114,8 @@ export async function createProject(
   if (!regionId)
     fieldErrors.regionId =
       "Lokasi wajib dipilih — IKK provinsi mempengaruhi harga material.";
+
+  if (!projectType) fieldErrors.projectType = "Jenis project wajib dipilih.";
 
   if (!opd) fieldErrors.opd = "Klien / pemilik proyek wajib diisi.";
   else if (opd.length > 200)
@@ -114,6 +136,12 @@ export async function createProject(
   if (!alamat) fieldErrors.alamat = "Alamat lengkap wajib diisi.";
   else if (alamat.length > 300)
     fieldErrors.alamat = "Alamat maksimal 300 karakter.";
+
+  if (luasTanahParsed.invalid)
+    fieldErrors.luasTanah = "Luas tanah tidak valid (angka 0 - 10.000.000 m²).";
+  if (luasBangunanParsed.invalid)
+    fieldErrors.luasBangunan =
+      "Luas bangunan tidak valid (angka 0 - 10.000.000 m²).";
 
   if (Object.keys(fieldErrors).length > 0) {
     return { fieldErrors };
@@ -136,6 +164,9 @@ export async function createProject(
         alamat,
         lat,
         lng,
+        projectType,
+        luasTanah: luasTanahParsed.value,
+        luasBangunan: luasBangunanParsed.value,
         tahun,
         ppnPercent,
         overheadPercent,
@@ -179,6 +210,9 @@ export async function updateProject(
   const alamat = (formData.get("alamat") ?? "").toString().trim();
   const lat = parseCoord(formData.get("lat"), -90, 90);
   const lng = parseCoord(formData.get("lng"), -180, 180);
+  const projectType = (formData.get("projectType") ?? "").toString().trim();
+  const luasTanahParsed = parseLuas(formData.get("luasTanah"));
+  const luasBangunanParsed = parseLuas(formData.get("luasBangunan"));
   const tahunRaw = (formData.get("tahun") ?? "").toString().trim();
   const tahunNum = tahunRaw ? Number(tahunRaw) : NaN;
   const ppnPercent = parsePercent(formData.get("ppnPercent"), "11.00");
@@ -196,6 +230,8 @@ export async function updateProject(
   if (!regionId)
     fieldErrors.regionId =
       "Lokasi wajib dipilih — IKK provinsi mempengaruhi harga material.";
+
+  if (!projectType) fieldErrors.projectType = "Jenis project wajib dipilih.";
 
   if (!opd) fieldErrors.opd = "Klien / pemilik proyek wajib diisi.";
   else if (opd.length > 200)
@@ -216,6 +252,12 @@ export async function updateProject(
   if (!alamat) fieldErrors.alamat = "Alamat lengkap wajib diisi.";
   else if (alamat.length > 300)
     fieldErrors.alamat = "Alamat maksimal 300 karakter.";
+
+  if (luasTanahParsed.invalid)
+    fieldErrors.luasTanah = "Luas tanah tidak valid (angka 0 - 10.000.000 m²).";
+  if (luasBangunanParsed.invalid)
+    fieldErrors.luasBangunan =
+      "Luas bangunan tidak valid (angka 0 - 10.000.000 m²).";
 
   if (!isProjectStatus(status)) fieldErrors.status = "Status tidak valid.";
 
@@ -241,6 +283,9 @@ export async function updateProject(
         alamat,
         lat,
         lng,
+        projectType,
+        luasTanah: luasTanahParsed.value,
+        luasBangunan: luasBangunanParsed.value,
         tahun,
         ppnPercent,
         overheadPercent,
@@ -299,6 +344,9 @@ export async function duplicateProject(formData: FormData) {
       alamat: source.alamat,
       lat: source.lat,
       lng: source.lng,
+      projectType: source.projectType,
+      luasTanah: source.luasTanah,
+      luasBangunan: source.luasBangunan,
       ppnPercent: source.ppnPercent,
       overheadPercent: source.overheadPercent,
       dibulatkanKe: source.dibulatkanKe,

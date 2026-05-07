@@ -12,6 +12,10 @@ import {
   ArchiveButton,
 } from "@/components/duplicate-archive-buttons";
 import { formatDate } from "@/lib/utils";
+import {
+  projectTypeIcon,
+  projectTypeLabel,
+} from "@/lib/project-types";
 import { WbsSection } from "./wbs-section";
 import { ItemsSection } from "./items-section";
 
@@ -94,30 +98,51 @@ export default async function ProjectDetailPage({
           ← Projects
         </Link>
 
-        {/* === Project Header === */}
-        <header className="mb-6 mt-3 rounded-lg border border-border bg-card p-6 shadow-sm">
-          <div className="mb-4 flex items-start justify-between gap-4">
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight">
-                {project.name}
-              </h1>
-              <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-                <Badge tone={project.status}>{project.status}</Badge>
-                {project.regionName && (
-                  <Badge tone="accent">📍 {project.regionName}</Badge>
+        {/* === Hero: Name + identitas === */}
+        <header className="mb-6 mt-3 overflow-hidden rounded-xl border border-border bg-gradient-to-br from-card via-card to-accent/5 shadow-sm">
+          <div className="flex flex-col gap-5 p-6 md:flex-row md:items-start md:justify-between md:p-7">
+            <div className="flex-1">
+              <div className="mb-3 flex flex-wrap items-center gap-2">
+                {project.projectType && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-accent/40 bg-accent/10 px-3 py-1 text-xs font-semibold text-accent">
+                    <span>{projectTypeIcon(project.projectType)}</span>
+                    {projectTypeLabel(project.projectType)}
+                  </span>
                 )}
+                <Badge tone={project.status}>{project.status}</Badge>
                 {project.tahun && (
                   <Badge tone="default">Tahun {project.tahun}</Badge>
                 )}
-                <span className="font-mono text-muted-foreground">
-                  {project.id.slice(0, 8)}
-                </span>
               </div>
+              <h1 className="text-3xl font-bold leading-tight tracking-tight md:text-4xl">
+                {project.name}
+              </h1>
+              <p className="mt-2 text-sm text-muted-foreground">
+                {[project.opd, project.regionName].filter(Boolean).join(" · ")}
+              </p>
             </div>
+
+            {/* Quick stats — luas tanah/bangunan */}
+            {(project.luasTanah || project.luasBangunan) && (
+              <div className="flex flex-wrap gap-3 md:gap-4">
+                {project.luasTanah && (
+                  <StatBox
+                    label="Luas Tanah"
+                    value={`${Number(project.luasTanah).toLocaleString("id-ID")} m²`}
+                  />
+                )}
+                {project.luasBangunan && (
+                  <StatBox
+                    label="Luas Bangunan"
+                    value={`${Number(project.luasBangunan).toLocaleString("id-ID")} m²`}
+                  />
+                )}
+              </div>
+            )}
           </div>
 
           {/* Primary actions */}
-          <div className="mb-3 flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 border-t border-border bg-muted/20 px-6 py-3 md:px-7">
             <a href={`/api/projects/${project.id}/export`} download>
               <Button variant="primary" size="sm">
                 ↓ Excel
@@ -150,7 +175,7 @@ export default async function ProjectDetailPage({
           </div>
 
           {/* Secondary actions */}
-          <div className="flex flex-wrap gap-2 border-t border-border pt-3">
+          <div className="flex flex-wrap items-center gap-2 border-t border-border px-6 py-3 md:px-7">
             <Link href={`/projects/${project.id}/edit`}>
               <Button variant="ghost" size="sm">
                 Edit
@@ -161,12 +186,13 @@ export default async function ProjectDetailPage({
               id={project.id}
               isArchived={project.isArchived}
             />
-            <div className="ml-auto">
-              <DeleteProjectButton
-                id={project.id}
-                projectName={project.name}
-              />
-            </div>
+            <span className="ml-auto font-mono text-[11px] text-muted-foreground">
+              ID {project.id.slice(0, 8)}
+            </span>
+            <DeleteProjectButton
+              id={project.id}
+              projectName={project.name}
+            />
           </div>
         </header>
 
@@ -187,11 +213,11 @@ export default async function ProjectDetailPage({
             }
             icon="📍"
           />
-          <MetaCard label="Alamat" value={project.alamat} icon="🏠" />
           <MetaCard
-            label="Tahun"
-            value={project.tahun?.toString() ?? null}
-            icon="📅"
+            label="Alamat Lengkap"
+            value={project.alamat}
+            icon="🏠"
+            className="sm:col-span-2"
           />
           <MetaCard
             label="Konfigurasi RAB"
@@ -259,19 +285,36 @@ function MetaCard({
   label,
   value,
   icon,
+  className,
 }: {
   label: string;
   value: string | null;
   icon: string;
+  className?: string;
 }) {
   return (
-    <div className="rounded-md border border-border bg-card p-4 shadow-sm">
-      <p className="mb-1 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+    <div
+      className={`rounded-md border border-border bg-card p-4 shadow-sm ${className ?? ""}`}
+    >
+      <p className="mb-1 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         <span>{icon}</span>
         <span>{label}</span>
       </p>
       <p className="text-sm font-medium text-foreground">
-        {value ?? <span className="text-muted-foreground italic">—</span>}
+        {value ?? <span className="italic text-muted-foreground">—</span>}
+      </p>
+    </div>
+  );
+}
+
+function StatBox({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-border bg-background/60 px-4 py-3 text-right shadow-sm backdrop-blur-sm">
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+        {label}
+      </p>
+      <p className="mt-1 font-mono text-lg font-bold tabular-nums text-foreground">
+        {value}
       </p>
     </div>
   );

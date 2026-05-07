@@ -94,6 +94,9 @@ export const projects = pgTable(
     alamat: text("alamat"),
     lat: numeric("lat", { precision: 10, scale: 7 }),
     lng: numeric("lng", { precision: 10, scale: 7 }),
+    projectType: text("project_type"),
+    luasTanah: numeric("luas_tanah", { precision: 12, scale: 2 }),
+    luasBangunan: numeric("luas_bangunan", { precision: 12, scale: 2 }),
     ppnPercent: numeric("ppn_percent", { precision: 5, scale: 2 })
       .notNull()
       .default("11.00"),
