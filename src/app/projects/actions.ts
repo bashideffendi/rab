@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { and, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { requireUser } from "@/lib/auth";
+import { logAudit } from "@/lib/audit";
 
 const PROJECT_STATUSES = ["draft", "active", "archived"] as const;
 type ProjectStatus = (typeof PROJECT_STATUSES)[number];
@@ -183,6 +184,13 @@ export async function createProject(
     };
   }
 
+  await logAudit({
+    projectId: inserted!.id,
+    userId: user.id,
+    action: "create",
+    summary: `Project "${name}" dibuat`,
+  });
+
   revalidatePath("/projects");
   redirect(`/projects/${inserted!.id}`);
 }
@@ -304,6 +312,14 @@ export async function updateProject(
     };
   }
 
+  await logAudit({
+    projectId: id,
+    userId: user.id,
+    action: "update",
+    summary: `Data project diperbarui`,
+    details: { fields: ["name", "status", "regionId", "alamat", "tahun"] },
+  });
+
   revalidatePath("/projects");
   revalidatePath(`/projects/${id}`);
   redirect(`/projects/${id}`);
@@ -393,6 +409,14 @@ export async function duplicateProject(formData: FormData) {
     });
   }
 
+  await logAudit({
+    projectId: newProj.id,
+    userId: user.id,
+    action: "duplicate",
+    summary: `Diduplikasi dari "${source.name}"`,
+    details: { sourceId: source.id, sourceName: source.name },
+  });
+
   revalidatePath("/projects");
   redirect(`/projects/${newProj.id}`);
 }
@@ -411,6 +435,14 @@ export async function toggleArchiveProject(formData: FormData) {
     .where(
       and(eq(schema.projects.id, id), eq(schema.projects.userId, user.id)),
     );
+
+  await logAudit({
+    projectId: id,
+    userId: user.id,
+    action: archive ? "archive" : "unarchive",
+    summary: archive ? "Project diarsipkan" : "Project diaktifkan kembali",
+  });
+
   revalidatePath("/projects");
   if (archive) redirect("/projects");
   redirect(`/projects/${id}`);

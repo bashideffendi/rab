@@ -1,6 +1,7 @@
 import { relations } from "drizzle-orm";
 import {
   boolean,
+  jsonb,
   pgEnum,
   pgTable,
   text,
@@ -97,6 +98,7 @@ export const projects = pgTable(
     projectType: text("project_type"),
     luasTanah: numeric("luas_tanah", { precision: 12, scale: 2 }),
     luasBangunan: numeric("luas_bangunan", { precision: 12, scale: 2 }),
+    coverImageUrl: text("cover_image_url"),
     ppnPercent: numeric("ppn_percent", { precision: 5, scale: 2 })
       .notNull()
       .default("11.00"),
@@ -325,6 +327,30 @@ export const projectItemProgress = pgTable(
       t.projectItemId,
       t.weekNum,
     ),
+  ],
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PROJECT AUDIT LOG — riwayat perubahan
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const projectAuditLog = pgTable(
+  "project_audit_log",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    userId: uuid("user_id"),
+    action: text("action").notNull(),
+    summary: text("summary"),
+    details: jsonb("details"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("project_audit_log_project_idx").on(t.projectId, t.createdAt),
   ],
 );
 

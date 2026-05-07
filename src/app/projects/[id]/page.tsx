@@ -11,6 +11,7 @@ import {
   DuplicateButton,
   ArchiveButton,
 } from "@/components/duplicate-archive-buttons";
+import { CoverUpload } from "@/components/cover-upload";
 import { formatDate } from "@/lib/utils";
 import {
   projectTypeIcon,
@@ -18,6 +19,7 @@ import {
 } from "@/lib/project-types";
 import { WbsSection } from "./wbs-section";
 import { ItemsSection } from "./items-section";
+import { AuditLogSection } from "./audit-log";
 
 export const dynamic = "force-dynamic";
 
@@ -100,6 +102,17 @@ export default async function ProjectDetailPage({
 
         {/* === Hero: Name + identitas === */}
         <header className="mb-6 mt-3 overflow-hidden rounded-xl border border-border bg-gradient-to-br from-card via-card to-accent/5 shadow-sm">
+          {project.coverImageUrl && (
+            <div className="relative h-48 w-full overflow-hidden bg-muted md:h-56">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={project.coverImageUrl}
+                alt={`Sampul ${project.name}`}
+                className="h-full w-full object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
+            </div>
+          )}
           <div className="flex flex-col gap-5 p-6 md:flex-row md:items-start md:justify-between md:p-7">
             <div className="flex-1">
               <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -194,6 +207,17 @@ export default async function ProjectDetailPage({
             <DeleteProjectButton
               id={project.id}
               projectName={project.name}
+            />
+          </div>
+
+          {/* Cover photo upload */}
+          <div className="border-t border-border bg-muted/10 px-6 py-3 md:px-7">
+            <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Foto Sampul
+            </p>
+            <CoverUpload
+              projectId={project.id}
+              currentUrl={project.coverImageUrl}
             />
           </div>
         </header>
@@ -333,6 +357,8 @@ export default async function ProjectDetailPage({
           overheadPercent={project.overheadPercent}
           dibulatkanKe={project.dibulatkanKe}
         />
+
+        <AuditLogSection projectId={project.id} />
       </section>
     </AppShell>
   );
