@@ -1,5 +1,6 @@
 import { relations } from "drizzle-orm";
 import {
+  boolean,
   pgEnum,
   pgTable,
   text,
@@ -77,8 +78,8 @@ export const projects = pgTable(
   "projects",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    // Supabase auth.users.id — gak FK karena auth.users gak ke-manage Drizzle.
-    // Nullable untuk backward compat data lama; new rows always populated.
+    // Supabase auth.users.id. Nullable buat backward compat + buat templates
+    // (templates = is_template true, user_id NULL).
     userId: uuid("user_id"),
     name: text("name").notNull(),
     opd: text("opd"),
@@ -88,6 +89,12 @@ export const projects = pgTable(
     }),
     status: projectStatus("status").notNull().default("draft"),
     notes: text("notes"),
+    // Template fields: kalau is_template = true, project ini gak pernah keliatan
+    // di list user. Cuma muncul di gallery /projects untuk di-clone.
+    isTemplate: boolean("is_template").notNull().default(false),
+    templateCategory: text("template_category"), // "rumah", "renovasi", "komersial", dll
+    templateDescription: text("template_description"),
+    templateSlug: text("template_slug"), // unique slug for stable URL
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -98,6 +105,8 @@ export const projects = pgTable(
   (t) => [
     index("projects_status_idx").on(t.status),
     index("projects_user_idx").on(t.userId),
+    index("projects_template_idx").on(t.isTemplate),
+    uniqueIndex("projects_template_slug_idx").on(t.templateSlug),
   ],
 );
 

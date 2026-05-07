@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/utils";
 import { requireUser } from "@/lib/auth";
+import { TemplatesGallery } from "./templates-gallery";
 
 export const dynamic = "force-dynamic";
 
@@ -60,10 +61,15 @@ export default async function ProjectsPage() {
 
         {dbError ? (
           <DbErrorState message={dbError} />
-        ) : projects.length === 0 ? (
-          <EmptyState />
         ) : (
-          <ProjectsTable projects={projects} />
+          <>
+            <TemplatesGallery />
+            {projects.length === 0 ? (
+              <EmptyState />
+            ) : (
+              <ProjectsTable projects={projects} />
+            )}
+          </>
         )}
       </section>
     </AppShell>
