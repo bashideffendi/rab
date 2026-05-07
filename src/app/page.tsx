@@ -1,4 +1,9 @@
-export default function Home() {
+import { getCurrentUser } from "@/lib/auth";
+import { LogoutButton } from "@/components/logout-button";
+
+export default async function Home() {
+  const user = await getCurrentUser();
+
   return (
     <div className="flex flex-1 flex-col">
       <header className="border-b border-border px-6 py-4">
@@ -10,16 +15,48 @@ export default function Home() {
               Draft
             </span>
           </div>
-          <nav className="flex items-center gap-6 text-sm text-muted-foreground">
-            <a href="#fitur" className="hover:text-foreground">
+          <nav className="flex items-center gap-4 text-sm text-muted-foreground sm:gap-6">
+            <a
+              href="#fitur"
+              className="hidden hover:text-foreground sm:inline"
+            >
               Fitur
             </a>
-            <a href="#untuk-siapa" className="hover:text-foreground">
+            <a
+              href="#untuk-siapa"
+              className="hidden hover:text-foreground sm:inline"
+            >
               Untuk Siapa
             </a>
-            <a href="#roadmap" className="hover:text-foreground">
-              Roadmap
-            </a>
+            {user ? (
+              <>
+                <a
+                  href="/projects"
+                  className="hover:text-foreground"
+                >
+                  Workspace
+                </a>
+                <span
+                  className="hidden font-mono text-xs sm:inline"
+                  title={user.email ?? undefined}
+                >
+                  {user.email?.split("@")[0]}
+                </span>
+                <LogoutButton />
+              </>
+            ) : (
+              <>
+                <a href="/login" className="hover:text-foreground">
+                  Login
+                </a>
+                <a
+                  href="/signup"
+                  className="rounded border border-accent px-3 py-1 text-accent hover:bg-accent hover:text-black"
+                >
+                  Daftar
+                </a>
+              </>
+            )}
           </nav>
         </div>
       </header>
