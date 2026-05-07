@@ -71,9 +71,13 @@ export default async function EditProjectPage({
           >
             ← {project.name}
           </Link>
-          <h1 className="mt-2 text-2xl font-semibold tracking-tight">
+          <h1 className="mt-2 text-2xl font-bold tracking-tight">
             Edit Project
           </h1>
+          <p className="mt-1.5 text-sm text-muted-foreground">
+            Perbarui data proyek. Semua field bertanda{" "}
+            <span className="text-danger">*</span> wajib diisi.
+          </p>
         </header>
         <EditProjectForm project={project} regionOptions={regionOptions} />
       </section>

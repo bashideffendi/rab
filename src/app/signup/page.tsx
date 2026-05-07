@@ -15,32 +15,34 @@ export default async function SignupPage({
       <header className="border-b border-border px-6 py-4">
         <div className="mx-auto flex max-w-6xl items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
-            <span className="font-mono text-sm text-accent">▲</span>
-            <span className="font-semibold tracking-tight">RABin</span>
+            <span className="text-lg font-bold tracking-tight">
+              <span className="text-accent">RAB</span>in
+            </span>
           </Link>
         </div>
       </header>
 
       <main className="flex flex-1 items-center justify-center px-6 py-12">
         <div className="w-full max-w-sm">
-          <h1 className="mb-2 text-2xl font-semibold tracking-tight">
-            Bikin Akun
+          <h1 className="mb-2 text-3xl font-bold tracking-tight">
+            Daftar Gratis
           </h1>
           <p className="mb-8 text-sm text-muted-foreground">
-            Gratis. Akun ini buat akses RAB-mu di mana aja.
+            Cukup email dan password. Tidak perlu kartu kredit, bisa langsung
+            mulai bikin RAB.
           </p>
           <SignupForm />
           <p className="mt-6 text-center text-sm text-muted-foreground">
-            Udah punya akun?{" "}
+            Sudah punya akun?{" "}
             <Link
               href={
                 next
                   ? `/login?next=${encodeURIComponent(next)}`
                   : "/login"
               }
-              className="text-accent hover:underline"
+              className="font-medium text-accent hover:underline"
             >
-              Masuk
+              Masuk di sini
             </Link>
           </p>
         </div>

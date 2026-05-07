@@ -46,28 +46,44 @@ export function EditProjectForm({
           defaultValue={project.name}
           maxLength={200}
           onBlur={titleCaseOnBlur}
+          required
         />
       </Field>
 
-      <Field label="Status" htmlFor="status" error={state.fieldErrors?.status}>
-        <Select id="status" name="status" defaultValue={project.status}>
-          <option value="draft">draft</option>
-          <option value="active">active</option>
-          <option value="archived">archived</option>
+      <Field
+        label="Status"
+        htmlFor="status"
+        required
+        error={state.fieldErrors?.status}
+      >
+        <Select
+          id="status"
+          name="status"
+          defaultValue={project.status}
+          required
+        >
+          <option value="draft">Draft</option>
+          <option value="active">Active</option>
+          <option value="archived">Archived</option>
         </Select>
       </Field>
 
       <Field
         label="Lokasi (Provinsi)"
         htmlFor="regionId"
-        hint="Bikin harga material ngikut daerah. Kosongin = harga nasional."
+        required
+        error={state.fieldErrors?.regionId}
+        hint="Indeks Kemahalan Konstruksi (IKK) per provinsi mempengaruhi harga material."
       >
         <Select
           id="regionId"
           name="regionId"
           defaultValue={project.regionId ?? ""}
+          required
         >
-          <option value="">— pilih provinsi —</option>
+          <option value="" disabled>
+            — pilih provinsi —
+          </option>
           {regionOptions.map((r) => (
             <option key={r.id} value={r.id}>
               {r.name}
@@ -80,7 +96,9 @@ export function EditProjectForm({
       <Field
         label="Klien / Pemilik Proyek"
         htmlFor="opd"
-        hint="Buat siapa RAB ini? Kosongin aja kalau bikin sendiri."
+        required
+        error={state.fieldErrors?.opd}
+        hint="Untuk siapa RAB ini dibuat. Kalau proyek pribadi, isi nama kamu sendiri."
       >
         <Input
           id="opd"
@@ -88,13 +106,16 @@ export function EditProjectForm({
           defaultValue={project.opd ?? ""}
           maxLength={200}
           onBlur={titleCaseOnBlur}
+          required
         />
       </Field>
 
       <Field
         label="Penanggung Jawab"
         htmlFor="ownerName"
-        hint="Nama yang nyusun atau PIC proyek."
+        required
+        error={state.fieldErrors?.ownerName}
+        hint="Nama penyusun RAB atau PIC proyek."
       >
         <Input
           id="ownerName"
@@ -102,11 +123,17 @@ export function EditProjectForm({
           defaultValue={project.ownerName ?? ""}
           maxLength={200}
           onBlur={titleCaseOnBlur}
+          required
         />
       </Field>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Field label="Tahun" htmlFor="tahun">
+        <Field
+          label="Tahun Proyek"
+          htmlFor="tahun"
+          required
+          error={state.fieldErrors?.tahun}
+        >
           <Input
             id="tahun"
             name="tahun"
@@ -115,11 +142,14 @@ export function EditProjectForm({
             defaultValue={project.tahun ?? ""}
             min={1990}
             max={2100}
+            required
           />
         </Field>
         <Field
           label="Alamat Lengkap"
           htmlFor="alamat"
+          required
+          error={state.fieldErrors?.alamat}
           hint="Cari di peta atau ketik manual."
         >
           <AlamatPicker
@@ -127,46 +157,52 @@ export function EditProjectForm({
             defaultValue={project.alamat ?? ""}
             defaultLat={project.lat ?? ""}
             defaultLng={project.lng ?? ""}
+            required
           />
         </Field>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Field label="PPN (%)" htmlFor="ppnPercent">
-          <Input
-            id="ppnPercent"
-            name="ppnPercent"
-            type="number"
-            inputMode="decimal"
-            defaultValue={project.ppnPercent}
-            step="0.01"
-            min="0"
-            max="100"
-          />
-        </Field>
-        <Field label="Overhead (%)" htmlFor="overheadPercent">
-          <Input
-            id="overheadPercent"
-            name="overheadPercent"
-            type="number"
-            inputMode="decimal"
-            defaultValue={project.overheadPercent}
-            step="0.01"
-            min="0"
-            max="100"
-          />
-        </Field>
-        <Field label="Dibulatkan ke (Rp)" htmlFor="dibulatkanKe">
-          <Input
-            id="dibulatkanKe"
-            name="dibulatkanKe"
-            type="number"
-            inputMode="numeric"
-            defaultValue={project.dibulatkanKe}
-            step="100"
-            min="0"
-          />
-        </Field>
+      <div className="rounded-md border border-border bg-muted/30 p-4">
+        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Konfigurasi Perhitungan
+        </p>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <Field label="PPN (%)" htmlFor="ppnPercent">
+            <Input
+              id="ppnPercent"
+              name="ppnPercent"
+              type="number"
+              inputMode="decimal"
+              defaultValue={project.ppnPercent}
+              step="0.01"
+              min="0"
+              max="100"
+            />
+          </Field>
+          <Field label="Overhead (%)" htmlFor="overheadPercent">
+            <Input
+              id="overheadPercent"
+              name="overheadPercent"
+              type="number"
+              inputMode="decimal"
+              defaultValue={project.overheadPercent}
+              step="0.01"
+              min="0"
+              max="100"
+            />
+          </Field>
+          <Field label="Dibulatkan ke (Rp)" htmlFor="dibulatkanKe">
+            <Input
+              id="dibulatkanKe"
+              name="dibulatkanKe"
+              type="number"
+              inputMode="numeric"
+              defaultValue={project.dibulatkanKe}
+              step="100"
+              min="0"
+            />
+          </Field>
+        </div>
       </div>
 
       <Field label="Catatan" htmlFor="notes">
@@ -185,15 +221,25 @@ export function EditProjectForm({
         </div>
       )}
 
-      <div className="mt-2 flex items-center justify-end gap-3">
-        <Link href={`/projects/${project.id}`}>
-          <Button type="button" variant="ghost" size="md">
-            Batal
+      <div className="mt-2 flex items-center justify-between gap-3">
+        <p className="text-xs text-muted-foreground">
+          <span className="text-danger">*</span> Wajib diisi
+        </p>
+        <div className="flex items-center gap-3">
+          <Link href={`/projects/${project.id}`}>
+            <Button type="button" variant="ghost" size="md">
+              Batal
+            </Button>
+          </Link>
+          <Button
+            type="submit"
+            variant="primary"
+            size="md"
+            disabled={pending}
+          >
+            {pending ? "Menyimpan…" : "Simpan Perubahan"}
           </Button>
-        </Link>
-        <Button type="submit" variant="primary" size="md" disabled={pending}>
-          {pending ? "Menyimpan…" : "Simpan Perubahan"}
-        </Button>
+        </div>
       </div>
     </form>
   );

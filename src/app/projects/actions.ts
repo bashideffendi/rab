@@ -18,9 +18,17 @@ function isProjectStatus(v: unknown): v is ProjectStatus {
 
 // ─── CREATE ──────────────────────────────────────────────────────────────────
 
+type ProjectField =
+  | "name"
+  | "regionId"
+  | "opd"
+  | "ownerName"
+  | "tahun"
+  | "alamat";
+
 export type CreateProjectFormState = {
   error?: string;
-  fieldErrors?: Partial<Record<"name", string>>;
+  fieldErrors?: Partial<Record<ProjectField, string>>;
 };
 
 function parsePercent(v: FormDataEntryValue | null, fallback: string): string {
@@ -62,17 +70,15 @@ export async function createProject(
   formData: FormData,
 ): Promise<CreateProjectFormState> {
   const name = (formData.get("name") ?? "").toString().trim();
-  const opd = (formData.get("opd") ?? "").toString().trim() || null;
-  const ownerName =
-    (formData.get("ownerName") ?? "").toString().trim() || null;
+  const opd = (formData.get("opd") ?? "").toString().trim();
+  const ownerName = (formData.get("ownerName") ?? "").toString().trim();
   const notes = (formData.get("notes") ?? "").toString().trim() || null;
-  const regionRaw = (formData.get("regionId") ?? "").toString().trim();
-  const regionId = regionRaw ? regionRaw : null;
-  const alamat = (formData.get("alamat") ?? "").toString().trim() || null;
+  const regionId = (formData.get("regionId") ?? "").toString().trim();
+  const alamat = (formData.get("alamat") ?? "").toString().trim();
   const lat = parseCoord(formData.get("lat"), -90, 90);
   const lng = parseCoord(formData.get("lng"), -180, 180);
   const tahunRaw = (formData.get("tahun") ?? "").toString().trim();
-  const tahun = tahunRaw ? Number(tahunRaw) : null;
+  const tahunNum = tahunRaw ? Number(tahunRaw) : NaN;
   const ppnPercent = parsePercent(formData.get("ppnPercent"), "11.00");
   const overheadPercent = parsePercent(
     formData.get("overheadPercent"),
@@ -80,12 +86,39 @@ export async function createProject(
   );
   const dibulatkanKe = parseInt0OrPositive(formData.get("dibulatkanKe"), 1000);
 
-  if (!name) {
-    return { fieldErrors: { name: "Nama project wajib diisi." } };
+  const fieldErrors: Partial<Record<ProjectField, string>> = {};
+  if (!name) fieldErrors.name = "Nama project wajib diisi.";
+  else if (name.length > 200)
+    fieldErrors.name = "Nama project maksimal 200 karakter.";
+
+  if (!regionId)
+    fieldErrors.regionId =
+      "Lokasi wajib dipilih — IKK provinsi mempengaruhi harga material.";
+
+  if (!opd) fieldErrors.opd = "Klien / pemilik proyek wajib diisi.";
+  else if (opd.length > 200)
+    fieldErrors.opd = "Klien maksimal 200 karakter.";
+
+  if (!ownerName) fieldErrors.ownerName = "Penanggung jawab wajib diisi.";
+  else if (ownerName.length > 200)
+    fieldErrors.ownerName = "Penanggung jawab maksimal 200 karakter.";
+
+  if (!tahunRaw) fieldErrors.tahun = "Tahun proyek wajib diisi.";
+  else if (
+    !Number.isInteger(tahunNum) ||
+    tahunNum < 1990 ||
+    tahunNum > 2100
+  )
+    fieldErrors.tahun = "Tahun harus angka antara 1990 - 2100.";
+
+  if (!alamat) fieldErrors.alamat = "Alamat lengkap wajib diisi.";
+  else if (alamat.length > 300)
+    fieldErrors.alamat = "Alamat maksimal 300 karakter.";
+
+  if (Object.keys(fieldErrors).length > 0) {
+    return { fieldErrors };
   }
-  if (name.length > 200) {
-    return { fieldErrors: { name: "Nama project maksimal 200 karakter." } };
-  }
+  const tahun = tahunNum;
 
   const user = await requireUser();
 
@@ -125,9 +158,11 @@ export async function createProject(
 
 // ─── UPDATE ──────────────────────────────────────────────────────────────────
 
+type UpdateField = ProjectField | "status";
+
 export type UpdateProjectFormState = {
   error?: string;
-  fieldErrors?: Partial<Record<"name" | "status", string>>;
+  fieldErrors?: Partial<Record<UpdateField, string>>;
 };
 
 export async function updateProject(
@@ -136,18 +171,16 @@ export async function updateProject(
   formData: FormData,
 ): Promise<UpdateProjectFormState> {
   const name = (formData.get("name") ?? "").toString().trim();
-  const opd = (formData.get("opd") ?? "").toString().trim() || null;
-  const ownerName =
-    (formData.get("ownerName") ?? "").toString().trim() || null;
+  const opd = (formData.get("opd") ?? "").toString().trim();
+  const ownerName = (formData.get("ownerName") ?? "").toString().trim();
   const notes = (formData.get("notes") ?? "").toString().trim() || null;
   const status = formData.get("status");
-  const regionRaw = (formData.get("regionId") ?? "").toString().trim();
-  const regionId = regionRaw ? regionRaw : null;
-  const alamat = (formData.get("alamat") ?? "").toString().trim() || null;
+  const regionId = (formData.get("regionId") ?? "").toString().trim();
+  const alamat = (formData.get("alamat") ?? "").toString().trim();
   const lat = parseCoord(formData.get("lat"), -90, 90);
   const lng = parseCoord(formData.get("lng"), -180, 180);
   const tahunRaw = (formData.get("tahun") ?? "").toString().trim();
-  const tahun = tahunRaw ? Number(tahunRaw) : null;
+  const tahunNum = tahunRaw ? Number(tahunRaw) : NaN;
   const ppnPercent = parsePercent(formData.get("ppnPercent"), "11.00");
   const overheadPercent = parsePercent(
     formData.get("overheadPercent"),
@@ -155,15 +188,43 @@ export async function updateProject(
   );
   const dibulatkanKe = parseInt0OrPositive(formData.get("dibulatkanKe"), 1000);
 
-  if (!name) {
-    return { fieldErrors: { name: "Nama project wajib diisi." } };
+  const fieldErrors: Partial<Record<UpdateField, string>> = {};
+  if (!name) fieldErrors.name = "Nama project wajib diisi.";
+  else if (name.length > 200)
+    fieldErrors.name = "Nama project maksimal 200 karakter.";
+
+  if (!regionId)
+    fieldErrors.regionId =
+      "Lokasi wajib dipilih — IKK provinsi mempengaruhi harga material.";
+
+  if (!opd) fieldErrors.opd = "Klien / pemilik proyek wajib diisi.";
+  else if (opd.length > 200)
+    fieldErrors.opd = "Klien maksimal 200 karakter.";
+
+  if (!ownerName) fieldErrors.ownerName = "Penanggung jawab wajib diisi.";
+  else if (ownerName.length > 200)
+    fieldErrors.ownerName = "Penanggung jawab maksimal 200 karakter.";
+
+  if (!tahunRaw) fieldErrors.tahun = "Tahun proyek wajib diisi.";
+  else if (
+    !Number.isInteger(tahunNum) ||
+    tahunNum < 1990 ||
+    tahunNum > 2100
+  )
+    fieldErrors.tahun = "Tahun harus angka antara 1990 - 2100.";
+
+  if (!alamat) fieldErrors.alamat = "Alamat lengkap wajib diisi.";
+  else if (alamat.length > 300)
+    fieldErrors.alamat = "Alamat maksimal 300 karakter.";
+
+  if (!isProjectStatus(status)) fieldErrors.status = "Status tidak valid.";
+
+  if (Object.keys(fieldErrors).length > 0) {
+    return { fieldErrors };
   }
-  if (name.length > 200) {
-    return { fieldErrors: { name: "Nama project maksimal 200 karakter." } };
-  }
-  if (!isProjectStatus(status)) {
-    return { fieldErrors: { status: "Status tidak valid." } };
-  }
+  const tahun = tahunNum;
+  // After validation pass, status is guaranteed valid
+  const validatedStatus = status as ProjectStatus;
 
   const user = await requireUser();
 
@@ -175,7 +236,7 @@ export async function updateProject(
         opd,
         ownerName,
         notes,
-        status,
+        status: validatedStatus,
         regionId,
         alamat,
         lat,

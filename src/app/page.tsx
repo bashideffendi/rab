@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
 import { LogoutButton } from "@/components/logout-button";
 
@@ -6,38 +7,43 @@ export default async function Home() {
 
   return (
     <div className="flex flex-1 flex-col">
-      <header className="border-b border-border px-6 py-4">
+      {/* Header */}
+      <header className="sticky top-0 z-30 border-b border-border bg-background/85 px-6 py-4 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="font-mono text-sm text-accent">▲</span>
-            <span className="font-semibold tracking-tight">RABin</span>
-            <span className="ml-2 rounded border border-border px-2 py-0.5 text-xs font-medium text-muted-foreground">
-              Draft
+          <Link href="/" className="flex items-center gap-2">
+            <span className="text-lg font-bold tracking-tight">
+              <span className="text-accent">RAB</span>in
             </span>
-          </div>
-          <nav className="flex items-center gap-4 text-sm text-muted-foreground sm:gap-6">
+          </Link>
+          <nav className="flex items-center gap-5 text-sm sm:gap-7">
             <a
               href="#fitur"
-              className="hidden hover:text-foreground sm:inline"
+              className="hidden text-muted-foreground hover:text-foreground sm:inline"
             >
               Fitur
             </a>
             <a
+              href="#cara-kerja"
+              className="hidden text-muted-foreground hover:text-foreground sm:inline"
+            >
+              Cara Kerja
+            </a>
+            <a
               href="#untuk-siapa"
-              className="hidden hover:text-foreground sm:inline"
+              className="hidden text-muted-foreground hover:text-foreground sm:inline"
             >
               Untuk Siapa
             </a>
             {user ? (
               <>
-                <a
+                <Link
                   href="/projects"
-                  className="hover:text-foreground"
+                  className="text-muted-foreground hover:text-foreground"
                 >
                   Workspace
-                </a>
+                </Link>
                 <span
-                  className="hidden font-mono text-xs sm:inline"
+                  className="hidden font-mono text-xs text-muted-foreground sm:inline"
                   title={user.email ?? undefined}
                 >
                   {user.email?.split("@")[0]}
@@ -46,15 +52,18 @@ export default async function Home() {
               </>
             ) : (
               <>
-                <a href="/login" className="hover:text-foreground">
-                  Login
-                </a>
-                <a
-                  href="/signup"
-                  className="rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-accent/90"
+                <Link
+                  href="/login"
+                  className="text-muted-foreground hover:text-foreground"
                 >
-                  Daftar
-                </a>
+                  Login
+                </Link>
+                <Link
+                  href="/signup"
+                  className="rounded-md bg-accent px-3.5 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-accent/90"
+                >
+                  Daftar Gratis
+                </Link>
               </>
             )}
           </nav>
@@ -62,89 +71,127 @@ export default async function Home() {
       </header>
 
       <main className="flex-1">
-        <section className="mx-auto max-w-6xl px-6 py-20">
-          <div className="max-w-3xl">
-            <p className="mb-4 text-sm font-semibold text-accent">
-              RAB Online &mdash; Indonesia
-            </p>
-            <h1 className="text-3xl font-bold leading-tight tracking-tight break-words md:text-5xl">
-              Hitung RAB rumah, renovasi,
-              <br />
-              atau proyek konstruksi —{" "}
-              <span className="text-accent">rinci & transparan.</span>
-            </h1>
-            <p className="mt-6 max-w-2xl text-lg leading-relaxed text-muted-foreground">
-              Tiap angka jelas asalnya. Harga ngikut daerahmu. Peringatan
-              otomatis kalau ada item yang harganya gak wajar. Buat siapa aja
-              — pemilik rumah, konsultan, kontraktor.
-            </p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <a
-                href="/projects"
-                className="rounded-md bg-accent px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-accent/90"
-              >
-                Mulai Bikin RAB &rarr;
-              </a>
-              <a
-                href="#fitur"
-                className="rounded border border-border px-5 py-2.5 text-sm font-medium hover:border-accent hover:text-accent"
-              >
-                Lihat Fitur
-              </a>
+        {/* Hero */}
+        <section className="px-6 py-20 md:py-28">
+          <div className="mx-auto max-w-6xl">
+            <div className="max-w-3xl">
+              <p className="mb-5 text-xs font-semibold uppercase tracking-[0.18em] text-accent">
+                RAB Online · Konstruksi Indonesia
+              </p>
+              <h1 className="text-4xl font-bold leading-[1.1] tracking-tight md:text-6xl">
+                Susun RAB profesional —
+                <br />
+                <span className="text-accent">
+                  rinci, transparan, sesuai standar.
+                </span>
+              </h1>
+              <p className="mt-6 max-w-2xl text-lg leading-relaxed text-muted-foreground">
+                Hitung anggaran biaya konstruksi berbasis Analisis Harga Satuan
+                Pekerjaan (AHSP) resmi dari Permen PUPR, dengan harga yang
+                menyesuaikan daerah proyek. Hasil siap diekspor ke Excel atau
+                PDF, lengkap dengan time schedule.
+              </p>
+              <div className="mt-8 flex flex-wrap items-center gap-4">
+                <Link
+                  href={user ? "/projects" : "/signup"}
+                  className="rounded-md bg-accent px-6 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-accent/90"
+                >
+                  {user ? "Buka Workspace →" : "Mulai Gratis →"}
+                </Link>
+                <a
+                  href="#cara-kerja"
+                  className="rounded-md border border-border px-6 py-3 text-sm font-medium transition-colors hover:border-accent hover:text-accent"
+                >
+                  Lihat Cara Kerja
+                </a>
+              </div>
+              <p className="mt-5 text-xs text-muted-foreground">
+                Gratis · Tanpa kartu kredit · Berbasis web — langsung pakai di
+                browser
+              </p>
+            </div>
+
+            {/* Stats banner */}
+            <div className="mt-16 grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-border bg-border md:grid-cols-4">
+              <Stat label="Item AHSP" value="2.669+" />
+              <Stat label="Provinsi (IKK)" value="34" />
+              <Stat label="Sumber Resmi" value="PUPR · DJBK" />
+              <Stat label="Format Export" value="Excel · PDF" />
             </div>
           </div>
         </section>
 
+        {/* Fitur */}
         <section
           id="fitur"
           className="border-t border-border bg-muted/30 px-6 py-20"
         >
           <div className="mx-auto max-w-6xl">
-            <h2 className="mb-12 text-2xl font-semibold tracking-tight">
-              Apa bedanya sama kalkulator RAB lain?
-            </h2>
-            <div className="grid gap-px overflow-hidden rounded border border-border bg-border md:grid-cols-2 lg:grid-cols-3">
+            <div className="mb-12 max-w-2xl">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-accent">
+                Fitur Inti
+              </p>
+              <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
+                Semua kebutuhan RAB dalam satu workspace.
+              </h2>
+              <p className="mt-3 text-base leading-relaxed text-muted-foreground">
+                Dari struktur pekerjaan, perhitungan harga otomatis, sampai
+                export profesional — semuanya terintegrasi tanpa pindah-pindah
+                aplikasi.
+              </p>
+            </div>
+            <div className="grid gap-px overflow-hidden rounded-lg border border-border bg-border md:grid-cols-2 lg:grid-cols-3">
               {features.map((f, i) => (
-                <div
+                <article
                   key={f.title}
-                  className="bg-background p-6 transition-colors hover:bg-muted/50"
+                  className="bg-background p-6 transition-colors hover:bg-muted/40"
                 >
                   <div className="mb-3 flex items-baseline justify-between">
+                    <span className="text-2xl">{f.icon}</span>
                     <span className="font-mono text-xs text-muted-foreground">
-                      0{i + 1}
-                    </span>
-                    <span className="rounded border border-border px-1.5 py-0.5 text-xs font-medium text-muted-foreground">
-                      {f.tag}
+                      {String(i + 1).padStart(2, "0")}
                     </span>
                   </div>
-                  <h3 className="mb-2 font-semibold tracking-tight">
+                  <h3 className="mb-2 text-base font-semibold tracking-tight">
                     {f.title}
                   </h3>
                   <p className="text-sm leading-relaxed text-muted-foreground">
                     {f.desc}
                   </p>
-                </div>
+                </article>
               ))}
             </div>
           </div>
         </section>
 
-        <section id="untuk-siapa" className="px-6 py-20">
+        {/* Cara kerja */}
+        <section id="cara-kerja" className="px-6 py-20">
           <div className="mx-auto max-w-6xl">
-            <h2 className="mb-12 text-2xl font-semibold tracking-tight">
-              Untuk siapa
-            </h2>
+            <div className="mb-12 max-w-2xl">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-accent">
+                Cara Kerja
+              </p>
+              <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
+                Tiga langkah dari awal sampai export.
+              </h2>
+              <p className="mt-3 text-base leading-relaxed text-muted-foreground">
+                Tidak butuh training panjang. Buka, isi, ekspor.
+              </p>
+            </div>
             <div className="grid gap-6 md:grid-cols-3">
-              {audiences.map((a) => (
+              {steps.map((s, i) => (
                 <div
-                  key={a.role}
-                  className="rounded border border-border p-6"
+                  key={s.title}
+                  className="relative rounded-lg border border-border bg-card p-6 shadow-sm"
                 >
-                  <p className="mb-2 text-sm font-semibold text-accent">
-                    {a.role}
-                  </p>
-                  <p className="text-sm leading-relaxed text-muted-foreground">
-                    {a.note}
+                  <span className="font-mono text-3xl font-bold text-accent/80">
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                  <h3 className="mt-3 text-base font-semibold tracking-tight">
+                    {s.title}
+                  </h3>
+                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                    {s.desc}
                   </p>
                 </div>
               ))}
@@ -152,126 +199,169 @@ export default async function Home() {
           </div>
         </section>
 
+        {/* Untuk siapa */}
         <section
-          id="roadmap"
+          id="untuk-siapa"
           className="border-t border-border bg-muted/30 px-6 py-20"
         >
           <div className="mx-auto max-w-6xl">
-            <h2 className="mb-12 text-2xl font-semibold tracking-tight">
-              Roadmap
-            </h2>
-            <div className="space-y-px overflow-hidden rounded border border-border bg-border">
-              {roadmap.map((r) => (
-                <div
-                  key={r.version}
-                  className="flex flex-col gap-2 bg-background p-5 md:flex-row md:items-center md:gap-8"
+            <div className="mb-12 max-w-2xl">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-accent">
+                Cocok Untuk
+              </p>
+              <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
+                Dipakai siapa saja yang butuh RAB.
+              </h2>
+            </div>
+            <div className="grid gap-6 md:grid-cols-3">
+              {audiences.map((a) => (
+                <article
+                  key={a.role}
+                  className="rounded-lg border border-border bg-background p-6 shadow-sm"
                 >
-                  <div className="flex w-32 shrink-0 items-center gap-3">
-                    <span className="font-mono text-sm font-semibold text-accent">
-                      {r.version}
-                    </span>
-                    <span
-                      className={`rounded-md border px-2 py-0.5 text-xs font-medium ${
-                        r.status === "now"
-                          ? "border-accent/40 bg-accent/5 text-accent"
-                          : "border-border text-muted-foreground"
-                      }`}
-                    >
-                      {r.status === "now" ? "Active" : "Planned"}
-                    </span>
-                  </div>
-                  <p className="text-sm text-muted-foreground">{r.items}</p>
-                </div>
+                  <span className="text-3xl">{a.icon}</span>
+                  <h3 className="mt-4 text-base font-semibold tracking-tight">
+                    {a.role}
+                  </h3>
+                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                    {a.note}
+                  </p>
+                </article>
               ))}
+            </div>
+          </div>
+        </section>
+
+        {/* CTA bawah */}
+        <section className="border-t border-border px-6 py-20">
+          <div className="mx-auto max-w-3xl text-center">
+            <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
+              Siap susun RAB pertamamu?
+            </h2>
+            <p className="mt-4 text-base leading-relaxed text-muted-foreground">
+              Daftar gratis hari ini. Tidak perlu kartu kredit, tidak perlu
+              instalasi. Tinggal buka browser dan mulai bekerja.
+            </p>
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
+              <Link
+                href={user ? "/projects" : "/signup"}
+                className="rounded-md bg-accent px-6 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-accent/90"
+              >
+                {user ? "Buka Workspace →" : "Daftar Gratis →"}
+              </Link>
+              {!user && (
+                <Link
+                  href="/login"
+                  className="rounded-md border border-border px-6 py-3 text-sm font-medium transition-colors hover:border-accent hover:text-accent"
+                >
+                  Sudah Punya Akun? Login
+                </Link>
+              )}
             </div>
           </div>
         </section>
       </main>
 
-      <footer className="border-t border-border px-6 py-8">
-        <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-2 text-xs text-muted-foreground md:flex-row md:items-center">
+      <footer className="border-t border-border px-6 py-10">
+        <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-4 text-xs text-muted-foreground md:flex-row md:items-center">
+          <div className="flex items-center gap-2">
+            <span className="text-base font-bold">
+              <span className="text-accent">RAB</span>in
+            </span>
+            <span>·</span>
+            <span>RAB online untuk konstruksi Indonesia</span>
+          </div>
           <p className="font-mono">
-            rabin.masbash.id &mdash; bagian dari{" "}
+            Bagian dari{" "}
             <a
               href="https://masbash.id"
               className="text-accent hover:underline"
             >
               masbash.id
             </a>{" "}
-            ecosystem
+            · &copy; 2026
           </p>
-          <p>&copy; 2026 Bashid Effendi</p>
         </div>
       </footer>
     </div>
   );
 }
 
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="bg-background p-5 text-center">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+        {label}
+      </p>
+      <p className="mt-2 text-xl font-bold tracking-tight md:text-2xl">
+        {value}
+      </p>
+    </div>
+  );
+}
+
 const features = [
   {
-    tag: "Transparan",
-    title: "Tiap angka jelas asalnya",
-    desc: "Koefisien & harga punya referensi ke standar resmi (Permen PUPR, SNI). Klik, lihat sumbernya — gak asal nempelin angka.",
+    icon: "📚",
+    title: "Library AHSP 2.669+ item",
+    desc: "Database analisis harga satuan pekerjaan dari Permen PUPR dan SE DJBK. Cari berdasarkan kata kunci atau kode — koefisien dan referensi resmi langsung tersedia.",
   },
   {
-    tag: "Lokal",
-    title: "Harga ngikut daerahmu",
-    desc: "Pasir di Batam beda sama di Aceh, semen juga. Harga otomatis pakai data daerah, bukan flat nasional.",
+    icon: "📍",
+    title: "Harga sesuai daerah",
+    desc: "Indeks Kemahalan Konstruksi (IKK) dari BPS per provinsi diterapkan otomatis. Anggaran proyek di Aceh, Batam, atau Papua menyesuaikan kondisi pasar setempat.",
   },
   {
-    tag: "Cek wajar",
-    title: "Peringatan harga aneh",
-    desc: "Kalau ada item yang harganya melenceng jauh dari pasaran, ada warning otomatis. Biar gak ke-mark-up tanpa sadar.",
+    icon: "📅",
+    title: "Time Schedule + Gantt",
+    desc: "Tentukan minggu mulai dan durasi setiap pekerjaan. Bobot pekerjaan dihitung otomatis dari nilai item. Visualisasi Gantt langsung tersedia.",
   },
   {
-    tag: "Riwayat",
-    title: "Catatan perubahan",
-    desc: "RAB direvisi? Ada riwayat kapan & apanya yang diubah. Kalau ditanya pas meeting, gampang jawabnya.",
+    icon: "📊",
+    title: "Export Excel & PDF",
+    desc: "Hasil RAB lengkap dengan rekapitulasi, terbilang, dan PPN — siap diunduh dalam Excel multi-sheet atau PDF profesional. Langsung kirim ke klien.",
   },
   {
-    tag: "Export",
-    title: "Excel & PDF rapi",
-    desc: "Hasil siap dikirim ke kontraktor, dilampirin ke kontrak, atau dibawa ke meeting. Format profesional, langsung pakai.",
+    icon: "✨",
+    title: "Generate AI dari gambar kerja",
+    desc: "Upload gambar kerja PDF (denah, tampak, potongan). AI membaca dan mengusulkan item RAB beserta estimasi volume. Review dan terapkan dalam beberapa klik.",
   },
   {
-    tag: "Soon",
-    title: "Template proyek",
-    desc: "Mulai dari template umum (rumah 1 lantai, renovasi dapur, ruko 2 lantai) biar gak mulai dari nol.",
+    icon: "📁",
+    title: "Template proyek siap pakai",
+    desc: "Mulai dari template umum (rumah satu lantai, renovasi, ruko dua lantai). Salin ke project baru, lalu sesuaikan dengan kebutuhan proyek.",
   },
 ];
 
 const audiences = [
   {
-    role: "Pemilik Rumah / Proyek",
-    note: "Mau bangun atau renovasi? Bikin RAB sendiri biar tau detailnya sebelum kontraktor masuk. Lebih kebal dari mark-up.",
+    icon: "🏠",
+    role: "Pemilik Proyek",
+    note: "Mau bangun atau renovasi rumah? Susun RAB sendiri sebelum mengundang kontraktor. Lebih jelas budget, lebih kuat saat negosiasi, lebih kebal mark-up.",
   },
   {
-    role: "Konsultan Perencana",
-    note: "Bikin RAB profesional dengan referensi yang bisa kamu pertanggungjawabkan ke klien. Hemat waktu, gak harus mulai dari Excel kosong.",
+    icon: "📐",
+    role: "Konsultan & Estimator",
+    note: "Susun RAB dengan referensi yang bisa dipertanggungjawabkan ke klien. Hemat waktu — tidak perlu mulai dari Excel kosong setiap proyek baru.",
   },
   {
-    role: "Kontraktor & Estimator",
-    note: "Submit penawaran konsisten dan transparan. Klien lebih percaya kalau angkanya bisa dijelasin sumbernya.",
+    icon: "🏗️",
+    role: "Kontraktor",
+    note: "Submit penawaran dengan basis perhitungan transparan. Klien lebih percaya saat tiap angka bisa dijelaskan sumbernya — dari koefisien sampai harga material.",
   },
 ];
 
-const roadmap = [
+const steps = [
   {
-    version: "v1",
-    status: "now" as const,
-    items:
-      "Bikin project, struktur pekerjaan, kalkulator RAB pakai AHSP standar atau item custom, total otomatis.",
+    title: "Daftar & buat project",
+    desc: "Daftar gratis, lalu isi data proyek: nama, lokasi, klien, dan tahun. Sistem menyiapkan workspace dengan konfigurasi default (PPN 11%, pembulatan Rp 1.000).",
   },
   {
-    version: "v2",
-    status: "next" as const,
-    items:
-      "Harga material per daerah (kabupaten/kota), peringatan harga aneh otomatis, riwayat perubahan.",
+    title: "Susun WBS & item RAB",
+    desc: "Bangun struktur pekerjaan (Work Breakdown Structure). Pilih item dari library AHSP atau buat custom. Input volume — harga otomatis dihitung dari koefisien dan harga material.",
   },
   {
-    version: "v3",
-    status: "next" as const,
-    items:
-      "Export Excel & PDF rapi, template proyek umum (rumah, renovasi, ruko), berbagi RAB ke kontraktor.",
+    title: "Schedule & export",
+    desc: "Tentukan timeline pengerjaan tiap item, lihat Gantt chart otomatis. Generate Excel atau PDF profesional — siap dikirim ke klien atau dilampirkan ke kontrak.",
   },
 ];

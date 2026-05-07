@@ -13,12 +13,29 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "RABin — Hitung RAB rumah, renovasi, atau proyek konstruksi",
+  title: "RABin — Susun RAB profesional untuk konstruksi Indonesia",
   description:
-    "Kalkulator RAB online buat siapa aja: pemilik rumah, konsultan, kontraktor. Tiap angka jelas asalnya, harga ngikut daerahmu, peringatan harga aneh otomatis.",
+    "Hitung Rencana Anggaran Biaya berbasis AHSP resmi (Permen PUPR) dengan harga yang menyesuaikan daerah proyek. Library 2.669+ item, time schedule, dan export Excel/PDF profesional.",
+  keywords: [
+    "RAB",
+    "Rencana Anggaran Biaya",
+    "AHSP",
+    "konstruksi",
+    "Permen PUPR",
+    "kalkulator RAB",
+    "estimator konstruksi",
+    "IKK",
+  ],
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
   ),
+  openGraph: {
+    title: "RABin — Susun RAB profesional untuk konstruksi Indonesia",
+    description:
+      "Hitung RAB berbasis AHSP resmi, harga menyesuaikan daerah, dengan time schedule dan export profesional.",
+    locale: "id_ID",
+    type: "website",
+  },
 };
 
 export default function RootLayout({

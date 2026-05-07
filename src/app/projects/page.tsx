@@ -54,14 +54,20 @@ export default async function ProjectsPage({
   return (
     <AppShell>
       <section className="mx-auto max-w-6xl px-6 py-12">
-        <header className="mb-8 flex items-center justify-between">
+        <header className="mb-8 flex items-end justify-between gap-4">
           <div>
-            <p className="mb-1 text-sm font-semibold text-accent">
+            <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-accent">
               Workspace
             </p>
-            <h1 className="text-2xl font-semibold tracking-tight">Projects</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Daftar project RAB. Total: {projects.length}.
+            <h1 className="text-3xl font-bold tracking-tight">
+              Project Saya
+            </h1>
+            <p className="mt-1.5 text-sm text-muted-foreground">
+              {isArchivedTab
+                ? `${projects.length} project diarsipkan.`
+                : projects.length === 0
+                  ? "Belum ada project. Mulai dengan bikin project pertama."
+                  : `${projects.length} project aktif.`}
             </p>
           </div>
           <Link href="/projects/new">
@@ -131,19 +137,18 @@ npm run db:push`}
 
 function EmptyState() {
   return (
-    <div className="flex flex-col items-center justify-center rounded border border-dashed border-border py-20 text-center">
-      <p className="mb-2 text-sm font-medium text-muted-foreground">
-        Workspace kosong
-      </p>
-      <h2 className="mb-1 text-lg font-semibold tracking-tight">
-        Belum ada project
+    <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border bg-muted/20 py-20 text-center">
+      <span className="mb-3 text-4xl">📋</span>
+      <h2 className="mb-2 text-lg font-bold tracking-tight">
+        Mulai project pertama
       </h2>
-      <p className="mb-6 max-w-sm text-sm text-muted-foreground">
-        Mulai bikin project pertama. Tiap project punya struktur pekerjaan
-        sendiri dan rincian RAB yang transparan.
+      <p className="mb-6 max-w-md text-sm leading-relaxed text-muted-foreground">
+        Setiap project memiliki struktur pekerjaan (WBS) dan rincian RAB
+        sendiri. Pilih item dari library AHSP atau bikin custom — total dan
+        rekapitulasi otomatis terhitung.
       </p>
       <Link href="/projects/new">
-        <Button variant="primary">+ Project Baru</Button>
+        <Button variant="primary">+ Buat Project Baru</Button>
       </Link>
     </div>
   );
@@ -155,15 +160,15 @@ function ProjectsTable({
   projects: Awaited<ReturnType<typeof loadProjects>>;
 }) {
   return (
-    <div className="overflow-hidden rounded border border-border">
+    <div className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
       <table className="w-full text-sm">
-        <thead className="bg-muted/40 text-left text-xs font-medium text-muted-foreground">
+        <thead className="bg-muted/50 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           <tr>
-            <th className="px-4 py-3 font-medium">Nama</th>
-            <th className="px-4 py-3 font-medium">Klien</th>
-            <th className="px-4 py-3 font-medium">PIC</th>
-            <th className="px-4 py-3 font-medium">Status</th>
-            <th className="px-4 py-3 text-right font-medium">Updated</th>
+            <th className="px-4 py-3">Nama Project</th>
+            <th className="px-4 py-3">Klien</th>
+            <th className="px-4 py-3">PIC</th>
+            <th className="px-4 py-3">Status</th>
+            <th className="px-4 py-3 text-right">Diperbarui</th>
           </tr>
         </thead>
         <tbody>

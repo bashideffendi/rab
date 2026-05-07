@@ -15,17 +15,20 @@ export default async function LoginPage({
       <header className="border-b border-border px-6 py-4">
         <div className="mx-auto flex max-w-6xl items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
-            <span className="font-mono text-sm text-accent">▲</span>
-            <span className="font-semibold tracking-tight">RABin</span>
+            <span className="text-lg font-bold tracking-tight">
+              <span className="text-accent">RAB</span>in
+            </span>
           </Link>
         </div>
       </header>
 
       <main className="flex flex-1 items-center justify-center px-6 py-12">
         <div className="w-full max-w-sm">
-          <h1 className="mb-2 text-2xl font-semibold tracking-tight">Login</h1>
+          <h1 className="mb-2 text-3xl font-bold tracking-tight">
+            Selamat Datang
+          </h1>
           <p className="mb-8 text-sm text-muted-foreground">
-            Masuk untuk akses workspace RAB-mu.
+            Masuk ke akun untuk mengakses workspace RAB kamu.
           </p>
           <LoginForm next={next ?? "/projects"} />
           <p className="mt-6 text-center text-sm text-muted-foreground">
@@ -36,9 +39,9 @@ export default async function LoginPage({
                   ? `/signup?next=${encodeURIComponent(next)}`
                   : "/signup"
               }
-              className="text-accent hover:underline"
+              className="font-medium text-accent hover:underline"
             >
-              Daftar di sini
+              Daftar gratis di sini
             </Link>
           </p>
         </div>

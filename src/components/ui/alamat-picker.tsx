@@ -24,6 +24,7 @@ export function AlamatPicker({
   latName = "lat",
   lngName = "lng",
   id,
+  required,
   placeholder = "Cari nama jalan, kelurahan, atau landmark…",
 }: {
   defaultValue?: string;
@@ -33,6 +34,7 @@ export function AlamatPicker({
   latName?: string;
   lngName?: string;
   id?: string;
+  required?: boolean;
   placeholder?: string;
 }) {
   const [value, setValue] = useState(defaultValue);
@@ -126,6 +128,7 @@ export function AlamatPicker({
         className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground shadow-sm transition-colors focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
         maxLength={300}
         autoComplete="off"
+        required={required}
       />
       <input type="hidden" name={latName} value={lat} />
       <input type="hidden" name={lngName} value={lng} />

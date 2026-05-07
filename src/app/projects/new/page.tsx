@@ -18,11 +18,12 @@ export default async function NewProjectPage() {
           >
             ← Projects
           </Link>
-          <h1 className="mt-2 text-2xl font-semibold tracking-tight">
+          <h1 className="mt-2 text-2xl font-bold tracking-tight">
             Project Baru
           </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Cuma butuh nama. Sisanya opsional, bisa diisi belakangan.
+          <p className="mt-1.5 text-sm text-muted-foreground">
+            Lengkapi data proyek di bawah. Lokasi wajib dipilih agar harga
+            material menyesuaikan IKK provinsi setempat.
           </p>
         </header>
         <NewProjectForm regionOptions={regionOptions} />
