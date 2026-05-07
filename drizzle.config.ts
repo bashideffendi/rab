@@ -1,5 +1,13 @@
 import { defineConfig } from "drizzle-kit";
 
+// Load .env.local manually — drizzle-kit by default cuma baca .env.
+// process.loadEnvFile native Node 20.12+ (we use 20.18+).
+try {
+  process.loadEnvFile(".env.local");
+} catch {
+  // file gak ada, fallback ke process.env existing
+}
+
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) {
   throw new Error(
