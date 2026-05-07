@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, ilike, or } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { AppShell } from "@/components/app-shell";
 import { Badge } from "@/components/ui/badge";
@@ -17,7 +17,27 @@ import { TemplatesGallery } from "./templates-gallery";
 
 export const dynamic = "force-dynamic";
 
-async function loadProjects(userId: string, archived: boolean) {
+async function loadProjects(
+  userId: string,
+  archived: boolean,
+  q: string,
+) {
+  const conditions = [
+    eq(schema.projects.userId, userId),
+    eq(schema.projects.isArchived, archived),
+  ];
+  const trimmed = q.trim();
+  if (trimmed) {
+    const pattern = `%${trimmed}%`;
+    const search = or(
+      ilike(schema.projects.name, pattern),
+      ilike(schema.projects.opd, pattern),
+      ilike(schema.projects.ownerName, pattern),
+      ilike(schema.projects.alamat, pattern),
+    );
+    if (search) conditions.push(search);
+  }
+
   return db
     .select({
       id: schema.projects.id,
@@ -29,12 +49,7 @@ async function loadProjects(userId: string, archived: boolean) {
       updatedAt: schema.projects.updatedAt,
     })
     .from(schema.projects)
-    .where(
-      and(
-        eq(schema.projects.userId, userId),
-        eq(schema.projects.isArchived, archived),
-      ),
-    )
+    .where(and(...conditions))
     .orderBy(desc(schema.projects.updatedAt))
     .limit(200);
 }
@@ -42,16 +57,17 @@ async function loadProjects(userId: string, archived: boolean) {
 export default async function ProjectsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string }>;
+  searchParams: Promise<{ tab?: string; q?: string }>;
 }) {
   const user = await requireUser();
   const sp = await searchParams;
   const isArchivedTab = sp.tab === "archived";
+  const q = sp.q ?? "";
 
   let projects: Awaited<ReturnType<typeof loadProjects>> = [];
   let dbError: string | null = null;
   try {
-    projects = await loadProjects(user.id, isArchivedTab);
+    projects = await loadProjects(user.id, isArchivedTab, q);
   } catch (e) {
     dbError =
       e instanceof Error
@@ -76,9 +92,11 @@ export default async function ProjectsPage({
               )}
             </h1>
             <p className="mt-1.5 text-sm text-muted-foreground">
-              {isArchivedTab
-                ? "Project yang sudah diarsipkan. Bisa diaktifkan kembali kapan saja."
-                : "Kelola semua project RAB dalam satu workspace."}
+              {q
+                ? `Hasil pencarian untuk "${q}"`
+                : isArchivedTab
+                  ? "Project yang sudah diarsipkan. Bisa diaktifkan kembali kapan saja."
+                  : "Kelola semua project RAB dalam satu workspace."}
             </p>
           </div>
           <Link href="/projects/new">
@@ -87,6 +105,34 @@ export default async function ProjectsPage({
             </Button>
           </Link>
         </header>
+
+        {/* Search */}
+        <form
+          method="get"
+          className="mb-6 flex gap-2"
+          action="/projects"
+        >
+          {isArchivedTab && (
+            <input type="hidden" name="tab" value="archived" />
+          )}
+          <input
+            type="search"
+            name="q"
+            defaultValue={q}
+            placeholder="Cari project — nama, klien, PIC, atau alamat…"
+            className="flex-1 rounded-md border border-border bg-card px-4 py-2 text-sm shadow-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+          />
+          <Button type="submit" variant="secondary" size="md">
+            Cari
+          </Button>
+          {q && (
+            <Link href={isArchivedTab ? "/projects?tab=archived" : "/projects"}>
+              <Button type="button" variant="ghost" size="md">
+                Reset
+              </Button>
+            </Link>
+          )}
+        </form>
 
         {dbError ? (
           <DbErrorState message={dbError} />

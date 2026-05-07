@@ -164,6 +164,11 @@ export default async function ProjectDetailPage({
                 📅 Schedule
               </Button>
             </Link>
+            <Link href={`/projects/${project.id}/progress`}>
+              <Button variant="secondary" size="sm">
+                📈 Progres
+              </Button>
+            </Link>
             <Link href={`/projects/${project.id}/breakdown`}>
               <Button variant="secondary" size="sm">
                 📊 Breakdown

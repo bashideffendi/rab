@@ -297,6 +297,38 @@ export const projectItems = pgTable(
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
+// PROJECT ITEM PROGRESS — Phase 6 progres tracking per minggu
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const projectItemProgress = pgTable(
+  "project_item_progress",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    projectItemId: uuid("project_item_id")
+      .notNull()
+      .references(() => projectItems.id, { onDelete: "cascade" }),
+    weekNum: integer("week_num").notNull(),
+    percentActual: numeric("percent_actual", { precision: 5, scale: 2 })
+      .notNull()
+      .default("0.00"),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("project_item_progress_item_idx").on(t.projectItemId),
+    uniqueIndex("project_item_progress_unique_idx").on(
+      t.projectItemId,
+      t.weekNum,
+    ),
+  ],
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
 // RELATIONS — for Drizzle's relational query builder
 // ─────────────────────────────────────────────────────────────────────────────
 
