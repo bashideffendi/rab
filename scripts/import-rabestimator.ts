@@ -241,42 +241,46 @@ async function main() {
     `   Materials: ${materialsInserted} inserted, ${materialsSkipped} skipped.`,
   );
 
-  // ─── Phase 3: Material prices — one entry per (material, year) ──────────
-  let pricesInserted = 0;
+  // ─── Phase 3: Material prices — batch insert per material ──────────────
+  // Bulk fetch existing prices supaya gak query per-material
+  const existingPrices = await db
+    .select({ materialId: schema.materialPrices.materialId })
+    .from(schema.materialPrices);
+  const matsWithPrice = new Set(existingPrices.map((p) => p.materialId));
+
+  type PriceRow = typeof schema.materialPrices.$inferInsert;
+  const priceRowsToInsert: PriceRow[] = [];
+
   for (const m of materialsList) {
     const matId = materialIdByKey.get(m.key);
     if (!matId) continue;
+    if (matsWithPrice.has(matId)) continue;
 
-    // Skip kalau material udah punya harga (pre-existing seed)
-    const existing = await db
-      .select({ id: schema.materialPrices.id })
-      .from(schema.materialPrices)
-      .where(eq(schema.materialPrices.materialId, matId))
-      .limit(1);
-    if (existing[0]) continue;
-
-    // Insert satu price entry per year. RABin calc engine pilih validFrom
-    // terbaru otomatis — tapi histori tahun lama tetap tersimpan untuk audit.
     for (const [yearKey, samples] of m.pricesByYear.entries()) {
       if (samples.length === 0) continue;
       const sorted = [...samples].sort((a, b) => a - b);
       const median = sorted[Math.floor(sorted.length / 2)];
       if (!Number.isFinite(median) || median <= 0) continue;
       const nasional = median / JAKARTA_IKK;
-
       const year = yearKey === "unknown" ? 2025 : Number(yearKey);
-      const validFrom = `${year}-01-01`;
-
-      await db.insert(schema.materialPrices).values({
+      priceRowsToInsert.push({
         materialId: matId,
         regionId: null,
         price: nasional.toFixed(2),
         currency: "IDR",
         source: `rabestimator.id ${yearKey === "unknown" ? "(year unknown)" : yearKey} (Jakarta IKK ${JAKARTA_IKK} → nasional)`,
-        validFrom,
+        validFrom: `${year}-01-01`,
       });
-      pricesInserted++;
     }
+  }
+
+  // Batch insert in chunks of 200
+  let pricesInserted = 0;
+  const PRICE_CHUNK = 200;
+  for (let i = 0; i < priceRowsToInsert.length; i += PRICE_CHUNK) {
+    const chunk = priceRowsToInsert.slice(i, i + PRICE_CHUNK);
+    await db.insert(schema.materialPrices).values(chunk);
+    pricesInserted += chunk.length;
   }
   console.log(`   Material prices: ${pricesInserted} inserted (multi-year).`);
 
@@ -329,8 +333,10 @@ async function main() {
     ahspBySrcUrl.set(sourceUrl, ahspId);
     ahspInserted++;
 
-    // Components
+    // Components — batch insert all at once per AHSP
     const seenInThisAhsp = new Set<string>();
+    type CompRow = typeof schema.ahspComponents.$inferInsert;
+    const compRows: CompRow[] = [];
     for (const c of entry.components) {
       const key = `${c.type}|${normalizeName(c.nama)}|${normalizeName(c.satuan)}`;
       if (seenInThisAhsp.has(key)) continue;
@@ -339,16 +345,24 @@ async function main() {
       if (!matId) continue;
       const koef = parseNumber(c.koefisien);
       if (koef === null || koef <= 0) continue;
-      const compResult = await db
+      compRows.push({
+        ahspItemId: ahspId,
+        materialId: matId,
+        coefficient: koef.toFixed(6),
+      });
+    }
+    if (compRows.length > 0) {
+      const inserted = await db
         .insert(schema.ahspComponents)
-        .values({
-          ahspItemId: ahspId,
-          materialId: matId,
-          coefficient: koef.toFixed(6),
-        })
+        .values(compRows)
         .onConflictDoNothing()
         .returning({ id: schema.ahspComponents.id });
-      if (compResult[0]) componentsInserted++;
+      componentsInserted += inserted.length;
+    }
+
+    // Progress every 100 AHSP
+    if (ahspInserted % 100 === 0) {
+      console.log(`   ${ahspInserted} AHSP inserted (~${componentsInserted} components)`);
     }
   }
 

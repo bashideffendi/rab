@@ -43,6 +43,13 @@
       "when": 1778158448561,
       "tag": "0005_drop_ahsp_code_unique",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1778160346934,
+      "tag": "0006_add_phase1_project_fields",
+      "breakpoints": true
     }
   ]
 }

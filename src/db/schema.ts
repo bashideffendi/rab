@@ -89,6 +89,17 @@ export const projects = pgTable(
     }),
     status: projectStatus("status").notNull().default("draft"),
     notes: text("notes"),
+    // Phase 1 — RAB calc + project metadata expansion (rabestimator parity)
+    tahun: integer("tahun"),
+    alamat: text("alamat"),
+    ppnPercent: numeric("ppn_percent", { precision: 5, scale: 2 })
+      .notNull()
+      .default("11.00"),
+    overheadPercent: numeric("overhead_percent", { precision: 5, scale: 2 })
+      .notNull()
+      .default("0.00"),
+    dibulatkanKe: integer("dibulatkan_ke").notNull().default(1000),
+    isArchived: boolean("is_archived").notNull().default(false),
     // Template fields: kalau is_template = true, project ini gak pernah keliatan
     // di list user. Cuma muncul di gallery /projects untuk di-clone.
     isTemplate: boolean("is_template").notNull().default(false),
@@ -106,6 +117,7 @@ export const projects = pgTable(
     index("projects_status_idx").on(t.status),
     index("projects_user_idx").on(t.userId),
     index("projects_template_idx").on(t.isTemplate),
+    index("projects_archived_idx").on(t.isArchived),
     uniqueIndex("projects_template_slug_idx").on(t.templateSlug),
   ],
 );

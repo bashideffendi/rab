@@ -100,6 +100,66 @@ export function EditProjectForm({
         />
       </Field>
 
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Field label="Tahun" htmlFor="tahun">
+          <Input
+            id="tahun"
+            name="tahun"
+            type="number"
+            inputMode="numeric"
+            defaultValue={project.tahun ?? ""}
+            min={1990}
+            max={2100}
+          />
+        </Field>
+        <Field label="Alamat Lengkap" htmlFor="alamat">
+          <Input
+            id="alamat"
+            name="alamat"
+            defaultValue={project.alamat ?? ""}
+            maxLength={300}
+          />
+        </Field>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <Field label="PPN (%)" htmlFor="ppnPercent">
+          <Input
+            id="ppnPercent"
+            name="ppnPercent"
+            type="number"
+            inputMode="decimal"
+            defaultValue={project.ppnPercent}
+            step="0.01"
+            min="0"
+            max="100"
+          />
+        </Field>
+        <Field label="Overhead (%)" htmlFor="overheadPercent">
+          <Input
+            id="overheadPercent"
+            name="overheadPercent"
+            type="number"
+            inputMode="decimal"
+            defaultValue={project.overheadPercent}
+            step="0.01"
+            min="0"
+            max="100"
+          />
+        </Field>
+        <Field label="Dibulatkan ke (Rp)" htmlFor="dibulatkanKe">
+          <Input
+            id="dibulatkanKe"
+            name="dibulatkanKe"
+            type="number"
+            inputMode="numeric"
+            defaultValue={project.dibulatkanKe}
+            step="100"
+            min="0"
+          />
+        </Field>
+      </div>
+
       <Field label="Catatan" htmlFor="notes">
         <Textarea
           id="notes"

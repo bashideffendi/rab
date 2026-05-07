@@ -4,6 +4,7 @@ import { db, schema } from "@/db";
 import { ItemAddForm } from "./item-add-form";
 import { ItemDeleteButton } from "./item-delete-button";
 import { formatIDR } from "@/lib/utils";
+import { roundToNearest, terbilangRupiah } from "@/lib/terbilang";
 
 type ItemRow = {
   id: string;
@@ -151,7 +152,17 @@ function groupByWbs(items: ItemRow[]): Group[] {
   );
 }
 
-export async function ItemsSection({ projectId }: { projectId: string }) {
+export async function ItemsSection({
+  projectId,
+  ppnPercent,
+  overheadPercent,
+  dibulatkanKe,
+}: {
+  projectId: string;
+  ppnPercent: string;
+  overheadPercent: string;
+  dibulatkanKe: number;
+}) {
   let items: ItemRow[] = [];
   let wbsOptions: WbsOption[] = [];
   let ahspOptions: AhspOption[] = [];
@@ -167,7 +178,15 @@ export async function ItemsSection({ projectId }: { projectId: string }) {
   }
 
   const groups = groupByWbs(items);
-  const grandTotal = groups.reduce((sum, g) => sum + g.subtotal, 0);
+  const subtotal = groups.reduce((sum, g) => sum + g.subtotal, 0);
+  const overheadPct = Number(overheadPercent);
+  const ppnPct = Number(ppnPercent);
+  const overhead = subtotal * (overheadPct / 100);
+  const subPlusOverhead = subtotal + overhead;
+  const ppn = subPlusOverhead * (ppnPct / 100);
+  const total = subPlusOverhead + ppn;
+  const dibulatkan = roundToNearest(total, dibulatkanKe);
+  const terbilang = items.length > 0 ? terbilangRupiah(dibulatkan) : "";
 
   return (
     <section className="mt-12">
@@ -182,10 +201,10 @@ export async function ItemsSection({ projectId }: { projectId: string }) {
         </div>
         <div className="text-right">
           <p className="text-sm font-medium text-muted-foreground">
-            Total
+            Total dibulatkan
           </p>
           <p className="font-mono text-lg font-semibold tabular-nums text-foreground">
-            {formatIDR(grandTotal)}
+            {formatIDR(items.length > 0 ? dibulatkan : 0)}
           </p>
         </div>
       </header>
@@ -220,18 +239,76 @@ export async function ItemsSection({ projectId }: { projectId: string }) {
                 />
               ))}
             </tbody>
-            <tfoot className="bg-muted/40">
+            <tfoot className="bg-muted/40 text-sm">
               <tr>
                 <td
                   colSpan={4}
-                  className="px-3 py-3 text-right text-sm font-medium text-muted-foreground"
+                  className="px-3 py-2 text-right text-muted-foreground"
                 >
-                  Grand Total
+                  Subtotal
                 </td>
-                <td className="px-3 py-3 text-right font-mono text-base font-semibold tabular-nums text-accent">
-                  {formatIDR(grandTotal)}
+                <td className="px-3 py-2 text-right font-mono tabular-nums">
+                  {formatIDR(subtotal)}
                 </td>
                 <td></td>
+              </tr>
+              {overheadPct > 0 && (
+                <tr>
+                  <td
+                    colSpan={4}
+                    className="px-3 py-2 text-right text-muted-foreground"
+                  >
+                    Overhead ({overheadPct}%)
+                  </td>
+                  <td className="px-3 py-2 text-right font-mono tabular-nums">
+                    {formatIDR(overhead)}
+                  </td>
+                  <td></td>
+                </tr>
+              )}
+              <tr>
+                <td
+                  colSpan={4}
+                  className="px-3 py-2 text-right text-muted-foreground"
+                >
+                  PPN ({ppnPct}%)
+                </td>
+                <td className="px-3 py-2 text-right font-mono tabular-nums">
+                  {formatIDR(ppn)}
+                </td>
+                <td></td>
+              </tr>
+              <tr className="border-t border-border">
+                <td
+                  colSpan={4}
+                  className="px-3 py-2 text-right text-sm text-muted-foreground"
+                >
+                  Total
+                </td>
+                <td className="px-3 py-2 text-right font-mono tabular-nums">
+                  {formatIDR(total)}
+                </td>
+                <td></td>
+              </tr>
+              <tr className="border-t border-border bg-accent/5">
+                <td
+                  colSpan={4}
+                  className="px-3 py-3 text-right font-semibold text-foreground"
+                >
+                  Total dibulatkan
+                </td>
+                <td className="px-3 py-3 text-right font-mono text-base font-semibold tabular-nums text-accent">
+                  {formatIDR(dibulatkan)}
+                </td>
+                <td></td>
+              </tr>
+              <tr>
+                <td
+                  colSpan={6}
+                  className="px-3 py-2 text-right text-xs italic text-muted-foreground"
+                >
+                  Terbilang: <span className="not-italic">{terbilang}</span>
+                </td>
               </tr>
             </tfoot>
           </table>

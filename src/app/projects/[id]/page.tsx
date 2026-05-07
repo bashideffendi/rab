@@ -7,6 +7,10 @@ import { AppShell } from "@/components/app-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DeleteProjectButton } from "@/components/delete-project-button";
+import {
+  DuplicateButton,
+  ArchiveButton,
+} from "@/components/duplicate-archive-buttons";
 import { formatDate } from "@/lib/utils";
 import { WbsSection } from "./wbs-section";
 import { ItemsSection } from "./items-section";
@@ -108,11 +112,24 @@ export default async function ProjectDetailPage({
                 ↓ Export Excel
               </Button>
             </a>
+            <Link
+              href={`/projects/${project.id}/breakdown`}
+              className="inline-block"
+            >
+              <Button variant="secondary" size="sm">
+                Breakdown
+              </Button>
+            </Link>
             <Link href={`/projects/${project.id}/edit`}>
               <Button variant="secondary" size="sm">
                 Edit
               </Button>
             </Link>
+            <DuplicateButton id={project.id} />
+            <ArchiveButton
+              id={project.id}
+              isArchived={project.isArchived}
+            />
             <DeleteProjectButton id={project.id} projectName={project.name} />
           </div>
         </header>
@@ -129,6 +146,12 @@ export default async function ProjectDetailPage({
                   : `${project.regionName} · IKK belum ada`
                 : null
             }
+          />
+          <DetailRow label="Tahun" value={project.tahun?.toString() ?? null} />
+          <DetailRow label="Alamat" value={project.alamat} />
+          <DetailRow
+            label="PPN / Overhead"
+            value={`PPN ${project.ppnPercent}% · Overhead ${project.overheadPercent}%`}
           />
           <DetailRow label="Status" value={project.status} />
           <DetailRow label="Created" value={formatDate(project.createdAt)} />
@@ -147,7 +170,12 @@ export default async function ProjectDetailPage({
         )}
 
         <WbsSection projectId={project.id} />
-        <ItemsSection projectId={project.id} />
+        <ItemsSection
+          projectId={project.id}
+          ppnPercent={project.ppnPercent}
+          overheadPercent={project.overheadPercent}
+          dibulatkanKe={project.dibulatkanKe}
+        />
       </section>
     </AppShell>
   );

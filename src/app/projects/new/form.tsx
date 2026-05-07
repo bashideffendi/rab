@@ -86,6 +86,82 @@ export function NewProjectForm({
         />
       </Field>
 
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Field label="Tahun" htmlFor="tahun" hint="Opsional.">
+          <Input
+            id="tahun"
+            name="tahun"
+            type="number"
+            inputMode="numeric"
+            placeholder="2026"
+            min={1990}
+            max={2100}
+          />
+        </Field>
+        <Field
+          label="Alamat Lengkap"
+          htmlFor="alamat"
+          hint="Opsional."
+        >
+          <Input
+            id="alamat"
+            name="alamat"
+            placeholder="Jl. / desa / kelurahan"
+            maxLength={300}
+          />
+        </Field>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <Field
+          label="PPN (%)"
+          htmlFor="ppnPercent"
+          hint="Default 11."
+        >
+          <Input
+            id="ppnPercent"
+            name="ppnPercent"
+            type="number"
+            inputMode="decimal"
+            defaultValue="11"
+            step="0.01"
+            min="0"
+            max="100"
+          />
+        </Field>
+        <Field
+          label="Overhead (%)"
+          htmlFor="overheadPercent"
+          hint="Margin profit/risiko. Default 0."
+        >
+          <Input
+            id="overheadPercent"
+            name="overheadPercent"
+            type="number"
+            inputMode="decimal"
+            defaultValue="0"
+            step="0.01"
+            min="0"
+            max="100"
+          />
+        </Field>
+        <Field
+          label="Dibulatkan ke (Rp)"
+          htmlFor="dibulatkanKe"
+          hint="Default Rp 1.000."
+        >
+          <Input
+            id="dibulatkanKe"
+            name="dibulatkanKe"
+            type="number"
+            inputMode="numeric"
+            defaultValue="1000"
+            step="100"
+            min="0"
+          />
+        </Field>
+      </div>
+
       <Field
         label="Catatan"
         htmlFor="notes"

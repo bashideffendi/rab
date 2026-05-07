@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { AppShell } from "@/components/app-shell";
 import { Badge } from "@/components/ui/badge";
@@ -10,7 +10,7 @@ import { TemplatesGallery } from "./templates-gallery";
 
 export const dynamic = "force-dynamic";
 
-async function loadProjects(userId: string) {
+async function loadProjects(userId: string, archived: boolean) {
   return db
     .select({
       id: schema.projects.id,
@@ -21,17 +21,29 @@ async function loadProjects(userId: string) {
       updatedAt: schema.projects.updatedAt,
     })
     .from(schema.projects)
-    .where(eq(schema.projects.userId, userId))
+    .where(
+      and(
+        eq(schema.projects.userId, userId),
+        eq(schema.projects.isArchived, archived),
+      ),
+    )
     .orderBy(desc(schema.projects.updatedAt))
     .limit(200);
 }
 
-export default async function ProjectsPage() {
+export default async function ProjectsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>;
+}) {
   const user = await requireUser();
+  const sp = await searchParams;
+  const isArchivedTab = sp.tab === "archived";
+
   let projects: Awaited<ReturnType<typeof loadProjects>> = [];
   let dbError: string | null = null;
   try {
-    projects = await loadProjects(user.id);
+    projects = await loadProjects(user.id, isArchivedTab);
   } catch (e) {
     dbError =
       e instanceof Error
@@ -63,7 +75,30 @@ export default async function ProjectsPage() {
           <DbErrorState message={dbError} />
         ) : (
           <>
-            <TemplatesGallery />
+            <div className="mb-6 flex gap-2 border-b border-border">
+              <Link
+                href="/projects"
+                className={
+                  !isArchivedTab
+                    ? "border-b-2 border-accent px-3 py-2 text-sm font-medium text-foreground"
+                    : "px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
+                }
+              >
+                Aktif
+              </Link>
+              <Link
+                href="/projects?tab=archived"
+                className={
+                  isArchivedTab
+                    ? "border-b-2 border-accent px-3 py-2 text-sm font-medium text-foreground"
+                    : "px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
+                }
+              >
+                Arsip
+              </Link>
+            </div>
+
+            {!isArchivedTab && <TemplatesGallery />}
             {projects.length === 0 ? (
               <EmptyState />
             ) : (
