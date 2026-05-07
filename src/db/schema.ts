@@ -157,7 +157,9 @@ export const ahspItems = pgTable(
       .defaultNow(),
   },
   (t) => [
-    uniqueIndex("ahsp_items_code_idx").on(t.code),
+    // Code BUKAN unique — kode AHSP (mis. "1.1.1.1") bisa muncul di banyak
+    // sumber (Permen PUPR, SE DJBK, SNI, edisi tahun beda) — semua valid.
+    index("ahsp_items_code_idx").on(t.code),
     index("ahsp_items_category_idx").on(t.category),
   ],
 );
