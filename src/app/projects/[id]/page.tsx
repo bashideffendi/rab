@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { DeleteProjectButton } from "@/components/delete-project-button";
 import { formatDate } from "@/lib/utils";
 import { WbsSection } from "./wbs-section";
+import { ItemsSection } from "./items-section";
 
 export const dynamic = "force-dynamic";
 
@@ -108,6 +109,7 @@ export default async function ProjectDetailPage({
         )}
 
         <WbsSection projectId={project.id} />
+        <ItemsSection projectId={project.id} />
       </section>
     </AppShell>
   );

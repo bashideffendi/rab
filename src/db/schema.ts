@@ -230,6 +230,10 @@ export const projectItems = pgTable(
     }),
     customName: text("custom_name"), // kalau ahspItemId NULL — custom item
     customUnit: text("custom_unit"),
+    customUnitPrice: numeric("custom_unit_price", {
+      precision: 18,
+      scale: 2,
+    }), // nullable — kalau pake AHSP, price dihitung dari komponen × harga
     volume: numeric("volume", { precision: 18, scale: 4 }).notNull(),
     regionOverrideId: uuid("region_override_id").references(() => regions.id, {
       onDelete: "set null",

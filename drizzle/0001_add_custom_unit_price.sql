@@ -1,0 +1,1 @@
+ALTER TABLE "project_items" ADD COLUMN "custom_unit_price" numeric(18, 2);
