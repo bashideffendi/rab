@@ -4,6 +4,7 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/input";
 import { Field } from "@/components/ui/field";
+import { AhspPicker } from "@/components/ui/ahsp-picker";
 import {
   createProjectItem,
   type CreateItemFormState,
@@ -13,30 +14,21 @@ import { cn } from "@/lib/utils";
 const initialState: CreateItemFormState = {};
 
 type WbsOption = { id: string; code: string; name: string };
-type AhspOption = {
-  id: string;
-  code: string;
-  name: string;
-  unit: string;
-  category: string;
-};
 
 type Mode = "ahsp" | "custom";
 
 export function ItemAddForm({
   projectId,
   wbsOptions,
-  ahspOptions,
 }: {
   projectId: string;
   wbsOptions: WbsOption[];
-  ahspOptions: AhspOption[];
 }) {
   const action = createProjectItem.bind(null, projectId);
   const [state, formAction, pending] = useActionState(action, initialState);
   const formRef = useRef<HTMLFormElement>(null);
   const nameRef = useRef<HTMLInputElement>(null);
-  const ahspHasData = ahspOptions.length > 0;
+  const ahspHasData = true; // search-based, always available
 
   // Controlled state — biar value gak ke-reset saat Server Action error
   const [mode, setMode] = useState<Mode>(ahspHasData ? "ahsp" : "custom");
@@ -120,21 +112,14 @@ export function ItemAddForm({
               label="AHSP"
               htmlFor="item-ahsp"
               error={state.fieldErrors?.ahspItemId}
-              hint="Nama, satuan, harga di-snapshot dari komponen × harga material saat disimpan."
+              hint="Cari berdasarkan nama atau kode. Nama, satuan, harga di-snapshot saat disimpan."
             >
-              <Select
+              <AhspPicker
                 id="item-ahsp"
                 name="ahspItemId"
                 value={ahspItemId}
-                onChange={(e) => setAhspItemId(e.target.value)}
-              >
-                <option value="">— pilih AHSP —</option>
-                {ahspOptions.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.code} — {a.name} ({a.unit})
-                  </option>
-                ))}
-              </Select>
+                onChange={(newId) => setAhspItemId(newId)}
+              />
             </Field>
           </div>
         ) : (

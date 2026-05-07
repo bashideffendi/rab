@@ -88,18 +88,9 @@ async function loadWbsOptions(projectId: string): Promise<WbsOption[]> {
     .orderBy(asc(schema.wbsItems.code));
 }
 
-async function loadAhspOptions(): Promise<AhspOption[]> {
-  return db
-    .select({
-      id: schema.ahspItems.id,
-      code: schema.ahspItems.code,
-      name: schema.ahspItems.name,
-      unit: schema.ahspItems.unit,
-      category: schema.ahspItems.category,
-    })
-    .from(schema.ahspItems)
-    .orderBy(asc(schema.ahspItems.code));
-}
+// Removed loadAhspOptions — replaced by searchable AhspPicker yang pakai
+// /api/ahsp/search endpoint. Save ~250KB payload per page load karena
+// gak perlu ship 2,669 entries ke client.
 
 function calcTotal(volume: string, unitPrice: string): number {
   const v = Number(volume);
@@ -165,13 +156,11 @@ export async function ItemsSection({
 }) {
   let items: ItemRow[] = [];
   let wbsOptions: WbsOption[] = [];
-  let ahspOptions: AhspOption[] = [];
   let dbError: string | null = null;
   try {
-    [items, wbsOptions, ahspOptions] = await Promise.all([
+    [items, wbsOptions] = await Promise.all([
       loadItems(projectId),
       loadWbsOptions(projectId),
-      loadAhspOptions(),
     ]);
   } catch (e) {
     dbError = e instanceof Error ? e.message : "Gagal load items.";
@@ -315,11 +304,7 @@ export async function ItemsSection({
         </div>
       )}
 
-      <ItemAddForm
-        projectId={projectId}
-        wbsOptions={wbsOptions}
-        ahspOptions={ahspOptions}
-      />
+      <ItemAddForm projectId={projectId} wbsOptions={wbsOptions} />
     </section>
   );
 }
