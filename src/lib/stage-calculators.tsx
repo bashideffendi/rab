@@ -1106,6 +1106,512 @@ const stageBetonPlat: StageCalcDef = {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Stage 7: PASANGAN & PLESTER (Dinding + Plester + Acian + Cat)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const stagePasangan: StageCalcDef = {
+  type: "stage_pasangan",
+  label: "Pasangan & Plester (4 items)",
+  description:
+    "Dinding bata, plesteran, acian, dan pengecatan. Bukaan (pintu/jendela) dikurangi otomatis.",
+  inputs: [
+    {
+      key: "Pdinding",
+      label: "Total Panjang Dinding",
+      unit: "m",
+      default: 30,
+      hint: "Total seluruh dinding",
+      group: "Dimensi Dinding",
+    },
+    {
+      key: "Tdinding",
+      label: "Tinggi Dinding",
+      unit: "m",
+      default: 3,
+      group: "Dimensi Dinding",
+    },
+    {
+      key: "jenisBata",
+      label: "Jenis Bata",
+      unit: "",
+      default: 1,
+      group: "Spesifikasi",
+      options: [
+        { value: 1, label: "Bata Merah 1/2 (1:5)" },
+        { value: 2, label: "Bata Hebel 7.5cm" },
+        { value: 3, label: "Bata Hebel 10cm" },
+      ],
+    },
+    {
+      key: "jumlahPintu",
+      label: "Jumlah Pintu",
+      unit: "buah",
+      default: 5,
+      group: "Bukaan",
+    },
+    {
+      key: "luasPintu",
+      label: "Luas per Pintu",
+      unit: "m²",
+      default: 1.8,
+      hint: "Default 0.9 × 2.0 = 1.8 m²",
+      group: "Bukaan",
+    },
+    {
+      key: "jumlahJendela",
+      label: "Jumlah Jendela",
+      unit: "buah",
+      default: 6,
+      group: "Bukaan",
+    },
+    {
+      key: "luasJendela",
+      label: "Luas per Jendela",
+      unit: "m²",
+      default: 1.2,
+      group: "Bukaan",
+    },
+  ],
+  items: [
+    {
+      key: "pasangan",
+      label: "Pasangan Dinding Bata",
+      ahspKeyword: "dinding bata merah",
+      ahspUnit: "m2",
+      defaultEnabled: true,
+      computeVolume: (i) => {
+        const P = n(i.Pdinding);
+        const T = n(i.Tdinding);
+        const bukaan =
+          n(i.jumlahPintu) * n(i.luasPintu, 1.8) +
+          n(i.jumlahJendela) * n(i.luasJendela, 1.2);
+        const v = Math.max(0, P * T - bukaan);
+        return {
+          volume: v,
+          formula: `(${fmt(P, 2)} × ${fmt(T, 2)}) − ${fmt(bukaan, 2)} = ${fmt(v, 2)} m²`,
+        };
+      },
+    },
+    {
+      key: "plester",
+      label: "Plesteran (2 Sisi)",
+      ahspKeyword: "plesteran 1sp 1pp tebal 15",
+      ahspUnit: "m2",
+      defaultEnabled: true,
+      computeVolume: (i) => {
+        const P = n(i.Pdinding);
+        const T = n(i.Tdinding);
+        const bukaan =
+          n(i.jumlahPintu) * n(i.luasPintu, 1.8) +
+          n(i.jumlahJendela) * n(i.luasJendela, 1.2);
+        const luasBersih = Math.max(0, P * T - bukaan);
+        const v = luasBersih * 2;
+        return {
+          volume: v,
+          formula: `(${fmt(luasBersih, 2)} m² bersih) × 2 sisi = ${fmt(v, 2)} m²`,
+        };
+      },
+    },
+    {
+      key: "acian",
+      label: "Acian (2 Sisi)",
+      ahspKeyword: "acian",
+      ahspUnit: "m2",
+      defaultEnabled: true,
+      computeVolume: (i) => {
+        const P = n(i.Pdinding);
+        const T = n(i.Tdinding);
+        const bukaan =
+          n(i.jumlahPintu) * n(i.luasPintu, 1.8) +
+          n(i.jumlahJendela) * n(i.luasJendela, 1.2);
+        const luasBersih = Math.max(0, P * T - bukaan);
+        const v = luasBersih * 2;
+        return {
+          volume: v,
+          formula: `(${fmt(luasBersih, 2)} m²) × 2 sisi = ${fmt(v, 2)} m²`,
+        };
+      },
+    },
+    {
+      key: "cat",
+      label: "Pengecatan Dinding (2 Sisi)",
+      ahspKeyword: "pengecatan tembok",
+      ahspUnit: "m2",
+      defaultEnabled: true,
+      computeVolume: (i) => {
+        const P = n(i.Pdinding);
+        const T = n(i.Tdinding);
+        const bukaan =
+          n(i.jumlahPintu) * n(i.luasPintu, 1.8) +
+          n(i.jumlahJendela) * n(i.luasJendela, 1.2);
+        const luasBersih = Math.max(0, P * T - bukaan);
+        const v = luasBersih * 2;
+        return {
+          volume: v,
+          formula: `(${fmt(luasBersih, 2)} m²) × 2 sisi = ${fmt(v, 2)} m²`,
+        };
+      },
+    },
+  ],
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Stage 8: ATAP (Penutup + Nok + Listplank)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const stageAtap: StageCalcDef = {
+  type: "stage_atap",
+  label: "Atap (4 items)",
+  description:
+    "Atap genteng / spandek + nok bubung + listplank. Luas atap miring auto-hitung dari sudut.",
+  inputs: [
+    {
+      key: "Pbang",
+      label: "Panjang Bangunan",
+      unit: "m",
+      default: 8,
+      group: "Dimensi Atap",
+    },
+    {
+      key: "Lbang",
+      label: "Lebar Bangunan",
+      unit: "m",
+      default: 6,
+      group: "Dimensi Atap",
+    },
+    {
+      key: "sudut",
+      label: "Sudut Kemiringan",
+      unit: "°",
+      default: 30,
+      hint: "Default 30° untuk genteng. Spandek bisa lebih landai.",
+      group: "Dimensi Atap",
+    },
+    {
+      key: "overhang",
+      label: "Overhang / Tritisan",
+      unit: "m",
+      default: 0.6,
+      hint: "Lebar tritisan keluar bangunan. 0 = gak ada.",
+      group: "Dimensi Atap",
+    },
+    {
+      key: "panjangNok",
+      label: "Panjang Nok / Bubung",
+      unit: "m",
+      default: 8,
+      hint: "Biasanya = panjang bangunan untuk atap pelana",
+      group: "Spesifikasi",
+    },
+    {
+      key: "panjangListplank",
+      label: "Panjang Listplank",
+      unit: "m",
+      default: 0,
+      hint: "Keliling tepi atap. 0 = skip.",
+      group: "Spesifikasi",
+    },
+  ],
+  items: [
+    {
+      key: "rangkaAtap",
+      label: "Rangka Atap (Genteng Beton)",
+      ahspKeyword: "rangka atap genteng",
+      ahspUnit: "m2",
+      defaultEnabled: true,
+      computeVolume: (i) => {
+        const P = n(i.Pbang);
+        const L = n(i.Lbang);
+        const overhang = n(i.overhang, 0.6);
+        const sudut = n(i.sudut, 30);
+        const cosS = Math.cos((sudut * Math.PI) / 180) || 1;
+        const luasMiring = ((P + 2 * overhang) * (L + 2 * overhang)) / cosS;
+        return {
+          volume: luasMiring,
+          formula: `((${fmt(P, 2)} + 2×${fmt(overhang, 2)}) × (${fmt(L, 2)} + 2×${fmt(overhang, 2)})) / cos(${fmt(sudut, 0)}°) = ${fmt(luasMiring, 2)} m²`,
+        };
+      },
+    },
+    {
+      key: "penutupAtap",
+      label: "Penutup Atap (Genteng / Spandek)",
+      ahspKeyword: "rangka atap genteng",
+      ahspUnit: "m2",
+      defaultEnabled: true,
+      computeVolume: (i) => {
+        const P = n(i.Pbang);
+        const L = n(i.Lbang);
+        const overhang = n(i.overhang, 0.6);
+        const sudut = n(i.sudut, 30);
+        const cosS = Math.cos((sudut * Math.PI) / 180) || 1;
+        const v = ((P + 2 * overhang) * (L + 2 * overhang)) / cosS;
+        return {
+          volume: v,
+          formula: `Sama dengan luas rangka = ${fmt(v, 2)} m²`,
+        };
+      },
+    },
+    {
+      key: "nok",
+      label: "Nok / Bubung Genteng",
+      ahspKeyword: "nok bubung genteng",
+      ahspUnit: "m",
+      defaultEnabled: true,
+      computeVolume: (i) => {
+        const v = n(i.panjangNok);
+        if (v <= 0) return null;
+        return { volume: v, formula: `${fmt(v, 2)} m (input langsung)` };
+      },
+    },
+    {
+      key: "listplank",
+      label: "Listplank Tepi Atap",
+      ahspKeyword: "listplank",
+      ahspUnit: "m",
+      defaultEnabled: false,
+      showIf: (i) => n(i.panjangListplank) > 0,
+      computeVolume: (i) => {
+        const v = n(i.panjangListplank);
+        if (v <= 0) return null;
+        return { volume: v, formula: `${fmt(v, 2)} m (input langsung)` };
+      },
+    },
+  ],
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Stage 9: FINISHING LANTAI & PLAFON
+// ─────────────────────────────────────────────────────────────────────────────
+
+const stageFinishing: StageCalcDef = {
+  type: "stage_finishing",
+  label: "Finishing Lantai & Plafon (4 items)",
+  description:
+    "Lantai keramik + plafon + lis plafon + skirting. Tipikal interior finishing.",
+  inputs: [
+    {
+      key: "luasLantai",
+      label: "Luas Lantai Total",
+      unit: "m²",
+      default: 48,
+      hint: "Total luas seluruh ruang",
+      group: "Dimensi",
+    },
+    {
+      key: "kelilingLantai",
+      label: "Keliling Lantai (untuk Skirting)",
+      unit: "m",
+      default: 0,
+      hint: "Total keliling perimeter ruang. 0 = skip skirting.",
+      group: "Dimensi",
+    },
+    {
+      key: "luasPlafon",
+      label: "Luas Plafon",
+      unit: "m²",
+      default: 0,
+      hint: "0 = sama dengan luas lantai. Beda kalau ada void.",
+      group: "Dimensi",
+    },
+    {
+      key: "kelilingPlafon",
+      label: "Keliling Plafon (untuk Lis)",
+      unit: "m",
+      default: 0,
+      hint: "Untuk pemasangan list plafon. 0 = skip.",
+      group: "Dimensi",
+    },
+    {
+      key: "ukuranKeramik",
+      label: "Ukuran Keramik",
+      unit: "cm",
+      default: 30,
+      group: "Spesifikasi",
+      options: [
+        { value: 20, label: "20 × 20 cm" },
+        { value: 30, label: "30 × 30 cm (umum)" },
+        { value: 40, label: "40 × 40 cm" },
+        { value: 60, label: "60 × 60 cm (granit)" },
+      ],
+    },
+  ],
+  items: [
+    {
+      key: "lantaiKeramik",
+      label: "Pemasangan Lantai Keramik",
+      ahspKeyword: "lantai keramik",
+      ahspUnit: "m2",
+      defaultEnabled: true,
+      computeVolume: (i) => {
+        const v = n(i.luasLantai);
+        return { volume: v, formula: `${fmt(v, 2)} m² (input langsung)` };
+      },
+    },
+    {
+      key: "skirting",
+      label: "Skirting / Lis Lantai",
+      ahspKeyword: "skirting",
+      ahspUnit: "m",
+      defaultEnabled: false,
+      showIf: (i) => n(i.kelilingLantai) > 0,
+      computeVolume: (i) => {
+        const v = n(i.kelilingLantai);
+        if (v <= 0) return null;
+        return { volume: v, formula: `${fmt(v, 2)} m (input langsung)` };
+      },
+    },
+    {
+      key: "plafon",
+      label: "Pemasangan Plafon",
+      ahspKeyword: "rangka plafon hollow",
+      ahspUnit: "m2",
+      defaultEnabled: true,
+      computeVolume: (i) => {
+        const luasPlafon = n(i.luasPlafon);
+        const v = luasPlafon > 0 ? luasPlafon : n(i.luasLantai);
+        return {
+          volume: v,
+          formula:
+            luasPlafon > 0
+              ? `${fmt(v, 2)} m² (input langsung)`
+              : `${fmt(v, 2)} m² (= luas lantai)`,
+        };
+      },
+    },
+    {
+      key: "lisPlafon",
+      label: "Lis Plafon",
+      ahspKeyword: "list plafon gypsum",
+      ahspUnit: "m",
+      defaultEnabled: false,
+      showIf: (i) => n(i.kelilingPlafon) > 0,
+      computeVolume: (i) => {
+        const v = n(i.kelilingPlafon);
+        if (v <= 0) return null;
+        return { volume: v, formula: `${fmt(v, 2)} m (input langsung)` };
+      },
+    },
+  ],
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Stage 10: MEP (Listrik + Sanitasi)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const stageMEP: StageCalcDef = {
+  type: "stage_mep",
+  label: "MEP — Listrik & Sanitasi (5 items)",
+  description:
+    "Instalasi listrik (titik lampu, saklar, stop kontak) dan sanitasi (pipa air bersih, air kotor).",
+  inputs: [
+    {
+      key: "titikLampu",
+      label: "Jumlah Titik Lampu",
+      unit: "titik",
+      default: 0,
+      group: "Listrik",
+    },
+    {
+      key: "saklar",
+      label: "Jumlah Saklar",
+      unit: "titik",
+      default: 0,
+      group: "Listrik",
+    },
+    {
+      key: "stopKontak",
+      label: "Jumlah Stop Kontak",
+      unit: "titik",
+      default: 0,
+      group: "Listrik",
+    },
+    {
+      key: "panjangPipaBersih",
+      label: "Panjang Pipa Air Bersih",
+      unit: "m",
+      default: 0,
+      hint: "Total pipa PVC 1/2 inch dari toren ke kran",
+      group: "Sanitasi",
+    },
+    {
+      key: "panjangPipaKotor",
+      label: "Panjang Pipa Air Kotor",
+      unit: "m",
+      default: 0,
+      hint: "Total pipa PVC 4 inch dari WC ke septic tank",
+      group: "Sanitasi",
+    },
+  ],
+  items: [
+    {
+      key: "titikLampu",
+      label: "Instalasi Titik Lampu",
+      ahspKeyword: "instalasi titik lampu",
+      ahspUnit: "titik",
+      defaultEnabled: false,
+      showIf: (i) => n(i.titikLampu) > 0,
+      computeVolume: (i) => {
+        const v = n(i.titikLampu);
+        if (v <= 0) return null;
+        return { volume: v, formula: `${v} titik` };
+      },
+    },
+    {
+      key: "saklar",
+      label: "Pemasangan Saklar",
+      ahspKeyword: "saklar",
+      ahspUnit: "titik",
+      defaultEnabled: false,
+      showIf: (i) => n(i.saklar) > 0,
+      computeVolume: (i) => {
+        const v = n(i.saklar);
+        if (v <= 0) return null;
+        return { volume: v, formula: `${v} titik` };
+      },
+    },
+    {
+      key: "stopKontak",
+      label: "Pemasangan Stop Kontak",
+      ahspKeyword: "instalasi stop kontak",
+      ahspUnit: "titik",
+      defaultEnabled: false,
+      showIf: (i) => n(i.stopKontak) > 0,
+      computeVolume: (i) => {
+        const v = n(i.stopKontak);
+        if (v <= 0) return null;
+        return { volume: v, formula: `${v} titik` };
+      },
+    },
+    {
+      key: "pipaBersih",
+      label: "Pemasangan Pipa Air Bersih",
+      ahspKeyword: "pipa pvc",
+      ahspUnit: "m",
+      defaultEnabled: false,
+      showIf: (i) => n(i.panjangPipaBersih) > 0,
+      computeVolume: (i) => {
+        const v = n(i.panjangPipaBersih);
+        if (v <= 0) return null;
+        return { volume: v, formula: `${fmt(v, 2)} m` };
+      },
+    },
+    {
+      key: "pipaKotor",
+      label: "Pemasangan Pipa Air Kotor",
+      ahspKeyword: "pipa pvc",
+      ahspUnit: "m",
+      defaultEnabled: false,
+      showIf: (i) => n(i.panjangPipaKotor) > 0,
+      computeVolume: (i) => {
+        const v = n(i.panjangPipaKotor);
+        if (v <= 0) return null;
+        return { volume: v, formula: `${fmt(v, 2)} m` };
+      },
+    },
+  ],
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Export all stages
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -1116,6 +1622,10 @@ export const STAGE_CALCULATORS: StageCalcDef[] = [
   stageBetonKolom,
   stageBetonBalok,
   stageBetonPlat,
+  stagePasangan,
+  stageAtap,
+  stageFinishing,
+  stageMEP,
 ];
 
 export function getStage(type: string): StageCalcDef | null {
