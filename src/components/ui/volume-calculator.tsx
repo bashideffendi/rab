@@ -148,42 +148,27 @@ export function VolumeCalculator({
       {calc && (
         <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
           <div className="grid gap-4 md:grid-cols-2">
-            {/* Left: form inputs */}
+            {/* Left: form inputs grouped by section */}
             <div>
-              <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Dimensi Utama
-              </p>
-              <div className="space-y-2.5">
-                {calc.inputs.map((inp) => (
-                  <div key={inp.key} className="flex items-center gap-2">
-                    <label
-                      htmlFor={`calc-${inp.key}`}
-                      className="w-32 shrink-0 text-xs font-medium"
-                    >
-                      {inp.label}
-                    </label>
-                    <input
-                      id={`calc-${inp.key}`}
-                      type="number"
-                      inputMode="decimal"
-                      step="0.001"
-                      min={inp.min ?? 0}
-                      value={inputs[inp.key] ?? ""}
-                      onChange={(e) => {
-                        const n = parseFloat(e.target.value);
-                        setInputs((prev) => ({
-                          ...prev,
-                          [inp.key]: Number.isFinite(n) ? n : 0,
-                        }));
-                      }}
-                      className="flex-1 rounded-md border border-border bg-background px-2.5 py-1.5 text-right font-mono text-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
-                    />
-                    <span className="w-12 shrink-0 text-[11px] font-mono text-muted-foreground">
-                      {inp.unit}
-                    </span>
+              {groupInputs(calc.inputs).map((group) => (
+                <div key={group.label} className="mb-3 last:mb-0">
+                  <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    {group.label}
+                  </p>
+                  <div className="space-y-2">
+                    {group.inputs.map((inp) => (
+                      <CalcInputRow
+                        key={inp.key}
+                        inp={inp}
+                        value={inputs[inp.key] ?? inp.default ?? 0}
+                        onChange={(v) =>
+                          setInputs((prev) => ({ ...prev, [inp.key]: v }))
+                        }
+                      />
+                    ))}
                   </div>
-                ))}
-              </div>
+                </div>
+              ))}
             </div>
 
             {/* Right: SVG diagram */}
@@ -199,24 +184,53 @@ export function VolumeCalculator({
 
           {/* Result */}
           {result && (
-            <div className="mt-4 flex items-baseline justify-between gap-3 rounded-md border border-accent/30 bg-accent/5 px-4 py-3">
-              <div>
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  {calc.outputLabel}
-                </p>
-                <p className="mt-0.5 font-mono text-xs text-muted-foreground">
-                  {result.formula}
+            <>
+              <div className="mt-4 flex items-baseline justify-between gap-3 rounded-md border border-accent/30 bg-accent/5 px-4 py-3">
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    {calc.outputLabel}
+                  </p>
+                  <p className="mt-0.5 font-mono text-xs text-muted-foreground">
+                    {result.formula}
+                  </p>
+                </div>
+                <p className="font-mono text-2xl font-bold tabular-nums text-accent">
+                  {result.value.toLocaleString("id-ID", {
+                    maximumFractionDigits: 3,
+                  })}{" "}
+                  <span className="text-sm font-semibold">
+                    {calc.outputUnit}
+                  </span>
                 </p>
               </div>
-              <p className="font-mono text-2xl font-bold tabular-nums text-accent">
-                {result.value.toLocaleString("id-ID", {
-                  maximumFractionDigits: 3,
-                })}{" "}
-                <span className="text-sm font-semibold">
-                  {calc.outputUnit}
-                </span>
-              </p>
-            </div>
+
+              {/* Supplementary info (jumlah patok, vol kayu, dll) */}
+              {result.info && result.info.length > 0 && (
+                <div className="mt-2 grid grid-cols-2 gap-1.5 sm:grid-cols-3 lg:grid-cols-4">
+                  {result.info.map((entry, i) => (
+                    <div
+                      key={i}
+                      className={`rounded-md border px-3 py-2 ${
+                        entry.highlight
+                          ? "border-accent/40 bg-accent/5"
+                          : "border-border bg-muted/30"
+                      }`}
+                    >
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        {entry.label}
+                      </p>
+                      <p
+                        className={`mt-0.5 font-mono text-xs font-semibold tabular-nums ${
+                          entry.highlight ? "text-accent" : "text-foreground"
+                        }`}
+                      >
+                        {entry.value}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </div>
       )}
@@ -238,6 +252,84 @@ export function VolumeCalculator({
         name={formulaFieldName}
         value={result ? result.formula : ""}
       />
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Helpers — group inputs by section + render row (with optional dropdown)
+// ─────────────────────────────────────────────────────────────────────────────
+
+function groupInputs(
+  inputs: import("@/lib/volume-calculators").CalcInputDef[],
+): { label: string; inputs: typeof inputs }[] {
+  const map = new Map<string, typeof inputs>();
+  for (const inp of inputs) {
+    const g = inp.group ?? "Dimensi Utama";
+    if (!map.has(g)) map.set(g, []);
+    map.get(g)!.push(inp);
+  }
+  // Preserve insertion order: Dimensi Utama first, then others
+  const order = Array.from(map.keys());
+  return order.map((label) => ({ label, inputs: map.get(label)! }));
+}
+
+function CalcInputRow({
+  inp,
+  value,
+  onChange,
+}: {
+  inp: import("@/lib/volume-calculators").CalcInputDef;
+  value: number;
+  onChange: (v: number) => void;
+}) {
+  const isDropdown = !!inp.options && inp.options.length > 0;
+  return (
+    <div>
+      <div className="flex items-center gap-2">
+        <label
+          htmlFor={`calc-${inp.key}`}
+          className="w-32 shrink-0 text-xs font-medium"
+        >
+          {inp.label}
+        </label>
+        {isDropdown ? (
+          <select
+            id={`calc-${inp.key}`}
+            value={String(value)}
+            onChange={(e) => onChange(parseFloat(e.target.value))}
+            className="flex-1 rounded-md border border-border bg-background px-2 py-1.5 text-xs focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+          >
+            {inp.options!.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <input
+            id={`calc-${inp.key}`}
+            type="number"
+            inputMode="decimal"
+            step="0.001"
+            min={inp.min ?? 0}
+            value={value}
+            onChange={(e) => {
+              const n = parseFloat(e.target.value);
+              onChange(Number.isFinite(n) ? n : 0);
+            }}
+            className="flex-1 rounded-md border border-border bg-background px-2.5 py-1.5 text-right font-mono text-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+          />
+        )}
+        <span className="w-12 shrink-0 text-[11px] font-mono text-muted-foreground">
+          {inp.unit}
+        </span>
+      </div>
+      {inp.hint && (
+        <p className="ml-32 mt-0.5 pl-2 text-[10px] leading-snug text-muted-foreground">
+          {inp.hint}
+        </p>
+      )}
     </div>
   );
 }

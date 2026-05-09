@@ -20,11 +20,28 @@ export type CalcInputDef = {
   hint?: string;
   default?: number;
   min?: number;
+  /** Section grouping. Default = "Dimensi Utama". Mis. "Spesifikasi" buat
+   *  field non-dimensional (mutu beton, jumlah sengkang, dll). */
+  group?: string;
+  /** Pakai dropdown alih-alih number input. Untuk diameter besi, mutu
+   *  beton, jenis bata, dll. */
+  options?: { value: number; label: string }[];
+};
+
+export type ComputeInfo = {
+  label: string;
+  value: string;
+  highlight?: boolean;
 };
 
 export type ComputeResult = {
+  /** Output utama (sesuai outputUnit) yang akan dipakai sebagai volume
+   *  untuk dikalikan dengan AHSP harga satuan. */
   value: number;
   formula: string;
+  /** Output supplementer / info tambahan ditampilkan di bawah hasil utama.
+   *  Mis. jumlah patok, volume kayu, dll. */
+  info?: ComputeInfo[];
 };
 
 export type CalcDef = {
@@ -58,6 +75,30 @@ function num(v: unknown, fallback = 0): number {
   }
   return fallback;
 }
+
+/**
+ * Tabel diameter besi (mm) → berat per meter (kg/m).
+ * Sumber: AutoRAB Pro reference / standar konstruksi Indonesia.
+ */
+const REBAR_WEIGHT: Record<number, number> = {
+  4: 0.099,
+  6: 0.222,
+  8: 0.395,
+  9: 0.499,
+  10: 0.617,
+  11: 0.746,
+  12: 0.888,
+  13: 1.042,
+  14: 1.208,
+  15: 1.387,
+  16: 1.578,
+  19: 2.226,
+  22: 2.984,
+  23: 3.262,
+  24: 3.553,
+  25: 3.853,
+  28: 4.834,
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Shared SVG defs (gradients + patterns) — diinclude di tiap diagram
@@ -2525,6 +2566,242 @@ function BowplankDiagram({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Diagram: Bouwplank Rich — top-down lahan + struktur dashed + patok + profil
+// ─────────────────────────────────────────────────────────────────────────────
+
+function BouwplankDiagramRich({
+  pLabel,
+  lLabel,
+  offsetLabel,
+  jarakLabel,
+  tinggiPatokVal,
+}: {
+  pLabel: string;
+  lLabel: string;
+  offsetLabel: string;
+  jarakLabel: string;
+  tinggiPatokVal: number;
+}) {
+  const x0 = 90;
+  const y0 = 60;
+  const w = 200;
+  const h = 130;
+  const margin = 22; // bouwplank offset (visual)
+
+  // Inner = bangunan (dashed)
+  const innerLeft = x0;
+  const innerTop = y0;
+  const innerRight = x0 + w;
+  const innerBot = y0 + h;
+
+  // Outer = bouwplank perimeter
+  const outerLeft = innerLeft - margin;
+  const outerTop = innerTop - margin;
+  const outerRight = innerRight + margin;
+  const outerBot = innerBot + margin;
+
+  // Patok positions along outer perimeter (visualized at intervals)
+  const patokSpacing = 28; // visual spacing
+  const patok: { x: number; y: number }[] = [];
+  // Top edge
+  for (let x = outerLeft; x <= outerRight; x += patokSpacing) {
+    patok.push({ x, y: outerTop });
+  }
+  // Right edge
+  for (let y = outerTop + patokSpacing; y < outerBot; y += patokSpacing) {
+    patok.push({ x: outerRight, y });
+  }
+  // Bottom edge
+  for (let x = outerRight; x >= outerLeft; x -= patokSpacing) {
+    patok.push({ x, y: outerBot });
+  }
+  // Left edge
+  for (let y = outerBot - patokSpacing; y > outerTop; y -= patokSpacing) {
+    patok.push({ x: outerLeft, y });
+  }
+
+  return (
+    <svg
+      viewBox="0 0 380 280"
+      className="h-full w-full"
+      preserveAspectRatio="xMidYMid meet"
+    >
+      <SharedDefs />
+
+      {/* Lahan / ground */}
+      <rect
+        x={outerLeft - 15}
+        y={outerTop - 15}
+        width={outerRight - outerLeft + 30}
+        height={outerBot - outerTop + 30}
+        fill="url(#earth-tex)"
+        opacity="0.4"
+      />
+
+      {/* Bouwplank perimeter (papan profil) — kayu coklat */}
+      <rect
+        x={outerLeft}
+        y={outerTop}
+        width={outerRight - outerLeft}
+        height={outerBot - outerTop}
+        fill="none"
+        stroke="#8b6f3d"
+        strokeWidth="3"
+      />
+      {/* Inner shadow biar keliatan papan */}
+      <rect
+        x={outerLeft - 2}
+        y={outerTop - 2}
+        width={outerRight - outerLeft + 4}
+        height={outerBot - outerTop + 4}
+        fill="none"
+        stroke="#5d4a26"
+        strokeWidth="1"
+      />
+
+      {/* Bangunan (struktur) — dashed merah pucat */}
+      <rect
+        x={innerLeft}
+        y={innerTop}
+        width={innerRight - innerLeft}
+        height={innerBot - innerTop}
+        fill="rgba(248, 113, 113, 0.1)"
+        stroke="#dc2626"
+        strokeWidth="0.8"
+        strokeDasharray="4 3"
+      />
+      <text
+        x={(innerLeft + innerRight) / 2}
+        y={(innerTop + innerBot) / 2 + 3}
+        textAnchor="middle"
+        className="font-mono"
+        fill="#7a2410"
+        style={{ fontSize: "9px", fontWeight: 600 }}
+      >
+        BANGUNAN
+      </text>
+
+      {/* Patok kayu di tiap intersect */}
+      {patok.map((p, i) => (
+        <g key={i}>
+          {/* Crossing kayu (cross-piece) */}
+          <line
+            x1={p.x - 5}
+            y1={p.y - 5}
+            x2={p.x + 5}
+            y2={p.y + 5}
+            stroke="#5d4a26"
+            strokeWidth="1.5"
+          />
+          <line
+            x1={p.x - 5}
+            y1={p.y + 5}
+            x2={p.x + 5}
+            y2={p.y - 5}
+            stroke="#5d4a26"
+            strokeWidth="1.5"
+          />
+          {/* Center dot (patok) */}
+          <rect
+            x={p.x - 2.5}
+            y={p.y - 2.5}
+            width="5"
+            height="5"
+            fill="#a87a3d"
+            stroke="#3d2c14"
+            strokeWidth="0.6"
+          />
+        </g>
+      ))}
+
+      {/* Offset indicator (between bangunan and bouwplank) */}
+      <line
+        x1={innerRight}
+        y1={(innerTop + innerBot) / 2}
+        x2={outerRight}
+        y2={(innerTop + innerBot) / 2}
+        stroke="#dc2626"
+        strokeWidth="0.6"
+        markerStart="url(#dim-arrow-start)"
+        markerEnd="url(#dim-arrow-end)"
+      />
+      <text
+        x={(innerRight + outerRight) / 2}
+        y={(innerTop + innerBot) / 2 - 3}
+        textAnchor="middle"
+        className="font-mono"
+        fill="#7a2410"
+        style={{ fontSize: "8px", fontWeight: 600 }}
+      >
+        {offsetLabel}
+      </text>
+
+      {/* Bangunan dimensions (P, L) */}
+      <DimLine
+        x1={innerLeft}
+        y1={innerBot + 6}
+        x2={innerRight}
+        y2={innerBot + 6}
+      />
+      <DimLabel
+        x={(innerLeft + innerRight) / 2}
+        y={innerBot + 22}
+        text={pLabel}
+      />
+
+      <DimLine
+        x1={innerLeft - 6}
+        y1={innerTop}
+        x2={innerLeft - 6}
+        y2={innerBot}
+      />
+      <DimLabel
+        x={innerLeft - 14}
+        y={(innerTop + innerBot) / 2 + 4}
+        text={lLabel}
+        anchor="end"
+      />
+
+      {/* Jarak antar patok callout (visual hint) */}
+      <text
+        x={(outerLeft + outerRight) / 2}
+        y={outerTop - 22}
+        textAnchor="middle"
+        className="font-mono"
+        fill="#5d4a26"
+        style={{ fontSize: "9px", fontWeight: 600 }}
+      >
+        Patok {jarakLabel}
+      </text>
+
+      {/* Tinggi patok mini-info bottom-left */}
+      <g transform={`translate(20, 220)`}>
+        <rect
+          x="0"
+          y="0"
+          width="80"
+          height="48"
+          fill="#fef3c7"
+          stroke="#92400e"
+          strokeWidth="0.6"
+          rx="3"
+        />
+        <text x="6" y="14" fill="#92400e" style={{ fontSize: "9px", fontWeight: 600 }}>
+          Tinggi Patok
+        </text>
+        {/* Mini patok illustration */}
+        <line x1="40" y1="42" x2="40" y2={42 - tinggiPatokVal * 30} stroke="#a87a3d" strokeWidth="3" />
+        <line x1="32" y1="36" x2="48" y2="36" stroke="#5d4a26" strokeWidth="1.2" />
+        <line x1="32" y1="42" x2="48" y2="42" stroke="#5e4724" strokeWidth="2" strokeDasharray="2 1" />
+        <text x="6" y="44" fill="#92400e" font-size="8">
+          tertanam: 30 cm
+        </text>
+      </g>
+    </svg>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Diagram: Atap Kuda-kuda Kayu — triangular truss frame
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -2775,25 +3052,156 @@ function PipeDiagram({
 export const CALCULATORS: CalcDef[] = [
   {
     type: "galian_tapak",
-    label: "Galian / Pondasi Tapak",
+    label: "Galian Pondasi Tapak/Menerus",
     description:
-      "Volume galian atau pondasi tapak/menerus dari panjang × lebar × tinggi.",
+      "Galian tanah untuk pondasi tapak (titik tunggal) atau menerus. Output utama: volume galian (m³). Plus info: volume urugan pasir lantai kerja, volume urugan kembali bekas galian.",
     outputUnit: "m³",
-    outputLabel: "Volume Galian/Pondasi",
+    outputLabel: "Volume Galian Tanah",
     inputs: [
-      { key: "P", label: "Panjang", unit: "m", default: 1, min: 0 },
-      { key: "L", label: "Lebar", unit: "m", default: 1, min: 0 },
-      { key: "T", label: "Kedalaman / Tinggi", unit: "m", default: 1, min: 0 },
-      { key: "n", label: "Jumlah", unit: "titik", default: 1, min: 1 },
+      // Dimensi galian
+      {
+        key: "P",
+        label: "Panjang Galian",
+        unit: "m",
+        default: 1,
+        min: 0,
+        hint: "Panjang per titik (atau total kalau menerus)",
+        group: "Dimensi Galian",
+      },
+      {
+        key: "L",
+        label: "Lebar Galian",
+        unit: "m",
+        default: 1,
+        min: 0,
+        group: "Dimensi Galian",
+      },
+      {
+        key: "T",
+        label: "Kedalaman",
+        unit: "m",
+        default: 1,
+        min: 0,
+        hint: "Kedalaman dari permukaan tanah",
+        group: "Dimensi Galian",
+      },
+      {
+        key: "n",
+        label: "Jumlah Titik",
+        unit: "titik",
+        default: 1,
+        min: 1,
+        hint: "1 untuk pondasi menerus, atau jumlah titik tapak",
+        group: "Dimensi Galian",
+      },
+      // Spesifikasi tanah & lantai kerja
+      {
+        key: "kemiringan",
+        label: "Kemiringan Galian",
+        unit: "%",
+        default: 0,
+        min: 0,
+        hint: "0% = tegak. Tanah lunak biasanya 25–30% miring.",
+        group: "Spesifikasi",
+      },
+      {
+        key: "tebalPasir",
+        label: "Tebal Urugan Pasir Lantai Kerja",
+        unit: "m",
+        default: 0.05,
+        min: 0,
+        hint: "Default 5 cm = 0.05 m. Set 0 kalau gak pakai.",
+        group: "Spesifikasi",
+      },
+      {
+        key: "tebalLantaiKerja",
+        label: "Tebal Lantai Kerja Beton",
+        unit: "m",
+        default: 0.05,
+        min: 0,
+        hint: "Beton tumbuk 1:3:5 untuk dasar. 0 kalau gak pakai.",
+        group: "Spesifikasi",
+      },
+      {
+        key: "rasioUrugan",
+        label: "Rasio Urugan Kembali",
+        unit: "%",
+        default: 30,
+        min: 0,
+        hint: "% galian yang diurug kembali (30% biasanya, sisanya pondasi)",
+        group: "Spesifikasi",
+      },
     ],
     compute: (i) => {
       const P = num(i.P);
       const L = num(i.L);
       const T = num(i.T);
       const n = num(i.n, 1);
-      const v = P * L * T * n;
-      const formula = `${fmt(P, 3)} × ${fmt(L, 3)} × ${fmt(T, 3)} × ${fmt(n, 0)} = ${fmt(v, 3)} m³`;
-      return { value: v, formula };
+      const kemiringan = num(i.kemiringan, 0);
+      const tebalPasir = num(i.tebalPasir, 0.05);
+      const tebalLantaiKerja = num(i.tebalLantaiKerja, 0.05);
+      const rasioUrugan = num(i.rasioUrugan, 30);
+
+      // Volume galian per titik
+      const baseVol = P * L * T;
+      // Adjust kalau ada kemiringan: V = (A_atas + A_bawah)/2 × T
+      // A_atas = (P + 2×T×k) × (L + 2×T×k) di mana k = kemiringan/100
+      const k = kemiringan / 100;
+      const atasP = P + 2 * T * k;
+      const atasL = L + 2 * T * k;
+      const aAtas = atasP * atasL;
+      const aBawah = P * L;
+      const volPerTitik =
+        kemiringan > 0 ? ((aAtas + aBawah) / 2) * T : baseVol;
+      const v = volPerTitik * n;
+
+      // Volume urugan pasir = P × L × tebalPasir × n
+      const volPasir = P * L * tebalPasir * n;
+      // Volume lantai kerja beton = P × L × tebalLantaiKerja × n
+      const volLantaiKerja = P * L * tebalLantaiKerja * n;
+      // Volume urugan kembali = v × rasio
+      const volUrugan = v * (rasioUrugan / 100);
+
+      const formula =
+        kemiringan > 0
+          ? `((${fmt(atasP, 2)}×${fmt(atasL, 2)} + ${fmt(P, 2)}×${fmt(L, 2)})/2) × ${fmt(T, 2)} × ${fmt(n, 0)} = ${fmt(v, 3)} m³`
+          : `${fmt(P, 2)} × ${fmt(L, 2)} × ${fmt(T, 2)} × ${fmt(n, 0)} = ${fmt(v, 3)} m³`;
+
+      return {
+        value: v,
+        formula,
+        info: [
+          {
+            label: "Vol. Galian",
+            value: `${fmt(v, 3)} m³`,
+            highlight: true,
+          },
+          {
+            label: "Vol. per Titik",
+            value: `${fmt(volPerTitik, 3)} m³`,
+          },
+          {
+            label: "Urugan Pasir",
+            value: `${fmt(volPasir, 3)} m³`,
+          },
+          {
+            label: "Lantai Kerja Beton",
+            value: `${fmt(volLantaiKerja, 3)} m³`,
+          },
+          {
+            label: "Urugan Kembali",
+            value: `${fmt(volUrugan, 3)} m³`,
+          },
+          ...(kemiringan > 0
+            ? [
+                {
+                  label: "Penampang Atas",
+                  value: `${fmt(atasP, 2)} × ${fmt(atasL, 2)} m`,
+                },
+              ]
+            : []),
+        ],
+      };
     },
     Diagram: ({ values }) => (
       <FootingDiagram
@@ -2808,21 +3216,161 @@ export const CALCULATORS: CalcDef[] = [
     type: "sloof_balok",
     label: "Sloof / Balok Beton",
     description:
-      "Volume beton untuk sloof atau balok lurus dengan tulangan.",
+      "Beton + bekisting + pembesian untuk sloof atau balok. Output utama: volume beton (m³). Plus info: berat besi tulangan utama, sengkang, dan luas bekisting.",
     outputUnit: "m³",
     outputLabel: "Volume Beton",
     inputs: [
-      { key: "P", label: "Panjang Total", unit: "m", default: 1, min: 0 },
-      { key: "L", label: "Lebar", unit: "m", default: 0.15, min: 0 },
-      { key: "T", label: "Tinggi", unit: "m", default: 0.2, min: 0 },
+      // Dimensi
+      {
+        key: "P",
+        label: "Panjang Total",
+        unit: "m",
+        default: 1,
+        min: 0,
+        hint: "Total panjang sloof/balok",
+        group: "Dimensi Sloof/Balok",
+      },
+      {
+        key: "L",
+        label: "Lebar Penampang",
+        unit: "m",
+        default: 0.15,
+        min: 0,
+        group: "Dimensi Sloof/Balok",
+      },
+      {
+        key: "T",
+        label: "Tinggi Penampang",
+        unit: "m",
+        default: 0.2,
+        min: 0,
+        group: "Dimensi Sloof/Balok",
+      },
+      // Spesifikasi beton
+      {
+        key: "mutuBeton",
+        label: "Mutu Beton",
+        unit: "K",
+        default: 225,
+        group: "Spesifikasi Beton",
+        options: [
+          { value: 175, label: "K-175" },
+          { value: 225, label: "K-225 (umum)" },
+          { value: 275, label: "K-275" },
+          { value: 300, label: "K-300" },
+        ],
+      },
+      // Spesifikasi tulangan utama
+      {
+        key: "diaTulanganUtama",
+        label: "Ø Tulangan Utama",
+        unit: "mm",
+        default: 12,
+        group: "Tulangan Utama",
+        options: [
+          { value: 10, label: "Ø10 mm (0.62 kg/m)" },
+          { value: 12, label: "Ø12 mm (0.89 kg/m)" },
+          { value: 13, label: "Ø13 mm (1.04 kg/m)" },
+          { value: 16, label: "Ø16 mm (1.58 kg/m)" },
+          { value: 19, label: "Ø19 mm (2.22 kg/m)" },
+          { value: 22, label: "Ø22 mm (2.98 kg/m)" },
+        ],
+      },
+      {
+        key: "jumlahTulangan",
+        label: "Jumlah Tulangan",
+        unit: "btg",
+        default: 4,
+        min: 2,
+        hint: "Total batang (atas + bawah)",
+        group: "Tulangan Utama",
+      },
+      // Spesifikasi sengkang
+      {
+        key: "diaSengkang",
+        label: "Ø Sengkang",
+        unit: "mm",
+        default: 8,
+        group: "Sengkang (Begel)",
+        options: [
+          { value: 6, label: "Ø6 mm (0.22 kg/m)" },
+          { value: 8, label: "Ø8 mm (0.39 kg/m)" },
+          { value: 10, label: "Ø10 mm (0.62 kg/m)" },
+        ],
+      },
+      {
+        key: "jarakSengkang",
+        label: "Jarak Antar Sengkang",
+        unit: "m",
+        default: 0.15,
+        min: 0.05,
+        hint: "Standar 10–20 cm. Daerah tumpuan lebih rapat.",
+        group: "Sengkang (Begel)",
+      },
     ],
     compute: (i) => {
       const P = num(i.P);
       const L = num(i.L);
       const T = num(i.T);
+      const diaTulangan = num(i.diaTulanganUtama, 12);
+      const jumlahTulangan = num(i.jumlahTulangan, 4);
+      const diaSengkang = num(i.diaSengkang, 8);
+      const jarakSengkang = num(i.jarakSengkang, 0.15);
+
+      // Volume beton
       const v = P * L * T;
+
+      // Berat besi tulangan utama (kg/m berdasarkan diameter)
+      const beratPerM = REBAR_WEIGHT[diaTulangan] ?? 0.617;
+      const panjangTulangan = P * jumlahTulangan;
+      const beratTulangan = panjangTulangan * beratPerM;
+
+      // Sengkang: keliling = 2(L + T) + overlap (10cm × 2)
+      const kelilingSengkang = 2 * (L + T) + 0.2;
+      const beratSengkangPerM = REBAR_WEIGHT[diaSengkang] ?? 0.39;
+      const jumlahSengkang = Math.ceil(P / jarakSengkang) + 1;
+      const panjangSengkang = jumlahSengkang * kelilingSengkang;
+      const beratSengkang = panjangSengkang * beratSengkangPerM;
+
+      const totalBesi = beratTulangan + beratSengkang;
+
+      // Bekisting (3 sisi: 2 sisi vertikal + 1 bawah, atas terbuka)
+      const luasBekisting = (2 * T + L) * P;
+
       const formula = `${fmt(P, 2)} × ${fmt(L, 3)} × ${fmt(T, 3)} = ${fmt(v, 3)} m³`;
-      return { value: v, formula };
+
+      return {
+        value: v,
+        formula,
+        info: [
+          {
+            label: "Volume Beton",
+            value: `${fmt(v, 3)} m³`,
+            highlight: true,
+          },
+          {
+            label: "Tulangan Utama",
+            value: `${fmt(beratTulangan, 2)} kg`,
+          },
+          {
+            label: "Sengkang",
+            value: `${fmt(beratSengkang, 2)} kg`,
+          },
+          {
+            label: "Total Besi",
+            value: `${fmt(totalBesi, 2)} kg`,
+            highlight: true,
+          },
+          {
+            label: "Jumlah Sengkang",
+            value: `${jumlahSengkang} buah`,
+          },
+          {
+            label: "Luas Bekisting",
+            value: `${fmt(luasBekisting, 2)} m²`,
+          },
+        ],
+      };
     },
     Diagram: ({ values }) => (
       <BeamDiagram
@@ -2836,32 +3384,176 @@ export const CALCULATORS: CalcDef[] = [
   {
     type: "kolom",
     label: "Kolom Beton",
-    description: "Volume beton kolom dengan tulangan (penampang persegi).",
+    description:
+      "Beton + bekisting + pembesian untuk kolom (penampang persegi/empat persegi panjang). Output utama: volume beton (m³).",
     outputUnit: "m³",
     outputLabel: "Volume Beton Kolom",
     inputs: [
+      // Dimensi
       {
-        key: "sisi",
-        label: "Sisi Penampang",
+        key: "Lx",
+        label: "Sisi X Penampang",
         unit: "m",
         default: 0.2,
         min: 0,
-        hint: "Misal 0.2 untuk kolom 20×20 cm",
+        hint: "Default 20 cm = 0.2 m",
+        group: "Dimensi Kolom",
       },
-      { key: "T", label: "Tinggi Kolom", unit: "m", default: 3, min: 0 },
-      { key: "n", label: "Jumlah Kolom", unit: "buah", default: 1, min: 1 },
+      {
+        key: "Ly",
+        label: "Sisi Y Penampang",
+        unit: "m",
+        default: 0.2,
+        min: 0,
+        hint: "Sama Lx kalau persegi, beda kalau persegi panjang",
+        group: "Dimensi Kolom",
+      },
+      {
+        key: "T",
+        label: "Tinggi Kolom",
+        unit: "m",
+        default: 3,
+        min: 0,
+        group: "Dimensi Kolom",
+      },
+      {
+        key: "n",
+        label: "Jumlah Kolom",
+        unit: "buah",
+        default: 1,
+        min: 1,
+        group: "Dimensi Kolom",
+      },
+      // Beton
+      {
+        key: "mutuBeton",
+        label: "Mutu Beton",
+        unit: "K",
+        default: 225,
+        group: "Spesifikasi Beton",
+        options: [
+          { value: 175, label: "K-175" },
+          { value: 225, label: "K-225 (umum)" },
+          { value: 275, label: "K-275" },
+          { value: 300, label: "K-300" },
+        ],
+      },
+      // Tulangan utama
+      {
+        key: "diaTulangan",
+        label: "Ø Tulangan Utama",
+        unit: "mm",
+        default: 12,
+        group: "Tulangan Utama",
+        options: [
+          { value: 10, label: "Ø10 mm (0.62 kg/m)" },
+          { value: 12, label: "Ø12 mm (0.89 kg/m)" },
+          { value: 13, label: "Ø13 mm (1.04 kg/m)" },
+          { value: 16, label: "Ø16 mm (1.58 kg/m)" },
+          { value: 19, label: "Ø19 mm (2.22 kg/m)" },
+        ],
+      },
+      {
+        key: "jumlahTulangan",
+        label: "Jumlah Tulangan",
+        unit: "btg",
+        default: 4,
+        min: 4,
+        hint: "Min 4 (1 di tiap sudut)",
+        group: "Tulangan Utama",
+      },
+      // Sengkang
+      {
+        key: "diaSengkang",
+        label: "Ø Sengkang",
+        unit: "mm",
+        default: 8,
+        group: "Sengkang",
+        options: [
+          { value: 6, label: "Ø6 mm (0.22 kg/m)" },
+          { value: 8, label: "Ø8 mm (0.39 kg/m)" },
+          { value: 10, label: "Ø10 mm (0.62 kg/m)" },
+        ],
+      },
+      {
+        key: "jarakSengkang",
+        label: "Jarak Sengkang",
+        unit: "m",
+        default: 0.15,
+        min: 0.05,
+        hint: "Standar 10–15 cm di tumpuan, 15–20 cm di lapangan",
+        group: "Sengkang",
+      },
     ],
     compute: (i) => {
-      const s = num(i.sisi);
+      const Lx = num(i.Lx);
+      const Ly = num(i.Ly);
       const T = num(i.T);
       const n = num(i.n, 1);
-      const v = s * s * T * n;
-      const formula = `${fmt(s, 3)} × ${fmt(s, 3)} × ${fmt(T, 2)} × ${fmt(n, 0)} = ${fmt(v, 3)} m³`;
-      return { value: v, formula };
+      const diaTulangan = num(i.diaTulangan, 12);
+      const jumlahTulangan = num(i.jumlahTulangan, 4);
+      const diaSengkang = num(i.diaSengkang, 8);
+      const jarakSengkang = num(i.jarakSengkang, 0.15);
+
+      // Volume beton per kolom × jumlah
+      const v = Lx * Ly * T * n;
+
+      // Tulangan utama
+      const beratTulanganPerM = REBAR_WEIGHT[diaTulangan] ?? 0.888;
+      const panjangTulangan = T * jumlahTulangan * n;
+      const beratTulangan = panjangTulangan * beratTulanganPerM;
+
+      // Sengkang: keliling 2(Lx+Ly) + overlap 0.2 m
+      const kelSengkang = 2 * (Lx + Ly) + 0.2;
+      const beratSengkangPerM = REBAR_WEIGHT[diaSengkang] ?? 0.395;
+      const jmlSengkangPerKolom = Math.ceil(T / jarakSengkang) + 1;
+      const totalSengkang = jmlSengkangPerKolom * n;
+      const panjangSengkang = totalSengkang * kelSengkang;
+      const beratSengkang = panjangSengkang * beratSengkangPerM;
+
+      const totalBesi = beratTulangan + beratSengkang;
+
+      // Bekisting: 4 sisi × tinggi × jumlah kolom
+      const luasBekisting = 2 * (Lx + Ly) * T * n;
+
+      const formula = `${fmt(Lx, 3)} × ${fmt(Ly, 3)} × ${fmt(T, 2)} × ${fmt(n, 0)} = ${fmt(v, 3)} m³`;
+
+      return {
+        value: v,
+        formula,
+        info: [
+          {
+            label: "Volume Beton",
+            value: `${fmt(v, 3)} m³`,
+            highlight: true,
+          },
+          {
+            label: "Tulangan Utama",
+            value: `${fmt(beratTulangan, 2)} kg`,
+          },
+          {
+            label: "Sengkang",
+            value: `${fmt(beratSengkang, 2)} kg`,
+          },
+          {
+            label: "Total Besi",
+            value: `${fmt(totalBesi, 2)} kg`,
+            highlight: true,
+          },
+          {
+            label: "Sengkang per Kolom",
+            value: `${jmlSengkangPerKolom} buah`,
+          },
+          {
+            label: "Luas Bekisting",
+            value: `${fmt(luasBekisting, 2)} m²`,
+          },
+        ],
+      };
     },
     Diagram: ({ values }) => (
       <ColumnDiagram
-        sideLabel={`s = ${fmt(num(values.sisi), 2)} m`}
+        sideLabel={`${fmt(num(values.Lx, 0.2), 2)} × ${fmt(num(values.Ly, 0.2), 2)} m`}
         heightLabel={`T = ${fmt(num(values.T), 2)} m`}
       />
     ),
@@ -2899,40 +3591,168 @@ export const CALCULATORS: CalcDef[] = [
     type: "dinding_pasangan",
     label: "Pasangan Dinding (Bata/Hebel)",
     description:
-      "Luas pasangan dinding dikurangi luas bukaan (pintu/jendela).",
+      "Pasangan dinding bata merah atau hebel/bataringan, dikurangi bukaan pintu/jendela. Output: luas pasangan (m²). Plus info: jumlah bata/hebel, volume mortar.",
     outputUnit: "m²",
     outputLabel: "Luas Pasangan Dinding",
     inputs: [
-      { key: "P", label: "Panjang Dinding", unit: "m", default: 5, min: 0 },
-      { key: "T", label: "Tinggi Dinding", unit: "m", default: 3, min: 0 },
+      // Dimensi
       {
-        key: "bukaan",
-        label: "Total Luas Bukaan",
-        unit: "m²",
+        key: "P",
+        label: "Panjang Dinding",
+        unit: "m",
+        default: 5,
+        min: 0,
+        group: "Dimensi Dinding",
+      },
+      {
+        key: "T",
+        label: "Tinggi Dinding",
+        unit: "m",
+        default: 3,
+        min: 0,
+        group: "Dimensi Dinding",
+      },
+      // Spesifikasi bata
+      {
+        key: "jenisBata",
+        label: "Jenis Bata",
+        unit: "",
+        default: 1,
+        group: "Spesifikasi Pasangan",
+        options: [
+          { value: 1, label: "Bata Merah 1/2 (70 buah/m²)" },
+          { value: 2, label: "Bata Hebel/Ringan 7.5cm (8.33 buah/m²)" },
+          { value: 3, label: "Bata Hebel/Ringan 10cm (8.33 buah/m²)" },
+          { value: 4, label: "Bata Hebel/Ringan 12.5cm (8.33 buah/m²)" },
+          { value: 5, label: "Bata Merah 1 (140 buah/m²)" },
+        ],
+      },
+      {
+        key: "adukan",
+        label: "Adukan / Mortar",
+        unit: "",
+        default: 5,
+        group: "Spesifikasi Pasangan",
+        options: [
+          { value: 2, label: "1:2 (utama struktur, kuat)" },
+          { value: 3, label: "1:3 (semi struktural)" },
+          { value: 4, label: "1:4 (umum, dinding biasa)" },
+          { value: 5, label: "1:5 (ringan, dinding non-struktural)" },
+          { value: 6, label: "1:6 (paling hemat)" },
+        ],
+      },
+      // Bukaan terstruktur (pintu + jendela terpisah)
+      {
+        key: "jumlahPintu",
+        label: "Jumlah Pintu",
+        unit: "buah",
         default: 0,
         min: 0,
-        hint: "Jumlah luas pintu + jendela",
+        group: "Bukaan",
+      },
+      {
+        key: "luasPintu",
+        label: "Luas per Pintu",
+        unit: "m²",
+        default: 1.8,
+        min: 0,
+        hint: "Default 0.9 × 2.0 = 1.8 m²",
+        group: "Bukaan",
+      },
+      {
+        key: "jumlahJendela",
+        label: "Jumlah Jendela",
+        unit: "buah",
+        default: 0,
+        min: 0,
+        group: "Bukaan",
+      },
+      {
+        key: "luasJendela",
+        label: "Luas per Jendela",
+        unit: "m²",
+        default: 1.2,
+        min: 0,
+        hint: "Default 1.2 × 1.0 = 1.2 m²",
+        group: "Bukaan",
       },
     ],
     compute: (i) => {
       const P = num(i.P);
       const T = num(i.T);
-      const b = num(i.bukaan);
-      const v = Math.max(0, P * T - b);
-      const formula = `(${fmt(P, 2)} × ${fmt(T, 2)}) − ${fmt(b, 2)} = ${fmt(v, 2)} m²`;
-      return { value: v, formula };
+      const jenisBata = num(i.jenisBata, 1);
+      const jumlahPintu = num(i.jumlahPintu, 0);
+      const luasPintu = num(i.luasPintu, 1.8);
+      const jumlahJendela = num(i.jumlahJendela, 0);
+      const luasJendela = num(i.luasJendela, 1.2);
+
+      const luasBukaan = jumlahPintu * luasPintu + jumlahJendela * luasJendela;
+      const v = Math.max(0, P * T - luasBukaan);
+
+      // Jumlah bata/hebel berdasarkan tipe
+      let jumlahPerM2 = 70; // bata merah 1/2 default
+      let labelMaterial = "Bata Merah 1/2";
+      if (jenisBata === 2 || jenisBata === 3 || jenisBata === 4) {
+        jumlahPerM2 = 8.33;
+        labelMaterial = `Hebel ${jenisBata === 2 ? "7.5" : jenisBata === 3 ? "10" : "12.5"}cm`;
+      } else if (jenisBata === 5) {
+        jumlahPerM2 = 140;
+        labelMaterial = "Bata Merah 1";
+      }
+      const totalBata = Math.ceil(v * jumlahPerM2);
+
+      // Volume mortar — depend jenis & adukan, approx
+      // Bata merah 1/2: ~0.045 m³ per m²
+      // Hebel: ~0.012 m³ per m²
+      const mortarPerM2 =
+        jenisBata === 2 || jenisBata === 3 || jenisBata === 4 ? 0.012 : 0.045;
+      const volMortar = v * mortarPerM2;
+
+      const formula = `(${fmt(P, 2)} × ${fmt(T, 2)}) − ${fmt(luasBukaan, 2)} = ${fmt(v, 2)} m²`;
+
+      return {
+        value: v,
+        formula,
+        info: [
+          {
+            label: "Luas Bersih",
+            value: `${fmt(v, 2)} m²`,
+            highlight: true,
+          },
+          {
+            label: "Luas Bukaan",
+            value: `${fmt(luasBukaan, 2)} m²`,
+          },
+          {
+            label: labelMaterial,
+            value: `${totalBata.toLocaleString("id-ID")} buah`,
+            highlight: true,
+          },
+          {
+            label: "Vol. Mortar",
+            value: `${fmt(volMortar, 3)} m³`,
+          },
+          {
+            label: "Pintu + Jendela",
+            value: `${jumlahPintu}P + ${jumlahJendela}J`,
+          },
+        ],
+      };
     },
-    Diagram: ({ values }) => (
-      <BrickWallDiagram
-        pLabel={`P = ${fmt(num(values.P), 2)} m`}
-        tLabel={`T = ${fmt(num(values.T), 2)} m`}
-        bukaanText={
-          num(values.bukaan) > 0
-            ? `Bukaan: ${fmt(num(values.bukaan), 2)} m²`
-            : undefined
-        }
-      />
-    ),
+    Diagram: ({ values }) => {
+      const luasBukaan =
+        num(values.jumlahPintu, 0) * num(values.luasPintu, 1.8) +
+        num(values.jumlahJendela, 0) * num(values.luasJendela, 1.2);
+      return (
+        <BrickWallDiagram
+          pLabel={`P = ${fmt(num(values.P), 2)} m`}
+          tLabel={`T = ${fmt(num(values.T), 2)} m`}
+          bukaanText={
+            luasBukaan > 0 ? `Bukaan: ${fmt(luasBukaan, 2)} m²` : undefined
+          }
+        />
+      );
+    },
   },
 
   {
@@ -3350,29 +4170,162 @@ export const CALCULATORS: CalcDef[] = [
     ),
   },
 
-  // 18. Bowplank — keliling m'
+  // 18. Bouwplank / Profil — keliling m' + jumlah patok + vol kayu
   {
     type: "bowplank",
-    label: "Bowplank / Profil",
+    label: "Bouwplank / Profil",
     description:
-      "Panjang bowplank (patok kayu + papan profil) = keliling area bangunan.",
+      "Pemasangan bouwplank di sekeliling lahan (offset dari struktur). Output utama: panjang bouwplank (m') untuk dipakai dengan AHSP. Plus info: jumlah patok, volume kayu papan & patok.",
     outputUnit: "m'",
-    outputLabel: "Panjang Bowplank",
+    outputLabel: "Panjang Bouwplank",
     inputs: [
-      { key: "P", label: "Panjang Bangunan", unit: "m", default: 8, min: 0 },
-      { key: "L", label: "Lebar Bangunan", unit: "m", default: 6, min: 0 },
+      // Dimensi Utama — geometri lahan & bangunan
+      {
+        key: "P",
+        label: "Panjang Bangunan",
+        unit: "m",
+        default: 8,
+        min: 0,
+        hint: "Panjang struktur (tanpa offset bouwplank)",
+        group: "Dimensi Lahan & Bangunan",
+      },
+      {
+        key: "L",
+        label: "Lebar Bangunan",
+        unit: "m",
+        default: 6,
+        min: 0,
+        hint: "Lebar struktur",
+        group: "Dimensi Lahan & Bangunan",
+      },
+      {
+        key: "offset",
+        label: "Offset Bouwplank",
+        unit: "m",
+        default: 1,
+        min: 0,
+        hint: "Jarak bouwplank ke pinggir struktur. Standar 1 m.",
+        group: "Dimensi Lahan & Bangunan",
+      },
+      // Spesifikasi patok
+      {
+        key: "jarakPatok",
+        label: "Jarak Antar Patok",
+        unit: "m",
+        default: 1.5,
+        min: 0.5,
+        hint: "Standar 1.5–2 m",
+        group: "Spesifikasi Patok",
+      },
+      {
+        key: "tinggiPatok",
+        label: "Tinggi Patok di Atas Tanah",
+        unit: "m",
+        default: 0.5,
+        min: 0,
+        hint: "Tinggi yang terlihat. Tertanam +30 cm.",
+        group: "Spesifikasi Patok",
+      },
+      {
+        key: "sisiPatok",
+        label: "Sisi Penampang Patok",
+        unit: "m",
+        default: 0.05,
+        min: 0,
+        hint: "Default 5/7 cm = 0.05 m (kayu kaso)",
+        group: "Spesifikasi Patok",
+      },
+      // Spesifikasi papan profil
+      {
+        key: "lebarPapan",
+        label: "Lebar Papan Profil",
+        unit: "m",
+        default: 0.2,
+        min: 0,
+        hint: "Default 20 cm = 0.20 m",
+        group: "Spesifikasi Papan Profil",
+      },
+      {
+        key: "tebalPapan",
+        label: "Tebal Papan Profil",
+        unit: "m",
+        default: 0.02,
+        min: 0,
+        hint: "Default 2 cm = 0.02 m",
+        group: "Spesifikasi Papan Profil",
+      },
     ],
     compute: (i) => {
       const P = num(i.P);
       const L = num(i.L);
-      const v = 2 * (P + L);
-      const formula = `2 × (${fmt(P, 2)} + ${fmt(L, 2)}) = ${fmt(v, 2)} m'`;
-      return { value: v, formula };
+      const offset = num(i.offset, 1);
+      const jarakPatok = num(i.jarakPatok, 1.5);
+      const tinggiPatok = num(i.tinggiPatok, 0.5);
+      const sisiPatok = num(i.sisiPatok, 0.05);
+      const lebarPapan = num(i.lebarPapan, 0.2);
+      const tebalPapan = num(i.tebalPapan, 0.02);
+
+      const panjangPerimeter = P + 2 * offset;
+      const lebarPerimeter = L + 2 * offset;
+      const keliling = 2 * (panjangPerimeter + lebarPerimeter);
+
+      // Jumlah patok = (keliling / jarak) + 4 corners (rounded up)
+      const jumlahPatok = Math.max(
+        4,
+        Math.ceil(keliling / jarakPatok) + 4,
+      );
+
+      // Volume kayu patok (tertanam 30 cm + atas tinggiPatok)
+      const tinggiTotalPatok = tinggiPatok + 0.3;
+      const volPatok = jumlahPatok * sisiPatok * sisiPatok * tinggiTotalPatok;
+
+      // Volume kayu papan profil (= keliling × lebar × tebal)
+      const volPapan = keliling * lebarPapan * tebalPapan;
+
+      const totalVolKayu = volPatok + volPapan;
+
+      const formula = `2 × ((${fmt(P, 2)} + 2×${fmt(offset, 2)}) + (${fmt(L, 2)} + 2×${fmt(offset, 2)})) = ${fmt(keliling, 2)} m'`;
+
+      return {
+        value: keliling,
+        formula,
+        info: [
+          {
+            label: "Keliling Lahan",
+            value: `${fmt(panjangPerimeter, 2)} × ${fmt(lebarPerimeter, 2)} m`,
+          },
+          {
+            label: "Jumlah Patok",
+            value: `${jumlahPatok} buah`,
+            highlight: true,
+          },
+          {
+            label: "Vol. Kayu Patok",
+            value: `${fmt(volPatok, 4)} m³`,
+          },
+          {
+            label: "Vol. Kayu Papan",
+            value: `${fmt(volPapan, 4)} m³`,
+          },
+          {
+            label: "Total Kayu",
+            value: `${fmt(totalVolKayu, 4)} m³`,
+            highlight: true,
+          },
+          {
+            label: "Tinggi Patok Total",
+            value: `${fmt(tinggiTotalPatok, 2)} m (${fmt(tinggiPatok, 2)} + 0.30 tertanam)`,
+          },
+        ],
+      };
     },
     Diagram: ({ values }) => (
-      <BowplankDiagram
+      <BouwplankDiagramRich
         pLabel={`P = ${fmt(num(values.P), 2)} m`}
         lLabel={`L = ${fmt(num(values.L), 2)} m`}
+        offsetLabel={`offset = ${fmt(num(values.offset, 1), 2)} m`}
+        jarakLabel={`@ ${fmt(num(values.jarakPatok, 1.5), 2)} m`}
+        tinggiPatokVal={num(values.tinggiPatok, 0.5)}
       />
     ),
   },
