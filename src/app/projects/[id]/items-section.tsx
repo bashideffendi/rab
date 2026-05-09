@@ -2,6 +2,7 @@ import Link from "next/link";
 import { asc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { ItemAddForm } from "./item-add-form";
+import { StageButton } from "./stage-button";
 import { ItemDeleteButton } from "./item-delete-button";
 import { formatIDR } from "@/lib/utils";
 import { roundToNearest, terbilangRupiah } from "@/lib/terbilang";
@@ -309,6 +310,18 @@ export async function ItemsSection({
           </table>
         </div>
       )}
+
+      {/* Stage Calculator + Single Item form */}
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+        <p className="text-xs text-muted-foreground">
+          💡 <strong className="text-foreground">Tahap (Multi-Item)</strong>:
+          input dimensi sekali → 4-5 items langsung masuk RAB. Cocok untuk
+          Persiapan, Pondasi, dst.{" "}
+          <strong className="text-foreground">Single Item</strong>:
+          tambah 1 item presisi.
+        </p>
+        <StageButton projectId={projectId} wbsOptions={wbsOptions} />
+      </div>
 
       <ItemAddForm
         projectId={projectId}
