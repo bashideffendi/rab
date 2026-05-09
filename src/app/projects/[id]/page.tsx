@@ -356,6 +356,7 @@ export default async function ProjectDetailPage({
           ppnPercent={project.ppnPercent}
           overheadPercent={project.overheadPercent}
           dibulatkanKe={project.dibulatkanKe}
+          regionId={project.regionId}
         />
 
         <AuditLogSection projectId={project.id} />

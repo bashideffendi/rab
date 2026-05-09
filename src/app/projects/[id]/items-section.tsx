@@ -151,11 +151,13 @@ export async function ItemsSection({
   ppnPercent,
   overheadPercent,
   dibulatkanKe,
+  regionId = null,
 }: {
   projectId: string;
   ppnPercent: string;
   overheadPercent: string;
   dibulatkanKe: number;
+  regionId?: string | null;
 }) {
   let items: ItemRow[] = [];
   let wbsOptions: WbsOption[] = [];
@@ -308,7 +310,11 @@ export async function ItemsSection({
         </div>
       )}
 
-      <ItemAddForm projectId={projectId} wbsOptions={wbsOptions} />
+      <ItemAddForm
+        projectId={projectId}
+        wbsOptions={wbsOptions}
+        regionId={regionId}
+      />
     </section>
   );
 }

@@ -6,6 +6,7 @@ import { Input, Select } from "@/components/ui/input";
 import { Field } from "@/components/ui/field";
 import { AhspPicker } from "@/components/ui/ahsp-picker";
 import { VolumeCalculator } from "@/components/ui/volume-calculator";
+import { AhspBreakdown } from "@/components/ui/ahsp-breakdown";
 import {
   createProjectItem,
   type CreateItemFormState,
@@ -21,9 +22,11 @@ type Mode = "ahsp" | "custom";
 export function ItemAddForm({
   projectId,
   wbsOptions,
+  regionId = null,
 }: {
   projectId: string;
   wbsOptions: WbsOption[];
+  regionId?: string | null;
 }) {
   const action = createProjectItem.bind(null, projectId);
   const [state, formAction, pending] = useActionState(action, initialState);
@@ -192,6 +195,17 @@ export function ItemAddForm({
           onChange={(s) => setVolume(s.volume)}
         />
       </div>
+
+      {/* AHSP Breakdown — tampil otomatis kalau AHSP + volume udah ada */}
+      {mode === "ahsp" && ahspItemId && Number(volume) > 0 && (
+        <div className="mt-4">
+          <AhspBreakdown
+            ahspId={ahspItemId}
+            volume={Number(volume)}
+            regionId={regionId}
+          />
+        </div>
+      )}
 
       {state.warning && (
         <div className="mt-3 rounded-md border border-warning/40 bg-warning/5 px-3 py-2 text-xs text-warning">
