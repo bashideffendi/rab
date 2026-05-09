@@ -216,6 +216,46 @@ function SharedDefs() {
         <circle cx="10" cy="9" r="0.6" fill="#5e4724" />
       </pattern>
 
+      {/* Wood / Plywood (bekisting) — vertical grain */}
+      <pattern
+        id="wood-tex"
+        patternUnits="userSpaceOnUse"
+        width="14"
+        height="40"
+      >
+        <rect width="14" height="40" fill="#d8a96a" />
+        <line x1="2" y1="0" x2="2" y2="40" stroke="#a87a3d" strokeWidth="0.4" />
+        <line x1="6" y1="0" x2="6" y2="40" stroke="#8b6f3d" strokeWidth="0.6" />
+        <line x1="10" y1="0" x2="10" y2="40" stroke="#a87a3d" strokeWidth="0.4" />
+        <ellipse cx="6" cy="14" rx="2" ry="0.8" fill="#7a5520" opacity="0.6" />
+        <ellipse cx="10" cy="28" rx="1.5" ry="0.6" fill="#7a5520" opacity="0.5" />
+      </pattern>
+      <linearGradient id="wood-shade" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stopColor="rgba(0,0,0,0)" />
+        <stop offset="100%" stopColor="rgba(0,0,0,0.25)" />
+      </linearGradient>
+
+      {/* Plafon / gypsum — light cream with subtle pattern */}
+      <pattern
+        id="ceiling-tex"
+        patternUnits="userSpaceOnUse"
+        width="40"
+        height="40"
+      >
+        <rect width="40" height="40" fill="#f5f1e6" />
+        <line x1="0" y1="0" x2="40" y2="0" stroke="#c4b890" strokeWidth="0.4" />
+        <line x1="0" y1="40" x2="40" y2="40" stroke="#c4b890" strokeWidth="0.4" />
+        <line x1="0" y1="0" x2="0" y2="40" stroke="#c4b890" strokeWidth="0.4" />
+        <line x1="40" y1="0" x2="40" y2="40" stroke="#c4b890" strokeWidth="0.4" />
+      </pattern>
+
+      {/* PVC pipe — gradient */}
+      <linearGradient id="pipe-pvc" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stopColor="#e8e8e8" />
+        <stop offset="40%" stopColor="#bdbdbd" />
+        <stop offset="100%" stopColor="#7a7a7a" />
+      </linearGradient>
+
       {/* Rebar (besi tulangan) */}
       <linearGradient id="rebar" x1="0%" y1="0%" x2="0%" y2="100%">
         <stop offset="0%" stopColor="#3a3a3a" />
@@ -1820,6 +1860,915 @@ function PaintWallDiagram({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Diagram: Bekisting Kolom — concrete column wrapped in wood formwork
+// ─────────────────────────────────────────────────────────────────────────────
+
+function FormworkColumnDiagram({
+  sLabel,
+  tLabel,
+}: {
+  sLabel: string;
+  tLabel: string;
+}) {
+  const x0 = 130;
+  const y0 = 240;
+  const w = 70;
+  const h = 200;
+  const dx = 32;
+  const dy = -22;
+
+  // Outer formwork (slightly larger)
+  const pad = 5;
+  const ofbl = { x: x0 - pad, y: y0 + pad };
+  const ofbr = { x: x0 + w + pad, y: y0 + pad };
+  const oftr = { x: x0 + w + pad, y: y0 - h };
+  const oftl = { x: x0 - pad, y: y0 - h };
+  const obtl = { x: oftl.x + dx, y: oftl.y + dy };
+  const obtr = { x: oftr.x + dx, y: oftr.y + dy };
+
+  // Inner concrete (peeking at top)
+  const ftl = { x: x0, y: y0 - h + 4 };
+  const ftr = { x: x0 + w, y: y0 - h + 4 };
+  const btl = { x: ftl.x + dx, y: ftl.y + dy };
+  const btr = { x: ftr.x + dx, y: ftr.y + dy };
+
+  return (
+    <svg
+      viewBox="0 0 380 280"
+      className="h-full w-full"
+      preserveAspectRatio="xMidYMid meet"
+    >
+      <SharedDefs />
+      {/* Top opening — concrete visible inside */}
+      <polygon
+        points={`${ftl.x},${ftl.y} ${ftr.x},${ftr.y} ${btr.x},${btr.y} ${btl.x},${btl.y}`}
+        fill="url(#concrete-top)"
+        stroke="#5d5d5d"
+        strokeWidth="0.6"
+      />
+      {/* Right wood face */}
+      <polygon
+        points={`${ofbr.x},${ofbr.y} ${oftr.x},${oftr.y} ${obtr.x},${obtr.y} ${obtr.x - dx + dx},${obtr.y - dy + dy}`}
+        fill="url(#wood-tex)"
+        stroke="#5d4a26"
+        strokeWidth="0.8"
+      />
+      <polygon
+        points={`${ofbr.x},${ofbr.y} ${oftr.x},${oftr.y} ${obtr.x},${obtr.y} ${ofbr.x + dx},${ofbr.y + dy}`}
+        fill="url(#wood-shade)"
+      />
+      {/* Front wood face */}
+      <polygon
+        points={`${ofbl.x},${ofbl.y} ${ofbr.x},${ofbr.y} ${oftr.x},${oftr.y} ${oftl.x},${oftl.y}`}
+        fill="url(#wood-tex)"
+        stroke="#5d4a26"
+        strokeWidth="1"
+      />
+
+      {/* Horizontal sabuk (yokes) — papan horizontal mengikat formwork */}
+      {[0.15, 0.35, 0.55, 0.75, 0.92].map((p) => (
+        <rect
+          key={p}
+          x={ofbl.x - 2}
+          y={oftl.y + h * p}
+          width={w + pad * 2 + 4}
+          height="6"
+          fill="#5d4a26"
+          stroke="#3d2c14"
+          strokeWidth="0.4"
+        />
+      ))}
+
+      {/* Dimensions */}
+      <DimLine x1={ofbl.x - 18} y1={ofbl.y} x2={oftl.x - 18} y2={oftl.y} />
+      <DimLabel
+        x={ofbl.x - 26}
+        y={(ofbl.y + oftl.y) / 2 + 4}
+        text={tLabel}
+        anchor="end"
+      />
+
+      <DimLine x1={ofbl.x} y1={ofbl.y + 22} x2={ofbr.x} y2={ofbr.y + 22} />
+      <DimLabel x={(ofbl.x + ofbr.x) / 2} y={ofbl.y + 38} text={sLabel} />
+    </svg>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Diagram: Bekisting Balok — beam with U-shape formwork (cross section view)
+// ─────────────────────────────────────────────────────────────────────────────
+
+function FormworkBeamDiagram({
+  pLabel,
+  lLabel,
+  tLabel,
+}: {
+  pLabel: string;
+  lLabel: string;
+  tLabel: string;
+}) {
+  const x0 = 60;
+  const y0 = 180;
+  const w = 240;
+  const h = 70;
+  const dx = 50;
+  const dy = -32;
+  const pad = 5;
+
+  // Outer wood (U-shape: bawah + 2 sisi, atas terbuka)
+  const ofbl = { x: x0 - pad, y: y0 + pad };
+  const ofbr = { x: x0 + w + pad, y: y0 + pad };
+  const oftr = { x: x0 + w + pad, y: y0 - h };
+  const oftl = { x: x0 - pad, y: y0 - h };
+
+  // Inner concrete top (open)
+  const ctl = { x: x0, y: y0 - h + 4 };
+  const ctr = { x: x0 + w, y: y0 - h + 4 };
+  const bctl = { x: ctl.x + dx, y: ctl.y + dy };
+  const bctr = { x: ctr.x + dx, y: ctr.y + dy };
+
+  return (
+    <svg
+      viewBox="0 0 380 280"
+      className="h-full w-full"
+      preserveAspectRatio="xMidYMid meet"
+    >
+      <SharedDefs />
+
+      {/* Top opening — concrete visible */}
+      <polygon
+        points={`${ctl.x},${ctl.y} ${ctr.x},${ctr.y} ${bctr.x},${bctr.y} ${bctl.x},${bctl.y}`}
+        fill="url(#concrete-top)"
+        stroke="#5d5d5d"
+        strokeWidth="0.6"
+      />
+
+      {/* Right end (cross-section showing U-shape) */}
+      <polygon
+        points={`${ofbr.x},${ofbr.y} ${oftr.x},${oftr.y} ${oftr.x + dx},${oftr.y + dy} ${ofbr.x + dx},${ofbr.y + dy}`}
+        fill="url(#wood-tex)"
+        stroke="#5d4a26"
+        strokeWidth="0.8"
+      />
+      <polygon
+        points={`${ofbr.x},${ofbr.y} ${oftr.x},${oftr.y} ${oftr.x + dx},${oftr.y + dy} ${ofbr.x + dx},${ofbr.y + dy}`}
+        fill="url(#wood-shade)"
+      />
+      {/* Front face wood */}
+      <polygon
+        points={`${ofbl.x},${ofbl.y} ${ofbr.x},${ofbr.y} ${oftr.x},${oftr.y} ${oftl.x},${oftl.y}`}
+        fill="url(#wood-tex)"
+        stroke="#5d4a26"
+        strokeWidth="1"
+      />
+
+      {/* Vertical battens (papan vertikal di sisi) */}
+      {[0.1, 0.25, 0.4, 0.55, 0.7, 0.85].map((p) => (
+        <line
+          key={p}
+          x1={ofbl.x + (ofbr.x - ofbl.x) * p}
+          y1={ofbl.y}
+          x2={ofbl.x + (ofbr.x - ofbl.x) * p}
+          y2={oftl.y}
+          stroke="#5d4a26"
+          strokeWidth="0.5"
+          opacity="0.7"
+        />
+      ))}
+
+      {/* Support stilts (perancah) */}
+      {[0.15, 0.85].map((p) => (
+        <g key={p}>
+          <line
+            x1={ofbl.x + (ofbr.x - ofbl.x) * p}
+            y1={ofbl.y + 6}
+            x2={ofbl.x + (ofbr.x - ofbl.x) * p}
+            y2={y0 + 50}
+            stroke="#5d4a26"
+            strokeWidth="2"
+          />
+        </g>
+      ))}
+
+      {/* Dimensions */}
+      <DimLine x1={ofbl.x} y1={ofbl.y + 60} x2={ofbr.x} y2={ofbr.y + 60} />
+      <DimLabel x={(ofbl.x + ofbr.x) / 2} y={ofbl.y + 76} text={pLabel} />
+
+      <DimLine x1={ofbr.x + 16} y1={ofbr.y + 6} x2={ofbr.x + dx + 16} y2={ofbr.y + dy + 6} />
+      <DimLabel
+        x={ofbr.x + dx / 2 + 30}
+        y={ofbr.y + dy / 2 + 22}
+        text={lLabel}
+        anchor="start"
+      />
+
+      <DimLine x1={ofbl.x - 18} y1={ofbl.y} x2={oftl.x - 18} y2={oftl.y} />
+      <DimLabel
+        x={ofbl.x - 26}
+        y={(ofbl.y + oftl.y) / 2 + 4}
+        text={tLabel}
+        anchor="end"
+      />
+    </svg>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Diagram: Bekisting Plat — plywood under slab with support stilts
+// ─────────────────────────────────────────────────────────────────────────────
+
+function FormworkSlabDiagram({
+  pLabel,
+  lLabel,
+}: {
+  pLabel: string;
+  lLabel: string;
+}) {
+  const x0 = 70;
+  const y0 = 130;
+  const w = 240;
+  const dx = 50;
+  const dy = -30;
+
+  const fbl = { x: x0, y: y0 };
+  const fbr = { x: x0 + w, y: y0 };
+  const btl = { x: fbl.x + dx, y: fbl.y + dy };
+  const btr = { x: fbr.x + dx, y: fbr.y + dy };
+
+  return (
+    <svg
+      viewBox="0 0 380 280"
+      className="h-full w-full"
+      preserveAspectRatio="xMidYMid meet"
+    >
+      <SharedDefs />
+
+      {/* Plywood underside (top face from below) */}
+      <polygon
+        points={`${fbl.x},${fbl.y} ${fbr.x},${fbr.y} ${btr.x},${btr.y} ${btl.x},${btl.y}`}
+        fill="url(#wood-tex)"
+        stroke="#5d4a26"
+        strokeWidth="1"
+      />
+
+      {/* Plywood seams (papan di-sambung) */}
+      {[0.25, 0.5, 0.75].map((p) => (
+        <line
+          key={p}
+          x1={fbl.x + (fbr.x - fbl.x) * p}
+          y1={fbl.y}
+          x2={btl.x + (btr.x - btl.x) * p}
+          y2={btl.y}
+          stroke="#5d4a26"
+          strokeWidth="0.8"
+        />
+      ))}
+
+      {/* Support stilts (perancah dari bawah) */}
+      {[0.15, 0.4, 0.65, 0.9].map((p) => (
+        <g key={p}>
+          <line
+            x1={fbl.x + (fbr.x - fbl.x) * p}
+            y1={fbl.y + 4}
+            x2={fbl.x + (fbr.x - fbl.x) * p}
+            y2={fbl.y + 80}
+            stroke="#5d4a26"
+            strokeWidth="2.5"
+          />
+          <line
+            x1={fbl.x + (fbr.x - fbl.x) * p - 8}
+            y1={fbl.y + 80}
+            x2={fbl.x + (fbr.x - fbl.x) * p + 8}
+            y2={fbl.y + 80}
+            stroke="#5d4a26"
+            strokeWidth="2"
+          />
+        </g>
+      ))}
+      {/* Back row stilts */}
+      {[0.15, 0.65].map((p) => (
+        <g key={`b${p}`}>
+          <line
+            x1={btl.x + (btr.x - btl.x) * p}
+            y1={btl.y + 4}
+            x2={btl.x + (btr.x - btl.x) * p}
+            y2={btl.y + 78}
+            stroke="#5d4a26"
+            strokeWidth="2"
+            opacity="0.7"
+          />
+        </g>
+      ))}
+
+      {/* Dimensions */}
+      <DimLine x1={fbl.x} y1={fbl.y + 100} x2={fbr.x} y2={fbr.y + 100} />
+      <DimLabel x={(fbl.x + fbr.x) / 2} y={fbl.y + 116} text={pLabel} />
+
+      <DimLine x1={fbr.x + 14} y1={fbr.y - 4} x2={btr.x + 14} y2={btr.y - 4} />
+      <DimLabel
+        x={(fbr.x + btr.x) / 2 + 26}
+        y={(fbr.y + btr.y) / 2 + 6}
+        text={lLabel}
+        anchor="start"
+      />
+    </svg>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Diagram: Pembesian — rebar bundle with ties
+// ─────────────────────────────────────────────────────────────────────────────
+
+function RebarDiagram({
+  diaLabel,
+  pLabel,
+  nLabel,
+}: {
+  diaLabel: string;
+  pLabel: string;
+  nLabel: string;
+}) {
+  const x0 = 60;
+  const yMid = 130;
+  const length = 260;
+
+  // Multiple rebars stacked
+  const rebars = [
+    { y: yMid - 20 },
+    { y: yMid - 8 },
+    { y: yMid + 4 },
+    { y: yMid + 16 },
+  ];
+
+  return (
+    <svg
+      viewBox="0 0 380 280"
+      className="h-full w-full"
+      preserveAspectRatio="xMidYMid meet"
+    >
+      <SharedDefs />
+
+      {/* Rebars — long horizontal */}
+      {rebars.map((r, i) => (
+        <g key={i}>
+          <rect
+            x={x0}
+            y={r.y - 2}
+            width={length}
+            height="5"
+            fill="url(#rebar)"
+            rx="1"
+          />
+          {/* Ribbed pattern (texture) */}
+          {Array.from({ length: 26 }, (_, k) => k * 10).map((dx) => (
+            <line
+              key={dx}
+              x1={x0 + dx}
+              y1={r.y - 2}
+              x2={x0 + dx + 2}
+              y2={r.y + 3}
+              stroke="#1a1a1a"
+              strokeWidth="0.5"
+              opacity="0.6"
+            />
+          ))}
+        </g>
+      ))}
+
+      {/* Tie wires (kawat ikat) */}
+      {[0.15, 0.4, 0.65, 0.9].map((p) => (
+        <g key={p}>
+          <ellipse
+            cx={x0 + length * p}
+            cy={yMid - 2}
+            rx="2"
+            ry="32"
+            fill="none"
+            stroke="#525252"
+            strokeWidth="1.2"
+            transform={`rotate(15, ${x0 + length * p}, ${yMid - 2})`}
+          />
+        </g>
+      ))}
+
+      {/* Cross-section at right end (circle showing diameter) */}
+      {rebars.map((r, i) => (
+        <circle
+          key={`cs${i}`}
+          cx={x0 + length}
+          cy={r.y + 0.5}
+          r="3"
+          fill="url(#rebar)"
+          stroke="#1a1a1a"
+          strokeWidth="0.6"
+        />
+      ))}
+
+      {/* Dimension labels (callouts) */}
+      <DimLine x1={x0} y1={yMid + 50} x2={x0 + length} y2={yMid + 50} />
+      <DimLabel x={x0 + length / 2} y={yMid + 66} text={pLabel} />
+
+      {/* Diameter callout */}
+      <line
+        x1={x0 + length + 8}
+        y1={yMid + 0.5}
+        x2={x0 + length + 30}
+        y2={yMid - 30}
+        stroke="#525252"
+        strokeWidth="0.6"
+      />
+      <DimLabel
+        x={x0 + length + 32}
+        y={yMid - 30}
+        text={diaLabel}
+        anchor="start"
+      />
+
+      {/* Number of bars callout */}
+      <line
+        x1={x0 - 6}
+        y1={yMid - 2}
+        x2={x0 - 28}
+        y2={yMid - 30}
+        stroke="#525252"
+        strokeWidth="0.6"
+      />
+      <DimLabel x={x0 - 28} y={yMid - 30} text={nLabel} anchor="end" />
+    </svg>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Diagram: Plafon — ceiling viewed from below
+// ─────────────────────────────────────────────────────────────────────────────
+
+function CeilingDiagram({
+  pLabel,
+  lLabel,
+}: {
+  pLabel: string;
+  lLabel: string;
+}) {
+  const x0 = 70;
+  const y0 = 70;
+  const w = 240;
+  const h = 140;
+
+  return (
+    <svg
+      viewBox="0 0 380 280"
+      className="h-full w-full"
+      preserveAspectRatio="xMidYMid meet"
+    >
+      <SharedDefs />
+
+      {/* Ceiling surface */}
+      <rect
+        x={x0}
+        y={y0}
+        width={w}
+        height={h}
+        fill="url(#ceiling-tex)"
+        stroke="#7a6c4d"
+        strokeWidth="1"
+      />
+
+      {/* Frame structure (rangka plafon) — visible grid */}
+      {[0.25, 0.5, 0.75].map((p) => (
+        <line
+          key={`v${p}`}
+          x1={x0 + w * p}
+          y1={y0}
+          x2={x0 + w * p}
+          y2={y0 + h}
+          stroke="#a3997a"
+          strokeWidth="0.8"
+          strokeDasharray="6 3"
+          opacity="0.6"
+        />
+      ))}
+      {[0.33, 0.66].map((p) => (
+        <line
+          key={`h${p}`}
+          x1={x0}
+          y1={y0 + h * p}
+          x2={x0 + w}
+          y2={y0 + h * p}
+          stroke="#a3997a"
+          strokeWidth="0.8"
+          strokeDasharray="6 3"
+          opacity="0.6"
+        />
+      ))}
+
+      {/* Lampu (downlight) accent */}
+      {[
+        [0.25, 0.33],
+        [0.5, 0.33],
+        [0.75, 0.33],
+        [0.25, 0.66],
+        [0.75, 0.66],
+      ].map(([px, py], i) => (
+        <g key={i}>
+          <circle
+            cx={x0 + w * px}
+            cy={y0 + h * py}
+            r="6"
+            fill="#fbbf24"
+            stroke="#92400e"
+            strokeWidth="0.6"
+          />
+          <circle
+            cx={x0 + w * px}
+            cy={y0 + h * py}
+            r="3"
+            fill="#fef3c7"
+          />
+        </g>
+      ))}
+
+      {/* Dimensions */}
+      <DimLine x1={x0} y1={y0 + h + 20} x2={x0 + w} y2={y0 + h + 20} />
+      <DimLabel x={x0 + w / 2} y={y0 + h + 36} text={pLabel} />
+
+      <DimLine x1={x0 - 18} y1={y0} x2={x0 - 18} y2={y0 + h} />
+      <DimLabel x={x0 - 26} y={y0 + h / 2 + 4} text={lLabel} anchor="end" />
+    </svg>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Diagram: Bowplank — top-down site with corner posts + string
+// ─────────────────────────────────────────────────────────────────────────────
+
+function BowplankDiagram({
+  pLabel,
+  lLabel,
+}: {
+  pLabel: string;
+  lLabel: string;
+}) {
+  const x0 = 90;
+  const y0 = 80;
+  const w = 200;
+  const h = 140;
+  const margin = 20; // bowplank lebih luar dari struktur
+
+  return (
+    <svg
+      viewBox="0 0 380 280"
+      className="h-full w-full"
+      preserveAspectRatio="xMidYMid meet"
+    >
+      <SharedDefs />
+
+      {/* Site / ground */}
+      <rect
+        x={x0 - margin - 10}
+        y={y0 - margin - 10}
+        width={w + margin * 2 + 20}
+        height={h + margin * 2 + 20}
+        fill="url(#earth-tex)"
+        opacity="0.5"
+      />
+
+      {/* Bowplank rectangle (string outline) */}
+      <rect
+        x={x0 - margin}
+        y={y0 - margin}
+        width={w + margin * 2}
+        height={h + margin * 2}
+        fill="none"
+        stroke="#dc2626"
+        strokeWidth="1.5"
+        strokeDasharray="6 3"
+      />
+
+      {/* Building footprint (struktur dalam) */}
+      <rect
+        x={x0}
+        y={y0}
+        width={w}
+        height={h}
+        fill="rgba(248, 113, 113, 0.15)"
+        stroke="#7a2410"
+        strokeWidth="0.8"
+        strokeDasharray="2 2"
+      />
+
+      {/* Corner posts (patok kayu) */}
+      {[
+        [x0 - margin, y0 - margin],
+        [x0 + w + margin, y0 - margin],
+        [x0 + w + margin, y0 + h + margin],
+        [x0 - margin, y0 + h + margin],
+      ].map(([px, py], i) => (
+        <g key={i}>
+          <rect
+            x={px - 4}
+            y={py - 4}
+            width="8"
+            height="8"
+            fill="url(#wood-tex)"
+            stroke="#5d4a26"
+            strokeWidth="0.8"
+          />
+          {/* Cross piece */}
+          <rect
+            x={px - 16}
+            y={py - 1}
+            width="32"
+            height="3"
+            fill="#a87a3d"
+            stroke="#5d4a26"
+            strokeWidth="0.4"
+          />
+          <rect
+            x={px - 1}
+            y={py - 16}
+            width="3"
+            height="32"
+            fill="#a87a3d"
+            stroke="#5d4a26"
+            strokeWidth="0.4"
+          />
+        </g>
+      ))}
+
+      {/* Dimensions */}
+      <DimLine
+        x1={x0 - margin}
+        y1={y0 - margin - 20}
+        x2={x0 + w + margin}
+        y2={y0 - margin - 20}
+      />
+      <DimLabel
+        x={(x0 - margin + x0 + w + margin) / 2}
+        y={y0 - margin - 24}
+        text={pLabel}
+      />
+
+      <DimLine
+        x1={x0 - margin - 20}
+        y1={y0 - margin}
+        x2={x0 - margin - 20}
+        y2={y0 + h + margin}
+      />
+      <DimLabel
+        x={x0 - margin - 28}
+        y={(y0 - margin + y0 + h + margin) / 2 + 4}
+        text={lLabel}
+        anchor="end"
+      />
+    </svg>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Diagram: Atap Kuda-kuda Kayu — triangular truss frame
+// ─────────────────────────────────────────────────────────────────────────────
+
+function TrussDiagram({
+  bentangLabel,
+  tinggiLabel,
+}: {
+  bentangLabel: string;
+  tinggiLabel: string;
+}) {
+  const x0 = 60;
+  const yBase = 220;
+  const w = 260; // bentang
+  const h = 110; // tinggi puncak
+
+  const left = { x: x0, y: yBase };
+  const right = { x: x0 + w, y: yBase };
+  const apex = { x: x0 + w / 2, y: yBase - h };
+  const mid = { x: (left.x + right.x) / 2, y: yBase };
+
+  // Internal members
+  const ql = { x: left.x + w * 0.25, y: yBase - h * 0.5 };
+  const qr = { x: right.x - w * 0.25, y: yBase - h * 0.5 };
+
+  const woodStroke = "#5d4a26";
+  const woodColor = "#a87a3d";
+
+  return (
+    <svg
+      viewBox="0 0 380 280"
+      className="h-full w-full"
+      preserveAspectRatio="xMidYMid meet"
+    >
+      <SharedDefs />
+
+      {/* Bottom chord (balok tarik) */}
+      <line
+        x1={left.x}
+        y1={left.y}
+        x2={right.x}
+        y2={right.y}
+        stroke={woodColor}
+        strokeWidth="8"
+        strokeLinecap="round"
+      />
+      <line
+        x1={left.x}
+        y1={left.y}
+        x2={right.x}
+        y2={right.y}
+        stroke={woodStroke}
+        strokeWidth="9"
+        strokeLinecap="round"
+        opacity="0"
+      />
+
+      {/* Left rafter */}
+      <line
+        x1={left.x}
+        y1={left.y}
+        x2={apex.x}
+        y2={apex.y}
+        stroke={woodColor}
+        strokeWidth="8"
+        strokeLinecap="round"
+      />
+      {/* Right rafter */}
+      <line
+        x1={right.x}
+        y1={right.y}
+        x2={apex.x}
+        y2={apex.y}
+        stroke={woodColor}
+        strokeWidth="8"
+        strokeLinecap="round"
+      />
+
+      {/* King post (vertical) */}
+      <line
+        x1={apex.x}
+        y1={apex.y}
+        x2={mid.x}
+        y2={mid.y}
+        stroke={woodColor}
+        strokeWidth="6"
+        strokeLinecap="round"
+      />
+
+      {/* Diagonal struts */}
+      <line
+        x1={ql.x}
+        y1={ql.y}
+        x2={mid.x}
+        y2={mid.y}
+        stroke={woodColor}
+        strokeWidth="5"
+        strokeLinecap="round"
+      />
+      <line
+        x1={qr.x}
+        y1={qr.y}
+        x2={mid.x}
+        y2={mid.y}
+        stroke={woodColor}
+        strokeWidth="5"
+        strokeLinecap="round"
+      />
+
+      {/* Joint bolts */}
+      {[left, right, apex, mid, ql, qr].map((p, i) => (
+        <circle key={i} cx={p.x} cy={p.y} r="3.5" fill="#1a1a1a" />
+      ))}
+
+      {/* Dimensions */}
+      <DimLine x1={left.x} y1={left.y + 22} x2={right.x} y2={right.y + 22} />
+      <DimLabel
+        x={(left.x + right.x) / 2}
+        y={left.y + 38}
+        text={bentangLabel}
+      />
+
+      <DimLine x1={left.x - 18} y1={left.y} x2={apex.x - w / 2 - 18} y2={apex.y} />
+      <DimLabel
+        x={left.x - 26}
+        y={(left.y + apex.y) / 2 + 4}
+        text={tinggiLabel}
+        anchor="end"
+      />
+    </svg>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Diagram: Pipa (PVC pipe) — long cylinder along length
+// ─────────────────────────────────────────────────────────────────────────────
+
+function PipeDiagram({
+  pLabel,
+  diaLabel,
+}: {
+  pLabel: string;
+  diaLabel: string;
+}) {
+  const x0 = 60;
+  const yMid = 140;
+  const length = 260;
+  const radius = 18;
+
+  return (
+    <svg
+      viewBox="0 0 380 280"
+      className="h-full w-full"
+      preserveAspectRatio="xMidYMid meet"
+    >
+      <SharedDefs />
+
+      {/* Pipe body */}
+      <rect
+        x={x0}
+        y={yMid - radius}
+        width={length}
+        height={radius * 2}
+        fill="url(#pipe-pvc)"
+        stroke="#525252"
+        strokeWidth="0.8"
+      />
+      {/* Highlight band */}
+      <line
+        x1={x0}
+        y1={yMid - radius * 0.5}
+        x2={x0 + length}
+        y2={yMid - radius * 0.5}
+        stroke="#fafafa"
+        strokeWidth="2"
+        opacity="0.6"
+      />
+      {/* Right end (cap) — circle */}
+      <ellipse
+        cx={x0 + length}
+        cy={yMid}
+        rx="6"
+        ry={radius}
+        fill="url(#pipe-pvc)"
+        stroke="#525252"
+        strokeWidth="1"
+      />
+      <ellipse
+        cx={x0 + length}
+        cy={yMid}
+        rx="3.5"
+        ry={radius * 0.7}
+        fill="#3d3d3d"
+        opacity="0.5"
+      />
+      {/* Left end ring */}
+      <ellipse
+        cx={x0}
+        cy={yMid}
+        rx="4"
+        ry={radius}
+        fill="#5d5d5d"
+        stroke="#3d3d3d"
+        strokeWidth="0.8"
+      />
+
+      {/* Couplings (sambungan) along length */}
+      {[0.33, 0.66].map((p) => (
+        <g key={p}>
+          <rect
+            x={x0 + length * p - 5}
+            y={yMid - radius - 3}
+            width="10"
+            height={radius * 2 + 6}
+            fill="#7a7a7a"
+            stroke="#3d3d3d"
+            strokeWidth="0.6"
+          />
+        </g>
+      ))}
+
+      {/* Dimensions */}
+      <DimLine x1={x0} y1={yMid + radius + 20} x2={x0 + length} y2={yMid + radius + 20} />
+      <DimLabel x={x0 + length / 2} y={yMid + radius + 36} text={pLabel} />
+
+      {/* Diameter callout */}
+      <line
+        x1={x0 + length + 12}
+        y1={yMid - radius}
+        x2={x0 + length + 32}
+        y2={yMid - radius - 30}
+        stroke="#525252"
+        strokeWidth="0.6"
+      />
+      <DimLabel
+        x={x0 + length + 32}
+        y={yMid - radius - 30}
+        text={diaLabel}
+        anchor="start"
+      />
+    </svg>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Calculator definitions
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -2241,6 +3190,265 @@ export const CALCULATORS: CalcDef[] = [
         pLabel={`P = ${fmt(num(values.P), 2)} m`}
         tLabel={`T = ${fmt(num(values.T), 2)} m`}
         sisiText={`${fmt(num(values.sisi, 2), 0)} sisi`}
+      />
+    ),
+  },
+
+  // 13. Bekisting Kolom — luas papan formwork m²
+  {
+    type: "bekisting_kolom",
+    label: "Bekisting Kolom",
+    description:
+      "Luas papan bekisting (cetakan) untuk kolom = 4 sisi × tinggi × jumlah.",
+    outputUnit: "m²",
+    outputLabel: "Luas Bekisting",
+    inputs: [
+      { key: "sisi", label: "Sisi Penampang", unit: "m", default: 0.2, min: 0 },
+      { key: "T", label: "Tinggi Kolom", unit: "m", default: 3, min: 0 },
+      { key: "n", label: "Jumlah Kolom", unit: "buah", default: 1, min: 1 },
+    ],
+    compute: (i) => {
+      const s = num(i.sisi);
+      const T = num(i.T);
+      const n = num(i.n, 1);
+      const v = 4 * s * T * n;
+      const formula = `4 × ${fmt(s, 3)} × ${fmt(T, 2)} × ${fmt(n, 0)} = ${fmt(v, 2)} m²`;
+      return { value: v, formula };
+    },
+    Diagram: ({ values }) => (
+      <FormworkColumnDiagram
+        sLabel={`s = ${fmt(num(values.sisi), 2)} m`}
+        tLabel={`T = ${fmt(num(values.T), 2)} m`}
+      />
+    ),
+  },
+
+  // 14. Bekisting Balok — luas papan m² (2 sisi + 1 bawah)
+  {
+    type: "bekisting_balok",
+    label: "Bekisting Balok",
+    description:
+      "Luas bekisting balok = (2 × tinggi + lebar) × panjang. Sisi atas terbuka.",
+    outputUnit: "m²",
+    outputLabel: "Luas Bekisting",
+    inputs: [
+      { key: "P", label: "Panjang Balok", unit: "m", default: 5, min: 0 },
+      { key: "L", label: "Lebar Balok", unit: "m", default: 0.2, min: 0 },
+      { key: "T", label: "Tinggi Balok", unit: "m", default: 0.4, min: 0 },
+    ],
+    compute: (i) => {
+      const P = num(i.P);
+      const L = num(i.L);
+      const T = num(i.T);
+      const v = (2 * T + L) * P;
+      const formula = `(2 × ${fmt(T, 2)} + ${fmt(L, 2)}) × ${fmt(P, 2)} = ${fmt(v, 2)} m²`;
+      return { value: v, formula };
+    },
+    Diagram: ({ values }) => (
+      <FormworkBeamDiagram
+        pLabel={`P = ${fmt(num(values.P), 2)} m`}
+        lLabel={`L = ${fmt(num(values.L), 2)} m`}
+        tLabel={`T = ${fmt(num(values.T), 2)} m`}
+      />
+    ),
+  },
+
+  // 15. Bekisting Plat — luas plywood bawah
+  {
+    type: "bekisting_plat",
+    label: "Bekisting Plat / Dak",
+    description:
+      "Luas plywood bekisting plat dari sisi bawah = panjang × lebar.",
+    outputUnit: "m²",
+    outputLabel: "Luas Bekisting",
+    inputs: [
+      { key: "P", label: "Panjang", unit: "m", default: 6, min: 0 },
+      { key: "L", label: "Lebar", unit: "m", default: 4, min: 0 },
+    ],
+    compute: (i) => {
+      const P = num(i.P);
+      const L = num(i.L);
+      const v = P * L;
+      const formula = `${fmt(P, 2)} × ${fmt(L, 2)} = ${fmt(v, 2)} m²`;
+      return { value: v, formula };
+    },
+    Diagram: ({ values }) => (
+      <FormworkSlabDiagram
+        pLabel={`P = ${fmt(num(values.P), 2)} m`}
+        lLabel={`L = ${fmt(num(values.L), 2)} m`}
+      />
+    ),
+  },
+
+  // 16. Pembesian / Tulangan (kg)
+  {
+    type: "pembesian",
+    label: "Pembesian / Tulangan",
+    description:
+      "Berat besi tulangan (kg) = panjang × jumlah × berat per meter (sesuai diameter).",
+    outputUnit: "kg",
+    outputLabel: "Berat Tulangan",
+    inputs: [
+      {
+        key: "P",
+        label: "Panjang per Batang",
+        unit: "m",
+        default: 12,
+        min: 0,
+        hint: "Standar batang besi 12 m",
+      },
+      { key: "n", label: "Jumlah Batang", unit: "btg", default: 10, min: 0 },
+      {
+        key: "beratPerM",
+        label: "Berat per Meter",
+        unit: "kg/m",
+        default: 0.617,
+        min: 0,
+        hint: "Ø10mm=0.617, Ø12mm=0.888, Ø13mm=1.04, Ø16mm=1.578",
+      },
+    ],
+    compute: (i) => {
+      const P = num(i.P);
+      const n = num(i.n);
+      const w = num(i.beratPerM, 0.617);
+      const v = P * n * w;
+      const formula = `${fmt(P, 2)} × ${fmt(n, 0)} × ${fmt(w, 3)} = ${fmt(v, 2)} kg`;
+      return { value: v, formula };
+    },
+    Diagram: ({ values }) => (
+      <RebarDiagram
+        diaLabel={`${fmt(num(values.beratPerM, 0.617), 3)} kg/m`}
+        pLabel={`P = ${fmt(num(values.P), 2)} m`}
+        nLabel={`n = ${fmt(num(values.n), 0)} btg`}
+      />
+    ),
+  },
+
+  // 17. Plafon + Rangka (m²)
+  {
+    type: "plafon",
+    label: "Plafon + Rangka",
+    description: "Luas pemasangan plafon (gypsum/PVC/GRC) plus rangka hollow.",
+    outputUnit: "m²",
+    outputLabel: "Luas Plafon",
+    inputs: [
+      { key: "P", label: "Panjang Ruang", unit: "m", default: 5, min: 0 },
+      { key: "L", label: "Lebar Ruang", unit: "m", default: 4, min: 0 },
+    ],
+    compute: (i) => {
+      const P = num(i.P);
+      const L = num(i.L);
+      const v = P * L;
+      const formula = `${fmt(P, 2)} × ${fmt(L, 2)} = ${fmt(v, 2)} m²`;
+      return { value: v, formula };
+    },
+    Diagram: ({ values }) => (
+      <CeilingDiagram
+        pLabel={`P = ${fmt(num(values.P), 2)} m`}
+        lLabel={`L = ${fmt(num(values.L), 2)} m`}
+      />
+    ),
+  },
+
+  // 18. Bowplank — keliling m'
+  {
+    type: "bowplank",
+    label: "Bowplank / Profil",
+    description:
+      "Panjang bowplank (patok kayu + papan profil) = keliling area bangunan.",
+    outputUnit: "m'",
+    outputLabel: "Panjang Bowplank",
+    inputs: [
+      { key: "P", label: "Panjang Bangunan", unit: "m", default: 8, min: 0 },
+      { key: "L", label: "Lebar Bangunan", unit: "m", default: 6, min: 0 },
+    ],
+    compute: (i) => {
+      const P = num(i.P);
+      const L = num(i.L);
+      const v = 2 * (P + L);
+      const formula = `2 × (${fmt(P, 2)} + ${fmt(L, 2)}) = ${fmt(v, 2)} m'`;
+      return { value: v, formula };
+    },
+    Diagram: ({ values }) => (
+      <BowplankDiagram
+        pLabel={`P = ${fmt(num(values.P), 2)} m`}
+        lLabel={`L = ${fmt(num(values.L), 2)} m`}
+      />
+    ),
+  },
+
+  // 19. Atap Kuda-kuda Kayu (volume m³)
+  {
+    type: "kuda_kuda",
+    label: "Atap Kuda-kuda Kayu",
+    description:
+      "Volume kayu kuda-kuda = (luas penampang × panjang × jumlah elemen).",
+    outputUnit: "m³",
+    outputLabel: "Volume Kayu",
+    inputs: [
+      { key: "bentang", label: "Bentang", unit: "m", default: 6, min: 0 },
+      { key: "tinggi", label: "Tinggi Puncak", unit: "m", default: 1.8, min: 0 },
+      {
+        key: "penampang",
+        label: "Luas Penampang Balok",
+        unit: "m²",
+        default: 0.0096,
+        min: 0,
+        hint: "Default 8/12 cm = 0.0096 m²",
+      },
+      { key: "n", label: "Jumlah Kuda-kuda", unit: "set", default: 5, min: 1 },
+    ],
+    compute: (i) => {
+      const b = num(i.bentang);
+      const t = num(i.tinggi);
+      const a = num(i.penampang, 0.0096);
+      const n = num(i.n, 1);
+      // Total panjang elemen kuda-kuda dasar (rafter + bottom + post + 2 strut)
+      const rafter = Math.sqrt(Math.pow(b / 2, 2) + Math.pow(t, 2));
+      const totalLen = b + 2 * rafter + t + 2 * 1.2; // strut diasumsi 1.2m
+      const v = totalLen * a * n;
+      const formula = `${fmt(totalLen, 2)} × ${fmt(a, 4)} × ${fmt(n, 0)} = ${fmt(v, 3)} m³`;
+      return { value: v, formula };
+    },
+    Diagram: ({ values }) => (
+      <TrussDiagram
+        bentangLabel={`B = ${fmt(num(values.bentang), 2)} m`}
+        tinggiLabel={`H = ${fmt(num(values.tinggi), 2)} m`}
+      />
+    ),
+  },
+
+  // 20. Pipa (PVC/Air/Sanitasi)
+  {
+    type: "pipa",
+    label: "Pipa (Air Bersih / Sanitasi)",
+    description:
+      "Panjang pipa untuk instalasi air bersih, air kotor, atau air buangan.",
+    outputUnit: "m'",
+    outputLabel: "Panjang Pipa",
+    inputs: [
+      { key: "P", label: "Panjang Pipa", unit: "m", default: 10, min: 0 },
+      { key: "n", label: "Jumlah Jalur", unit: "jalur", default: 1, min: 1 },
+      {
+        key: "diameter",
+        label: "Diameter",
+        unit: "inch",
+        default: 0.5,
+        min: 0,
+        hint: "1/2 inch=0.5, 3/4=0.75, 1=1, 4 inch=4 (sanitasi)",
+      },
+    ],
+    compute: (i) => {
+      const P = num(i.P);
+      const n = num(i.n, 1);
+      const v = P * n;
+      const formula = `${fmt(P, 2)} × ${fmt(n, 0)} = ${fmt(v, 2)} m'`;
+      return { value: v, formula };
+    },
+    Diagram: ({ values }) => (
+      <PipeDiagram
+        pLabel={`P = ${fmt(num(values.P), 2)} m`}
+        diaLabel={`Ø ${fmt(num(values.diameter, 0.5), 2)}"`}
       />
     ),
   },
