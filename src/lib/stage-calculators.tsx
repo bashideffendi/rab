@@ -67,7 +67,8 @@ function fmt(num: number, decimals = 2): string {
   });
 }
 
-/** Tabel diameter besi → berat per meter (kg/m) — standar AutoRAB. */
+/** Tabel diameter besi → berat per meter (kg/m) — standar AutoRAB.
+ *  Formula: berat = 0.006165 × d² (d dalam mm, ρ baja 7850 kg/m³). */
 const REBAR_WEIGHT: Record<number, number> = {
   6: 0.222,
   8: 0.395,
@@ -79,6 +80,10 @@ const REBAR_WEIGHT: Record<number, number> = {
   22: 2.984,
   25: 3.853,
 };
+
+function rebarWeight(dia: number): number {
+  return REBAR_WEIGHT[dia] ?? 0.006165 * dia * dia;
+}
 
 /** Mutu beton (K-X) → keyword search untuk AHSP beton */
 function mutuBetonKeyword(k: number): string {
@@ -498,18 +503,18 @@ const stageBetonSloof: StageCalcDef = {
   type: "stage_beton_sloof",
   label: "Beton Sloof (3 items)",
   description:
-    "Sloof = balok bawah pondasi. 1 input dimensi → 3 items keluar: Beton + Penulangan + Bekisting.",
+    "Sloof = balok bawah pondasi. Pembesian dipisah: utama (atas+bawah) + ring/begel + kawat ikat. RAB Pro level.",
   inputs: [
     {
       key: "Lsloof",
-      label: "Lebar Sloof",
+      label: "Lebar Sloof (b)",
       unit: "m",
       default: 0.15,
       group: "Dimensi Sloof",
     },
     {
       key: "Tsloof",
-      label: "Tinggi Sloof",
+      label: "Tinggi Sloof (h)",
       unit: "m",
       default: 0.2,
       group: "Dimensi Sloof",
@@ -519,7 +524,15 @@ const stageBetonSloof: StageCalcDef = {
       label: "Total Panjang Sloof",
       unit: "m",
       default: 30,
-      hint: "Total panjang seluruh jalur sloof",
+      hint: "Total seluruh jalur sloof",
+      group: "Dimensi Sloof",
+    },
+    {
+      key: "selimut",
+      label: "Selimut Beton (k)",
+      unit: "m",
+      default: 0.025,
+      hint: "Default 2.5 cm = 0.025 m",
       group: "Dimensi Sloof",
     },
     {
@@ -532,49 +545,47 @@ const stageBetonSloof: StageCalcDef = {
         { value: 175, label: "K-175 (fc 14.5)" },
         { value: 225, label: "K-225 (fc 19.3)" },
         { value: 275, label: "K-275 (fc 22.5)" },
-        { value: 300, label: "K-300 (fc 24.9)" },
       ],
     },
     {
-      key: "diaTulangan",
-      label: "Ø Tulangan Utama",
+      key: "D1",
+      label: "Ø Besi Utama (D1)",
       unit: "mm",
       default: 12,
-      group: "Tulangan & Sengkang",
+      group: "Besi Utama",
       options: [
-        { value: 10, label: "Ø10 mm (0.62 kg/m)" },
-        { value: 12, label: "Ø12 mm (0.89 kg/m)" },
-        { value: 13, label: "Ø13 mm (1.04 kg/m)" },
-        { value: 16, label: "Ø16 mm (1.58 kg/m)" },
+        { value: 10, label: "Ø10 mm" },
+        { value: 12, label: "Ø12 mm" },
+        { value: 13, label: "Ø13 mm" },
+        { value: 16, label: "Ø16 mm" },
       ],
     },
     {
-      key: "jmlTulangan",
-      label: "Jumlah Tulangan",
+      key: "n1",
+      label: "Jumlah Tulangan Utama (n1)",
       unit: "btg",
       default: 4,
-      hint: "Total batang (atas+bawah, biasanya 4-6)",
-      group: "Tulangan & Sengkang",
+      hint: "Total atas + bawah (biasanya 4-6)",
+      group: "Besi Utama",
     },
     {
-      key: "diaSengkang",
-      label: "Ø Sengkang",
+      key: "D3",
+      label: "Ø Ring/Begel (D3)",
       unit: "mm",
       default: 8,
-      group: "Tulangan & Sengkang",
+      group: "Sengkang / Ring",
       options: [
-        { value: 6, label: "Ø6 mm (0.22 kg/m)" },
-        { value: 8, label: "Ø8 mm (0.39 kg/m)" },
-        { value: 10, label: "Ø10 mm (0.62 kg/m)" },
+        { value: 6, label: "Ø6 mm" },
+        { value: 8, label: "Ø8 mm" },
+        { value: 10, label: "Ø10 mm" },
       ],
     },
     {
-      key: "jarakSengkang",
-      label: "Jarak Sengkang",
+      key: "R",
+      label: "Jarak Ring (R)",
       unit: "m",
       default: 0.15,
-      hint: "Standar 10–20 cm",
-      group: "Tulangan & Sengkang",
+      group: "Sengkang / Ring",
     },
   ],
   items: [
@@ -597,7 +608,7 @@ const stageBetonSloof: StageCalcDef = {
     },
     {
       key: "penulanganSloof",
-      label: "Penulangan Sloof (Besi)",
+      label: "Penulangan Sloof (Besi + Kawat)",
       ahspKeyword: "penulangan kolom balok sloof",
       ahspUnit: "kg",
       defaultEnabled: true,
@@ -605,24 +616,33 @@ const stageBetonSloof: StageCalcDef = {
         const L = n(i.Lsloof);
         const T = n(i.Tsloof);
         const P = n(i.Ptotal);
-        const dia = n(i.diaTulangan, 12);
-        const jml = n(i.jmlTulangan, 4);
-        const diaSeng = n(i.diaSengkang, 8);
-        const jrkSeng = n(i.jarakSengkang, 0.15);
+        const k = n(i.selimut, 0.025);
+        const D1 = n(i.D1, 12);
+        const n1 = n(i.n1, 4);
+        const D3 = n(i.D3, 8);
+        const R = n(i.R, 0.15);
 
-        // Berat tulangan utama
-        const wPerM = REBAR_WEIGHT[dia] ?? 0.888;
-        const beratUtama = P * jml * wPerM;
-        // Berat sengkang
-        const kelSeng = 2 * (L + T) + 0.2; // + overlap 20cm
-        const wSengPerM = REBAR_WEIGHT[diaSeng] ?? 0.395;
-        const jmlSeng = Math.ceil(P / jrkSeng) + 1;
-        const beratSeng = jmlSeng * kelSeng * wSengPerM;
-        const total = beratUtama + beratSeng;
-        return {
-          volume: total,
-          formula: `Utama (${fmt(P, 2)}×${jml}×${fmt(wPerM, 3)}) + Sengkang (${jmlSeng}×${fmt(kelSeng, 2)}×${fmt(wSengPerM, 3)}) = ${fmt(total, 2)} kg`,
-        };
+        // Besi utama
+        const lUtama = P * n1;
+        const wUtama = lUtama * rebarWeight(D1);
+        // Ring/begel
+        const kelRing = 2 * (L - 2 * k + (T - 2 * k)) + 0.1;
+        const jmlRing = Math.ceil(P / R) + 1;
+        const lRing = kelRing * jmlRing;
+        const wRing = lRing * rebarWeight(D3);
+        // Kawat ikat 1%
+        const wBesi = wUtama + wRing;
+        const wKawat = wBesi * 0.01;
+        const total = wBesi + wKawat;
+
+        const formula = [
+          `Utama (Ø${D1} × ${n1} btg × ${fmt(P, 2)} m): ${fmt(lUtama, 2)} m → ${fmt(wUtama, 2)} kg`,
+          `Ring/Begel (Ø${D3} jarak ${fmt(R * 100, 0)} cm, ${jmlRing} buah): ${fmt(lRing, 2)} m → ${fmt(wRing, 2)} kg`,
+          `Kawat ikat (1%): ${fmt(wKawat, 2)} kg`,
+          `TOTAL: ${fmt(total, 2)} kg`,
+        ].join(" | ");
+
+        return { volume: total, formula };
       },
     },
     {
@@ -635,7 +655,6 @@ const stageBetonSloof: StageCalcDef = {
         const L = n(i.Lsloof);
         const T = n(i.Tsloof);
         const P = n(i.Ptotal);
-        // 2 sisi vertikal + 1 bawah, atas terbuka
         const v = (2 * T + L) * P;
         return {
           volume: v,
@@ -647,46 +666,59 @@ const stageBetonSloof: StageCalcDef = {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Stage 4: BETON KOLOM (3 outputs: beton + tulangan + bekisting)
+// Stage 4: BETON KOLOM — RAB Pro level detail
 // ─────────────────────────────────────────────────────────────────────────────
+//
+// Outputs 3 items utama (Beton + Pembesian + Bekisting), TAPI Pembesian
+// dihitung dari 4 komponen terpisah (utama / support / ring / kawat ikat),
+// kayak AutoRAB Pro. Formula breakdown visible di volume_formula tiap item.
 
 const stageBetonKolom: StageCalcDef = {
   type: "stage_beton_kolom",
   label: "Beton Kolom (3 items)",
   description:
-    "Kolom beton bertulang. 1 input → 3 items: Beton + Penulangan + Bekisting. Pakai per kelompok kolom (mis. K1 semua sama dimensi).",
+    "Kolom beton bertulang dengan tulangan utama + support + ring/begel terpisah. Pembesian kg dihitung detail per komponen + kawat ikat. RAB Pro level.",
   inputs: [
+    // Dimensi
     {
       key: "Lx",
-      label: "Sisi X Penampang",
+      label: "Lebar 1 (b1)",
       unit: "m",
-      default: 0.2,
-      hint: "Default 20×20 cm",
+      default: 0.15,
+      hint: "Sisi X penampang. Default 15 cm = 0.15 m",
       group: "Dimensi Kolom",
     },
     {
       key: "Ly",
-      label: "Sisi Y Penampang",
+      label: "Lebar 2 (b2)",
       unit: "m",
-      default: 0.2,
-      hint: "Sama Lx kalau persegi",
+      default: 0.15,
+      hint: "Sisi Y penampang. Sama Lx kalau persegi",
       group: "Dimensi Kolom",
     },
     {
       key: "Tkolom",
       label: "Tinggi Kolom",
       unit: "m",
-      default: 3,
+      default: 4.5,
       group: "Dimensi Kolom",
     },
     {
       key: "nKolom",
       label: "Jumlah Kolom",
       unit: "buah",
-      default: 6,
-      hint: "Jumlah kolom dengan dimensi sama",
+      default: 3,
       group: "Dimensi Kolom",
     },
+    {
+      key: "selimut",
+      label: "Selimut Beton (k)",
+      unit: "m",
+      default: 0.02,
+      hint: "Tebal kulit beton dari muka tulangan ke luar. Default 2 cm = 0.02 m",
+      group: "Dimensi Kolom",
+    },
+    // Beton spec
     {
       key: "mutuBeton",
       label: "Mutu Beton",
@@ -700,13 +732,16 @@ const stageBetonKolom: StageCalcDef = {
         { value: 300, label: "K-300 (fc 24.9)" },
       ],
     },
+    // Besi Utama
     {
-      key: "diaTulangan",
-      label: "Ø Tulangan Utama",
+      key: "D1",
+      label: "Ø Besi Utama (D1)",
       unit: "mm",
-      default: 12,
-      group: "Tulangan & Sengkang",
+      default: 10,
+      hint: "Tulangan di tiap sudut",
+      group: "Besi Utama",
       options: [
+        { value: 8, label: "Ø8 mm" },
         { value: 10, label: "Ø10 mm" },
         { value: 12, label: "Ø12 mm" },
         { value: 13, label: "Ø13 mm" },
@@ -715,19 +750,42 @@ const stageBetonKolom: StageCalcDef = {
       ],
     },
     {
-      key: "jmlTulangan",
-      label: "Jumlah Tulangan",
+      key: "n1",
+      label: "Jumlah Besi Utama (n1)",
       unit: "btg",
       default: 4,
-      hint: "Min 4 (1 di tiap sudut). 6/8 untuk kolom besar.",
-      group: "Tulangan & Sengkang",
+      hint: "Min 4 (1 di tiap sudut)",
+      group: "Besi Utama",
+    },
+    // Besi Support (intermediate)
+    {
+      key: "D2",
+      label: "Ø Besi Support (D2)",
+      unit: "mm",
+      default: 10,
+      hint: "Tulangan tambahan di tengah sisi (intermediate). Default sama Utama.",
+      group: "Besi Support",
+      options: [
+        { value: 8, label: "Ø8 mm" },
+        { value: 10, label: "Ø10 mm" },
+        { value: 12, label: "Ø12 mm" },
+      ],
     },
     {
-      key: "diaSengkang",
-      label: "Ø Sengkang",
+      key: "n2",
+      label: "Jumlah Besi Support (n2)",
+      unit: "btg",
+      default: 0,
+      hint: "0 = gak pakai. Pakai untuk kolom besar (>30 cm).",
+      group: "Besi Support",
+    },
+    // Besi Ring/Begel
+    {
+      key: "D3",
+      label: "Ø Besi Ring/Begel (D3)",
       unit: "mm",
       default: 8,
-      group: "Tulangan & Sengkang",
+      group: "Sengkang / Ring",
       options: [
         { value: 6, label: "Ø6 mm" },
         { value: 8, label: "Ø8 mm" },
@@ -735,11 +793,29 @@ const stageBetonKolom: StageCalcDef = {
       ],
     },
     {
-      key: "jarakSengkang",
-      label: "Jarak Sengkang",
+      key: "R",
+      label: "Jarak Ring (R)",
       unit: "m",
       default: 0.15,
-      group: "Tulangan & Sengkang",
+      hint: "Standar 10–20 cm. Daerah tumpuan lebih rapat.",
+      group: "Sengkang / Ring",
+    },
+    // Kawat ikat
+    {
+      key: "Kb",
+      label: "Ø Kawat Beton (Kb)",
+      unit: "mm",
+      default: 1.6,
+      hint: "Default 1.6 mm",
+      group: "Kawat Ikat",
+    },
+    {
+      key: "Lkawat",
+      label: "Panjang Kawat per Ikat",
+      unit: "m",
+      default: 0.3,
+      hint: "Default 30 cm",
+      group: "Kawat Ikat",
     },
   ],
   items: [
@@ -763,7 +839,7 @@ const stageBetonKolom: StageCalcDef = {
     },
     {
       key: "penulanganKolom",
-      label: "Penulangan Kolom (Besi)",
+      label: "Penulangan Kolom (Besi + Kawat)",
       ahspKeyword: "penulangan kolom balok sloof",
       ahspUnit: "kg",
       defaultEnabled: true,
@@ -772,22 +848,48 @@ const stageBetonKolom: StageCalcDef = {
         const Ly = n(i.Ly);
         const T = n(i.Tkolom);
         const nk = n(i.nKolom, 1);
-        const dia = n(i.diaTulangan, 12);
-        const jml = n(i.jmlTulangan, 4);
-        const diaSeng = n(i.diaSengkang, 8);
-        const jrkSeng = n(i.jarakSengkang, 0.15);
+        const k = n(i.selimut, 0.02);
+        const D1 = n(i.D1, 10);
+        const n1 = n(i.n1, 4);
+        const D2 = n(i.D2, 10);
+        const n2 = n(i.n2, 0);
+        const D3 = n(i.D3, 8);
+        const R = n(i.R, 0.15);
 
-        const wPerM = REBAR_WEIGHT[dia] ?? 0.888;
-        const beratUtama = T * jml * nk * wPerM;
-        const kelSeng = 2 * (Lx + Ly) + 0.2;
-        const wSengPerM = REBAR_WEIGHT[diaSeng] ?? 0.395;
-        const jmlSengPerKolom = Math.ceil(T / jrkSeng) + 1;
-        const beratSeng = jmlSengPerKolom * nk * kelSeng * wSengPerM;
-        const total = beratUtama + beratSeng;
-        return {
-          volume: total,
-          formula: `Utama (${fmt(T, 2)}×${jml}×${nk}×${fmt(wPerM, 3)}) + Sengkang (${jmlSengPerKolom}×${nk}×${fmt(kelSeng, 2)}×${fmt(wSengPerM, 3)}) = ${fmt(total, 2)} kg`,
-        };
+        // Panjang besi utama (m): tinggi × jumlah × kolom
+        const lUtama = T * n1 * nk;
+        const wUtama = lUtama * rebarWeight(D1);
+
+        // Panjang besi support (m): sama formula, tapi pakai n2
+        const lSupport = T * n2 * nk;
+        const wSupport = lSupport * rebarWeight(D2);
+
+        // Panjang besi ring (m):
+        //   Keliling 1 ring = 2((Lx-2k) + (Ly-2k)) + overlap (2 × 0.05 = 0.1)
+        const kelRing = 2 * (Lx - 2 * k + (Ly - 2 * k)) + 0.1;
+        const jmlRingPerKolom = Math.ceil(T / R) + 1;
+        const lRing = kelRing * jmlRingPerKolom * nk;
+        const wRing = lRing * rebarWeight(D3);
+
+        // Kawat ikat: ~1% dari berat besi total (atau pakai formula)
+        const wBesi = wUtama + wSupport + wRing;
+        const wKawat = wBesi * 0.01; // 1% rule of thumb
+
+        const total = wBesi + wKawat;
+
+        const formula = [
+          `Utama (Ø${D1} × ${n1} btg × ${fmt(T, 2)} m × ${nk}): ${fmt(lUtama, 2)} m → ${fmt(wUtama, 2)} kg`,
+          n2 > 0
+            ? `Support (Ø${D2} × ${n2} btg × ${fmt(T, 2)} × ${nk}): ${fmt(lSupport, 2)} m → ${fmt(wSupport, 2)} kg`
+            : "",
+          `Ring/Begel (Ø${D3} jarak ${fmt(R * 100, 0)} cm, ${jmlRingPerKolom} buah/kolom × ${nk}): ${fmt(lRing, 2)} m → ${fmt(wRing, 2)} kg`,
+          `Kawat ikat (1% dari besi): ${fmt(wKawat, 2)} kg`,
+          `TOTAL: ${fmt(total, 2)} kg`,
+        ]
+          .filter(Boolean)
+          .join(" | ");
+
+        return { volume: total, formula };
       },
     },
     {
@@ -819,18 +921,18 @@ const stageBetonBalok: StageCalcDef = {
   type: "stage_beton_balok",
   label: "Beton Balok (3 items)",
   description:
-    "Balok beton bertulang (atas/lantai). Sama dengan sloof tapi posisi atas. Per kelompok balok dengan dimensi sama.",
+    "Balok beton bertulang (atas/lantai). Pembesian dipisah: utama (atas+bawah) + support + ring/begel + kawat ikat. RAB Pro level.",
   inputs: [
     {
       key: "Lbalok",
-      label: "Lebar Balok",
+      label: "Lebar Balok (b)",
       unit: "m",
       default: 0.2,
       group: "Dimensi Balok",
     },
     {
       key: "Tbalok",
-      label: "Tinggi Balok",
+      label: "Tinggi Balok (h)",
       unit: "m",
       default: 0.4,
       group: "Dimensi Balok",
@@ -840,7 +942,13 @@ const stageBetonBalok: StageCalcDef = {
       label: "Total Panjang Balok",
       unit: "m",
       default: 50,
-      hint: "Total seluruh jalur balok",
+      group: "Dimensi Balok",
+    },
+    {
+      key: "selimut",
+      label: "Selimut Beton (k)",
+      unit: "m",
+      default: 0.025,
       group: "Dimensi Balok",
     },
     {
@@ -853,15 +961,14 @@ const stageBetonBalok: StageCalcDef = {
         { value: 175, label: "K-175" },
         { value: 225, label: "K-225" },
         { value: 275, label: "K-275" },
-        { value: 300, label: "K-300" },
       ],
     },
     {
-      key: "diaTulangan",
-      label: "Ø Tulangan Utama",
+      key: "D1",
+      label: "Ø Besi Utama (D1)",
       unit: "mm",
       default: 13,
-      group: "Tulangan & Sengkang",
+      group: "Besi Utama",
       options: [
         { value: 10, label: "Ø10 mm" },
         { value: 12, label: "Ø12 mm" },
@@ -871,30 +978,50 @@ const stageBetonBalok: StageCalcDef = {
       ],
     },
     {
-      key: "jmlTulangan",
-      label: "Jumlah Tulangan",
+      key: "n1",
+      label: "Jumlah Tulangan Utama",
       unit: "btg",
       default: 6,
-      hint: "Atas + bawah (biasanya 6-8)",
-      group: "Tulangan & Sengkang",
+      hint: "Atas + bawah (4-8)",
+      group: "Besi Utama",
     },
     {
-      key: "diaSengkang",
-      label: "Ø Sengkang",
+      key: "D2",
+      label: "Ø Besi Support (D2)",
+      unit: "mm",
+      default: 10,
+      group: "Besi Support",
+      options: [
+        { value: 8, label: "Ø8 mm" },
+        { value: 10, label: "Ø10 mm" },
+        { value: 12, label: "Ø12 mm" },
+      ],
+    },
+    {
+      key: "n2",
+      label: "Jumlah Besi Support",
+      unit: "btg",
+      default: 0,
+      hint: "0 = skip. Untuk balok besar/panjang.",
+      group: "Besi Support",
+    },
+    {
+      key: "D3",
+      label: "Ø Ring/Begel (D3)",
       unit: "mm",
       default: 8,
-      group: "Tulangan & Sengkang",
+      group: "Sengkang / Ring",
       options: [
         { value: 8, label: "Ø8 mm" },
         { value: 10, label: "Ø10 mm" },
       ],
     },
     {
-      key: "jarakSengkang",
-      label: "Jarak Sengkang",
+      key: "R",
+      label: "Jarak Ring (R)",
       unit: "m",
       default: 0.15,
-      group: "Tulangan & Sengkang",
+      group: "Sengkang / Ring",
     },
   ],
   items: [
@@ -917,7 +1044,7 @@ const stageBetonBalok: StageCalcDef = {
     },
     {
       key: "penulanganBalok",
-      label: "Penulangan Balok (Besi)",
+      label: "Penulangan Balok (Besi + Kawat)",
       ahspKeyword: "penulangan kolom balok sloof",
       ahspUnit: "kg",
       defaultEnabled: true,
@@ -925,22 +1052,39 @@ const stageBetonBalok: StageCalcDef = {
         const L = n(i.Lbalok);
         const T = n(i.Tbalok);
         const P = n(i.Ptotal);
-        const dia = n(i.diaTulangan, 13);
-        const jml = n(i.jmlTulangan, 6);
-        const diaSeng = n(i.diaSengkang, 8);
-        const jrkSeng = n(i.jarakSengkang, 0.15);
+        const k = n(i.selimut, 0.025);
+        const D1 = n(i.D1, 13);
+        const n1 = n(i.n1, 6);
+        const D2 = n(i.D2, 10);
+        const n2 = n(i.n2, 0);
+        const D3 = n(i.D3, 8);
+        const R = n(i.R, 0.15);
 
-        const wPerM = REBAR_WEIGHT[dia] ?? 1.042;
-        const beratUtama = P * jml * wPerM;
-        const kelSeng = 2 * (L + T) + 0.2;
-        const wSengPerM = REBAR_WEIGHT[diaSeng] ?? 0.395;
-        const jmlSeng = Math.ceil(P / jrkSeng) + 1;
-        const beratSeng = jmlSeng * kelSeng * wSengPerM;
-        const total = beratUtama + beratSeng;
-        return {
-          volume: total,
-          formula: `Utama + Sengkang = ${fmt(total, 2)} kg`,
-        };
+        const lUtama = P * n1;
+        const wUtama = lUtama * rebarWeight(D1);
+        const lSupport = P * n2;
+        const wSupport = lSupport * rebarWeight(D2);
+        const kelRing = 2 * (L - 2 * k + (T - 2 * k)) + 0.1;
+        const jmlRing = Math.ceil(P / R) + 1;
+        const lRing = kelRing * jmlRing;
+        const wRing = lRing * rebarWeight(D3);
+        const wBesi = wUtama + wSupport + wRing;
+        const wKawat = wBesi * 0.01;
+        const total = wBesi + wKawat;
+
+        const formula = [
+          `Utama (Ø${D1} × ${n1} btg × ${fmt(P, 2)} m): ${fmt(lUtama, 2)} m → ${fmt(wUtama, 2)} kg`,
+          n2 > 0
+            ? `Support (Ø${D2} × ${n2} btg × ${fmt(P, 2)}): ${fmt(lSupport, 2)} m → ${fmt(wSupport, 2)} kg`
+            : "",
+          `Ring/Begel (Ø${D3} jarak ${fmt(R * 100, 0)} cm, ${jmlRing} bh): ${fmt(lRing, 2)} m → ${fmt(wRing, 2)} kg`,
+          `Kawat ikat (1%): ${fmt(wKawat, 2)} kg`,
+          `TOTAL: ${fmt(total, 2)} kg`,
+        ]
+          .filter(Boolean)
+          .join(" | ");
+
+        return { volume: total, formula };
       },
     },
     {
@@ -956,7 +1100,7 @@ const stageBetonBalok: StageCalcDef = {
         const v = (2 * T + L) * P;
         return {
           volume: v,
-          formula: `(2×${fmt(T, 3)} + ${fmt(L, 3)}) × ${fmt(P, 2)} = ${fmt(v, 2)} m²`,
+          formula: `(2 × ${fmt(T, 3)} + ${fmt(L, 3)}) × ${fmt(P, 2)} = ${fmt(v, 2)} m²`,
         };
       },
     },
