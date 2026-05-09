@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/input";
 import { Field } from "@/components/ui/field";
 import { AhspPicker } from "@/components/ui/ahsp-picker";
+import { VolumeCalculator } from "@/components/ui/volume-calculator";
 import {
   createProjectItem,
   type CreateItemFormState,
@@ -107,7 +108,7 @@ export function ItemAddForm({
         </div>
 
         {mode === "ahsp" ? (
-          <div className="md:col-span-7">
+          <div className="md:col-span-10">
             <Field
               label="AHSP"
               htmlFor="item-ahsp"
@@ -124,7 +125,7 @@ export function ItemAddForm({
           </div>
         ) : (
           <>
-            <div className="md:col-span-4">
+            <div className="md:col-span-5">
               <Field
                 label="Nama pekerjaan"
                 htmlFor="item-name"
@@ -138,6 +139,23 @@ export function ItemAddForm({
                   maxLength={200}
                   value={name}
                   onChange={(e) => setName(e.target.value)}
+                />
+              </Field>
+            </div>
+            <div className="md:col-span-2">
+              <Field
+                label="Sat"
+                htmlFor="item-unit"
+                error={state.fieldErrors?.unit}
+              >
+                <Input
+                  id="item-unit"
+                  name="unit"
+                  placeholder="m3"
+                  maxLength={20}
+                  className="font-mono"
+                  value={unit}
+                  onChange={(e) => setUnit(e.target.value)}
                 />
               </Field>
             </div>
@@ -160,44 +178,19 @@ export function ItemAddForm({
             </div>
           </>
         )}
+      </div>
 
-        <div className="md:col-span-2">
-          <Field
-            label="Volume"
-            htmlFor="item-volume"
-            error={state.fieldErrors?.volume}
-          >
-            <Input
-              id="item-volume"
-              name="volume"
-              inputMode="decimal"
-              placeholder="100"
-              className="font-mono text-right"
-              value={volume}
-              onChange={(e) => setVolume(e.target.value)}
-            />
-          </Field>
-        </div>
-
-        {mode === "custom" && (
-          <div className="md:col-span-1">
-            <Field
-              label="Sat"
-              htmlFor="item-unit"
-              error={state.fieldErrors?.unit}
-            >
-              <Input
-                id="item-unit"
-                name="unit"
-                placeholder="m3"
-                maxLength={20}
-                className="font-mono"
-                value={unit}
-                onChange={(e) => setUnit(e.target.value)}
-              />
-            </Field>
-          </div>
+      {/* Volume Calculator — full width row */}
+      <div className="mt-3">
+        {state.fieldErrors?.volume && (
+          <p className="mb-1.5 text-xs font-medium text-danger">
+            {state.fieldErrors.volume}
+          </p>
         )}
+        <VolumeCalculator
+          defaultVolume={volume}
+          onChange={(s) => setVolume(s.volume)}
+        />
       </div>
 
       {state.warning && (

@@ -18,6 +18,7 @@ type ItemRow = {
   ahspSourceDoc: string | null;
   ahspSourceModule: string | null;
   ahspSourceSection: string | null;
+  volumeFormula: string | null;
 };
 
 type WbsOption = {
@@ -48,6 +49,7 @@ async function loadItems(projectId: string): Promise<ItemRow[]> {
       ahspSourceDoc: schema.ahspItems.sourceDoc,
       ahspSourceModule: schema.ahspItems.sourceModule,
       ahspSourceSection: schema.ahspItems.sourceSection,
+      volumeFormula: schema.projectItems.volumeFormula,
     })
     .from(schema.projectItems)
     .leftJoin(
@@ -73,6 +75,7 @@ async function loadItems(projectId: string): Promise<ItemRow[]> {
     ahspSourceDoc: r.ahspSourceDoc,
     ahspSourceModule: r.ahspSourceModule,
     ahspSourceSection: r.ahspSourceSection,
+    volumeFormula: r.volumeFormula,
   }));
 }
 
@@ -356,7 +359,17 @@ function GroupRows({
               )}
             </td>
             <td className="px-3 py-2 text-right font-mono tabular-nums">
-              {Number(it.volume).toLocaleString("id-ID")}
+              <div className="flex flex-col items-end">
+                <span>{Number(it.volume).toLocaleString("id-ID")}</span>
+                {it.volumeFormula && (
+                  <span
+                    className="cursor-help text-[10px] font-normal text-muted-foreground"
+                    title={`Rumus: ${it.volumeFormula}`}
+                  >
+                    📐 {it.volumeFormula.split("=")[0]?.trim() ?? "Calculator"}
+                  </span>
+                )}
+              </div>
             </td>
             <td className="px-3 py-2 text-muted-foreground">{it.unit}</td>
             <td className="px-3 py-2 text-right font-mono tabular-nums">

@@ -153,6 +153,28 @@ export async function createProjectItem(
   const unitRaw = (formData.get("unit") ?? "").toString().trim();
   const unitPriceRaw = (formData.get("unitPrice") ?? "").toString().trim();
 
+  // Volume calculator fields (Phase 7)
+  const calculatorTypeRaw = (formData.get("calculatorType") ?? "")
+    .toString()
+    .trim();
+  const calculatorType = calculatorTypeRaw || null;
+  const calculatorInputsRaw = (formData.get("calculatorInputs") ?? "")
+    .toString()
+    .trim();
+  let calculatorInputs: Record<string, number> | null = null;
+  if (calculatorInputsRaw) {
+    try {
+      const parsed = JSON.parse(calculatorInputsRaw);
+      if (parsed && typeof parsed === "object") calculatorInputs = parsed;
+    } catch {
+      // ignore — silakan submit tanpa breakdown
+    }
+  }
+  const volumeFormulaRaw = (formData.get("volumeFormula") ?? "")
+    .toString()
+    .trim();
+  const volumeFormula = volumeFormulaRaw || null;
+
   // Snapshot all input — di-attach ke return state kalau error, biar form gak ke-reset
   const inputValues = {
     mode,
@@ -232,6 +254,9 @@ export async function createProjectItem(
         customUnit: ahsp[0].unit,
         customUnitPrice: price,
         volume: volume,
+        calculatorType,
+        calculatorInputs,
+        volumeFormula,
         sortOrder: 0,
       });
     } catch (e) {
@@ -277,6 +302,9 @@ export async function createProjectItem(
       customUnit,
       customUnitPrice: customUnitPrice!,
       volume: volume,
+      calculatorType,
+      calculatorInputs,
+      volumeFormula,
       sortOrder: 0,
     });
   } catch (e) {

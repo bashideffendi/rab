@@ -85,6 +85,13 @@
       "when": 1778173370168,
       "tag": "0011_add_cover_image_and_audit_log",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1778175170168,
+      "tag": "0012_add_volume_calculator",
+      "breakpoints": true
     }
   ]
 }

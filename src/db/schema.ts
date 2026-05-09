@@ -276,6 +276,10 @@ export const projectItems = pgTable(
       scale: 2,
     }), // nullable — kalau pake AHSP, price dihitung dari komponen × harga
     volume: numeric("volume", { precision: 18, scale: 4 }).notNull(),
+    // Volume calculator (Phase 7): user input dimensi → auto-hitung volume
+    calculatorType: text("calculator_type"), // mis. 'galian_tapak', 'kolom', dst.
+    calculatorInputs: jsonb("calculator_inputs"), // { P: 5, L: 0.4, T: 0.6, n: 1 }
+    volumeFormula: text("volume_formula"), // human-readable, mis. "5 × 0.4 × 0.6 × 1 = 1.20 m³"
     // Time Schedule fields (Phase 5)
     startWeek: integer("start_week"), // 1-based, NULL = belum di-schedule
     durationWeeks: integer("duration_weeks"), // jumlah minggu pengerjaan

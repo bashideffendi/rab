@@ -1,0 +1,243 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { CALCULATORS, getCalculator } from "@/lib/volume-calculators";
+
+/**
+ * VolumeCalculator — UI buat input dimensi → auto-hitung volume.
+ *
+ * Mode:
+ * - "manual": user input volume langsung (default)
+ * - calculator type (mis. "galian_tapak"): user input dimensi, volume auto.
+ *
+ * Submit ke parent via onChange dengan { volume, calculatorType, calculatorInputs, formula }.
+ */
+
+export type VolumeCalculatorState = {
+  volume: string; // submit-ready string, mis. "1.20"
+  calculatorType: string | null;
+  calculatorInputs: Record<string, number> | null;
+  formula: string | null;
+};
+
+export function VolumeCalculator({
+  defaultMode = "manual",
+  defaultVolume = "",
+  defaultInputs = null,
+  onChange,
+  volumeFieldName = "volume",
+  calcTypeFieldName = "calculatorType",
+  calcInputsFieldName = "calculatorInputs",
+  formulaFieldName = "volumeFormula",
+}: {
+  defaultMode?: string;
+  defaultVolume?: string;
+  defaultInputs?: Record<string, number> | null;
+  onChange?: (state: VolumeCalculatorState) => void;
+  volumeFieldName?: string;
+  calcTypeFieldName?: string;
+  calcInputsFieldName?: string;
+  formulaFieldName?: string;
+}) {
+  const [mode, setMode] = useState<string>(defaultMode);
+  const [manualVolume, setManualVolume] = useState(defaultVolume);
+  const [inputs, setInputs] = useState<Record<string, number>>(
+    defaultInputs ?? {},
+  );
+
+  const calc = useMemo(() => getCalculator(mode), [mode]);
+
+  // Initialize default values saat ganti calculator type
+  useEffect(() => {
+    if (!calc) return;
+    setInputs((prev) => {
+      const next = { ...prev };
+      let changed = false;
+      for (const i of calc.inputs) {
+        if (next[i.key] === undefined) {
+          next[i.key] = i.default ?? 0;
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [calc]);
+
+  const result = useMemo(() => {
+    if (!calc) return null;
+    return calc.compute(inputs);
+  }, [calc, inputs]);
+
+  // Notify parent on changes
+  useEffect(() => {
+    if (!onChange) return;
+    if (calc && result) {
+      onChange({
+        volume: result.value.toFixed(4),
+        calculatorType: mode,
+        calculatorInputs: inputs,
+        formula: result.formula,
+      });
+    } else {
+      onChange({
+        volume: manualVolume,
+        calculatorType: null,
+        calculatorInputs: null,
+        formula: null,
+      });
+    }
+  }, [calc, result, mode, inputs, manualVolume, onChange]);
+
+  // Effective volume yang akan disubmit
+  const effectiveVolume = result ? result.value.toFixed(4) : manualVolume;
+
+  return (
+    <div className="space-y-3">
+      {/* Mode picker */}
+      <div className="flex flex-col gap-1">
+        <label
+          htmlFor="calc-type"
+          className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+        >
+          Hitung Volume
+        </label>
+        <select
+          id="calc-type"
+          value={mode}
+          onChange={(e) => setMode(e.target.value)}
+          className="rounded-md border border-border bg-card px-3 py-2 text-sm shadow-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+        >
+          <option value="manual">📝 Manual — input volume langsung</option>
+          {CALCULATORS.map((c) => (
+            <option key={c.type} value={c.type}>
+              📐 {c.label}
+            </option>
+          ))}
+        </select>
+        {calc && (
+          <p className="text-[11px] leading-snug text-muted-foreground">
+            {calc.description}
+          </p>
+        )}
+      </div>
+
+      {/* Manual mode: simple volume input */}
+      {!calc && (
+        <div>
+          <label
+            htmlFor="manual-vol"
+            className="mb-1 block text-xs font-medium text-foreground"
+          >
+            Volume <span className="text-danger">*</span>
+          </label>
+          <input
+            id="manual-vol"
+            type="number"
+            inputMode="decimal"
+            step="0.0001"
+            min="0"
+            value={manualVolume}
+            onChange={(e) => setManualVolume(e.target.value)}
+            placeholder="Mis. 100"
+            className="w-full rounded-md border border-border bg-card px-3 py-2 font-mono text-right text-sm shadow-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+          />
+        </div>
+      )}
+
+      {/* Calculator mode: dimensions form + diagram + result */}
+      {calc && (
+        <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
+          <div className="grid gap-4 md:grid-cols-2">
+            {/* Left: form inputs */}
+            <div>
+              <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Dimensi Utama
+              </p>
+              <div className="space-y-2.5">
+                {calc.inputs.map((inp) => (
+                  <div key={inp.key} className="flex items-center gap-2">
+                    <label
+                      htmlFor={`calc-${inp.key}`}
+                      className="w-32 shrink-0 text-xs font-medium"
+                    >
+                      {inp.label}
+                    </label>
+                    <input
+                      id={`calc-${inp.key}`}
+                      type="number"
+                      inputMode="decimal"
+                      step="0.001"
+                      min={inp.min ?? 0}
+                      value={inputs[inp.key] ?? ""}
+                      onChange={(e) => {
+                        const n = parseFloat(e.target.value);
+                        setInputs((prev) => ({
+                          ...prev,
+                          [inp.key]: Number.isFinite(n) ? n : 0,
+                        }));
+                      }}
+                      className="flex-1 rounded-md border border-border bg-background px-2.5 py-1.5 text-right font-mono text-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+                    />
+                    <span className="w-12 shrink-0 text-[11px] font-mono text-muted-foreground">
+                      {inp.unit}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Right: SVG diagram */}
+            <div className="flex flex-col">
+              <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Sketsa
+              </p>
+              <div className="flex-1 rounded-md border border-border bg-muted/20 p-2 text-accent">
+                <calc.Diagram values={inputs} />
+              </div>
+            </div>
+          </div>
+
+          {/* Result */}
+          {result && (
+            <div className="mt-4 flex items-baseline justify-between gap-3 rounded-md border border-accent/30 bg-accent/5 px-4 py-3">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  {calc.outputLabel}
+                </p>
+                <p className="mt-0.5 font-mono text-xs text-muted-foreground">
+                  {result.formula}
+                </p>
+              </div>
+              <p className="font-mono text-2xl font-bold tabular-nums text-accent">
+                {result.value.toLocaleString("id-ID", {
+                  maximumFractionDigits: 3,
+                })}{" "}
+                <span className="text-sm font-semibold">
+                  {calc.outputUnit}
+                </span>
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Hidden inputs untuk submit ke server action */}
+      <input type="hidden" name={volumeFieldName} value={effectiveVolume} />
+      <input
+        type="hidden"
+        name={calcTypeFieldName}
+        value={calc ? mode : ""}
+      />
+      <input
+        type="hidden"
+        name={calcInputsFieldName}
+        value={calc ? JSON.stringify(inputs) : ""}
+      />
+      <input
+        type="hidden"
+        name={formulaFieldName}
+        value={result ? result.formula : ""}
+      />
+    </div>
+  );
+}
