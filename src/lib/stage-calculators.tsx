@@ -75,8 +75,9 @@ const stagePersiapan: StageCalcDef = {
   type: "stage_persiapan",
   label: "Tahap Persiapan",
   description:
-    "Pekerjaan persiapan: pembersihan lahan, bouwplank, direksi keet, pengukuran. Input dimensi lahan sekali, sub-items auto-hitung.",
+    "Pekerjaan persiapan lengkap: pembersihan, bouwplank, direksi keet, gudang bahan, steiger, pembongkaran existing, pengukuran. Input dimensi sekali, sub-items auto-hitung.",
   inputs: [
+    // Dimensi utama
     {
       key: "P",
       label: "Panjang Bangunan",
@@ -103,27 +104,71 @@ const stagePersiapan: StageCalcDef = {
     },
     {
       key: "luasLahan",
-      label: "Luas Lahan Total",
+      label: "Luas Lahan Total (override)",
       unit: "m²",
       default: 0,
-      hint: "Total luas lahan untuk pembersihan. 0 = pakai default P×L+(offset×perimeter)",
+      hint: "0 = auto pakai dimensi bangunan + offset",
       group: "Dimensi Lahan & Bangunan",
     },
+    // Bangunan sementara
     {
       key: "luasDireksikeet",
-      label: "Luas Direksi Keet / Los Kerja",
+      label: "Luas Direksi Keet / Kantor",
       unit: "m²",
       default: 0,
-      hint: "0 = gak pakai. Mis. 12 m² untuk los kerja kecil",
-      group: "Opsional",
+      hint: "Kantor proyek + los kerja. 0 = skip. Default ~12-24 m²",
+      group: "Bangunan Sementara",
     },
+    {
+      key: "luasGudangBahan",
+      label: "Luas Gudang Bahan / Semen",
+      unit: "m²",
+      default: 0,
+      hint: "Tempat simpan semen/material. 0 = skip. Default ~12 m²",
+      group: "Bangunan Sementara",
+    },
+    {
+      key: "papanNama",
+      label: "Papan Nama Proyek",
+      unit: "buah",
+      default: 0,
+      hint: "Default 1 untuk proyek pemerintah. 0 = skip.",
+      group: "Bangunan Sementara",
+    },
+    // Steiger / scaffolding
+    {
+      key: "luasSteiger",
+      label: "Luas Steiger / Scaffolding",
+      unit: "m²",
+      default: 0,
+      hint: "Untuk proyek bertingkat. 0 = skip.",
+      group: "Steiger & Pembongkaran",
+    },
+    // Pembongkaran (renovasi)
+    {
+      key: "volBongkarPasangan",
+      label: "Vol. Bongkar Pasangan Batu/Bata",
+      unit: "m³",
+      default: 0,
+      hint: "Tembok existing yang dibongkar. 0 = skip.",
+      group: "Steiger & Pembongkaran",
+    },
+    {
+      key: "luasBongkarAtap",
+      label: "Luas Bongkar Atap",
+      unit: "m²",
+      default: 0,
+      hint: "Atap existing yang dibongkar. 0 = skip.",
+      group: "Steiger & Pembongkaran",
+    },
+    // Pengukuran
     {
       key: "luasPengukuran",
       label: "Luas Pengukuran Topografi",
       unit: "Ha",
       default: 0,
-      hint: "0 = gak pakai. Pengukuran biasanya untuk lahan > 0.1 Ha",
-      group: "Opsional",
+      hint: "0 = skip. Pengukuran biasanya untuk lahan > 0.1 Ha",
+      group: "Steiger & Pembongkaran",
     },
   ],
   items: [
@@ -138,7 +183,6 @@ const stagePersiapan: StageCalcDef = {
         const L = n(i.L);
         const offset = n(i.offset, 1);
         const luasLahan = n(i.luasLahan);
-        // Kalau user input luas lahan eksplisit, pake itu. Kalau 0, hitung dari (P+2×offset+1)×(L+2×offset+1)
         const v =
           luasLahan > 0
             ? luasLahan
@@ -167,13 +211,81 @@ const stagePersiapan: StageCalcDef = {
     },
     {
       key: "direksikeet",
-      label: "Direksi Keet / Los Kerja",
+      label: "Direksi Keet / Kantor Proyek",
       ahspKeyword: "direksi keet",
       ahspUnit: "m2",
       defaultEnabled: false,
       showIf: (i) => n(i.luasDireksikeet) > 0,
       computeVolume: (i) => {
         const v = n(i.luasDireksikeet);
+        if (v <= 0) return null;
+        return { volume: v, formula: `${fmt(v, 2)} m² (input langsung)` };
+      },
+    },
+    {
+      key: "gudangBahan",
+      label: "Pembuatan Gudang Bahan / Semen",
+      ahspKeyword: "kantor sementara gudang semen",
+      ahspUnit: "m2",
+      defaultEnabled: false,
+      showIf: (i) => n(i.luasGudangBahan) > 0,
+      computeVolume: (i) => {
+        const v = n(i.luasGudangBahan);
+        if (v <= 0) return null;
+        return { volume: v, formula: `${fmt(v, 2)} m² (input langsung)` };
+      },
+    },
+    {
+      key: "papanNama",
+      label: "Papan Nama Proyek",
+      ahspKeyword: "papan nama proyek",
+      ahspUnit: "buah",
+      defaultEnabled: false,
+      showIf: (i) => n(i.papanNama) > 0,
+      computeVolume: (i) => {
+        const v = n(i.papanNama);
+        if (v <= 0) return null;
+        return {
+          volume: v,
+          formula: `${fmt(v, 0)} buah (input langsung)`,
+        };
+      },
+    },
+    {
+      key: "steiger",
+      label: "Steiger / Scaffolding",
+      ahspKeyword: "steiger scaffolding",
+      ahspUnit: "m2",
+      defaultEnabled: false,
+      showIf: (i) => n(i.luasSteiger) > 0,
+      computeVolume: (i) => {
+        const v = n(i.luasSteiger);
+        if (v <= 0) return null;
+        return { volume: v, formula: `${fmt(v, 2)} m² (input langsung)` };
+      },
+    },
+    {
+      key: "bongkarPasangan",
+      label: "Pembongkaran Pasangan Batu/Bata",
+      ahspKeyword: "bongkaran pasangan batu",
+      ahspUnit: "m3",
+      defaultEnabled: false,
+      showIf: (i) => n(i.volBongkarPasangan) > 0,
+      computeVolume: (i) => {
+        const v = n(i.volBongkarPasangan);
+        if (v <= 0) return null;
+        return { volume: v, formula: `${fmt(v, 3)} m³ (input langsung)` };
+      },
+    },
+    {
+      key: "bongkarAtap",
+      label: "Pembongkaran Atap Existing",
+      ahspKeyword: "pembongkaran penutup atap",
+      ahspUnit: "m2",
+      defaultEnabled: false,
+      showIf: (i) => n(i.luasBongkarAtap) > 0,
+      computeVolume: (i) => {
+        const v = n(i.luasBongkarAtap);
         if (v <= 0) return null;
         return { volume: v, formula: `${fmt(v, 2)} m² (input langsung)` };
       },
