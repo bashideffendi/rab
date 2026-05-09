@@ -3216,7 +3216,7 @@ export const CALCULATORS: CalcDef[] = [
     type: "sloof_balok",
     label: "Sloof / Balok Beton",
     description:
-      "Beton + bekisting + pembesian untuk sloof atau balok. Output utama: volume beton (m³). Plus info: berat besi tulangan utama, sengkang, dan luas bekisting.",
+      "Sloof/balok beton bertulang RAB Pro level: pisah Tulangan Atas (D1) + Bawah (D2) + Sengkang (D3) + Kawat Ikat. Output volume beton (m³), info breakdown panjang & berat besi.",
     outputUnit: "m³",
     outputLabel: "Volume Beton",
     inputs: [
@@ -3232,7 +3232,7 @@ export const CALCULATORS: CalcDef[] = [
       },
       {
         key: "L",
-        label: "Lebar Penampang",
+        label: "Lebar Penampang (b)",
         unit: "m",
         default: 0.15,
         min: 0,
@@ -3240,10 +3240,19 @@ export const CALCULATORS: CalcDef[] = [
       },
       {
         key: "T",
-        label: "Tinggi Penampang",
+        label: "Tinggi Penampang (h)",
         unit: "m",
         default: 0.2,
         min: 0,
+        group: "Dimensi Sloof/Balok",
+      },
+      {
+        key: "k",
+        label: "Selimut Beton (k)",
+        unit: "m",
+        default: 0.02,
+        min: 0,
+        hint: "Tebal kulit beton ke muka tulangan. Default 2 cm.",
         group: "Dimensi Sloof/Balok",
       },
       // Spesifikasi beton
@@ -3254,19 +3263,19 @@ export const CALCULATORS: CalcDef[] = [
         default: 225,
         group: "Spesifikasi Beton",
         options: [
-          { value: 175, label: "K-175" },
-          { value: 225, label: "K-225 (umum)" },
-          { value: 275, label: "K-275" },
-          { value: 300, label: "K-300" },
+          { value: 175, label: "K-175 (fc 14.5)" },
+          { value: 225, label: "K-225 (fc 19.3)" },
+          { value: 275, label: "K-275 (fc 22.5)" },
+          { value: 300, label: "K-300 (fc 24.9)" },
         ],
       },
-      // Spesifikasi tulangan utama
+      // Tulangan Atas (D1)
       {
-        key: "diaTulanganUtama",
-        label: "Ø Tulangan Utama",
+        key: "D1",
+        label: "Ø Tulangan Atas (D1)",
         unit: "mm",
         default: 12,
-        group: "Tulangan Utama",
+        group: "Tulangan Atas",
         options: [
           { value: 10, label: "Ø10 mm (0.62 kg/m)" },
           { value: 12, label: "Ø12 mm (0.89 kg/m)" },
@@ -3277,18 +3286,43 @@ export const CALCULATORS: CalcDef[] = [
         ],
       },
       {
-        key: "jumlahTulangan",
-        label: "Jumlah Tulangan",
+        key: "n1",
+        label: "Jumlah Tulangan Atas",
         unit: "btg",
-        default: 4,
+        default: 2,
         min: 2,
-        hint: "Total batang (atas + bawah)",
-        group: "Tulangan Utama",
+        hint: "Standar 2 batang di sudut atas",
+        group: "Tulangan Atas",
       },
-      // Spesifikasi sengkang
+      // Tulangan Bawah (D2)
       {
-        key: "diaSengkang",
-        label: "Ø Sengkang",
+        key: "D2",
+        label: "Ø Tulangan Bawah (D2)",
+        unit: "mm",
+        default: 12,
+        group: "Tulangan Bawah",
+        options: [
+          { value: 10, label: "Ø10 mm (0.62 kg/m)" },
+          { value: 12, label: "Ø12 mm (0.89 kg/m)" },
+          { value: 13, label: "Ø13 mm (1.04 kg/m)" },
+          { value: 16, label: "Ø16 mm (1.58 kg/m)" },
+          { value: 19, label: "Ø19 mm (2.22 kg/m)" },
+          { value: 22, label: "Ø22 mm (2.98 kg/m)" },
+        ],
+      },
+      {
+        key: "n2",
+        label: "Jumlah Tulangan Bawah",
+        unit: "btg",
+        default: 2,
+        min: 2,
+        hint: "Standar 2 batang di sudut bawah",
+        group: "Tulangan Bawah",
+      },
+      // Sengkang (D3)
+      {
+        key: "D3",
+        label: "Ø Sengkang (D3)",
         unit: "mm",
         default: 8,
         group: "Sengkang (Begel)",
@@ -3299,8 +3333,8 @@ export const CALCULATORS: CalcDef[] = [
         ],
       },
       {
-        key: "jarakSengkang",
-        label: "Jarak Antar Sengkang",
+        key: "R",
+        label: "Jarak Antar Sengkang (R)",
         unit: "m",
         default: 0.15,
         min: 0.05,
@@ -3312,27 +3346,39 @@ export const CALCULATORS: CalcDef[] = [
       const P = num(i.P);
       const L = num(i.L);
       const T = num(i.T);
-      const diaTulangan = num(i.diaTulanganUtama, 12);
-      const jumlahTulangan = num(i.jumlahTulangan, 4);
-      const diaSengkang = num(i.diaSengkang, 8);
-      const jarakSengkang = num(i.jarakSengkang, 0.15);
+      const k = num(i.k, 0.02);
+      const D1 = num(i.D1, 12);
+      const n1 = num(i.n1, 2);
+      const D2 = num(i.D2, 12);
+      const n2 = num(i.n2, 2);
+      const D3 = num(i.D3, 8);
+      const R = num(i.R, 0.15);
 
       // Volume beton
       const v = P * L * T;
 
-      // Berat besi tulangan utama (kg/m berdasarkan diameter)
-      const beratPerM = REBAR_WEIGHT[diaTulangan] ?? 0.617;
-      const panjangTulangan = P * jumlahTulangan;
-      const beratTulangan = panjangTulangan * beratPerM;
+      // Berat per meter (fallback ke formula 0.006165 × d²)
+      const wPerM = (d: number) =>
+        REBAR_WEIGHT[d] ?? 0.006165 * d * d;
 
-      // Sengkang: keliling = 2(L + T) + overlap (10cm × 2)
-      const kelilingSengkang = 2 * (L + T) + 0.2;
-      const beratSengkangPerM = REBAR_WEIGHT[diaSengkang] ?? 0.39;
-      const jumlahSengkang = Math.ceil(P / jarakSengkang) + 1;
-      const panjangSengkang = jumlahSengkang * kelilingSengkang;
-      const beratSengkang = panjangSengkang * beratSengkangPerM;
+      // Tulangan Atas: panjang = P × n1
+      const lAtas = P * n1;
+      const wAtas = lAtas * wPerM(D1);
 
-      const totalBesi = beratTulangan + beratSengkang;
+      // Tulangan Bawah: panjang = P × n2
+      const lBawah = P * n2;
+      const wBawah = lBawah * wPerM(D2);
+
+      // Sengkang: keliling inside (dikurangi 2 × selimut) + overlap 10cm
+      const kelSengkang = 2 * (L - 2 * k + (T - 2 * k)) + 0.1;
+      const jmlSengkang = Math.ceil(P / R) + 1;
+      const lSengkang = kelSengkang * jmlSengkang;
+      const wSengkang = lSengkang * wPerM(D3);
+
+      // Kawat ikat: 1% dari berat besi
+      const wBesi = wAtas + wBawah + wSengkang;
+      const wKawat = wBesi * 0.01;
+      const totalBesi = wBesi + wKawat;
 
       // Bekisting (3 sisi: 2 sisi vertikal + 1 bawah, atas terbuka)
       const luasBekisting = (2 * T + L) * P;
@@ -3349,25 +3395,30 @@ export const CALCULATORS: CalcDef[] = [
             highlight: true,
           },
           {
-            label: "Tulangan Utama",
-            value: `${fmt(beratTulangan, 2)} kg`,
+            label: `Tulangan Atas (Ø${D1})`,
+            value: `${fmt(lAtas, 2)} m → ${fmt(wAtas, 2)} kg`,
           },
           {
-            label: "Sengkang",
-            value: `${fmt(beratSengkang, 2)} kg`,
+            label: `Tulangan Bawah (Ø${D2})`,
+            value: `${fmt(lBawah, 2)} m → ${fmt(wBawah, 2)} kg`,
           },
           {
-            label: "Total Besi",
+            label: `Sengkang (Ø${D3})`,
+            value: `${jmlSengkang} bh × ${fmt(kelSengkang, 2)} m = ${fmt(lSengkang, 2)} m → ${fmt(wSengkang, 2)} kg`,
+          },
+          {
+            label: "Kawat Ikat (1%)",
+            value: `${fmt(wKawat, 2)} kg`,
+          },
+          {
+            label: "TOTAL Besi + Kawat",
             value: `${fmt(totalBesi, 2)} kg`,
             highlight: true,
           },
           {
-            label: "Jumlah Sengkang",
-            value: `${jumlahSengkang} buah`,
-          },
-          {
-            label: "Luas Bekisting",
+            label: "Bekisting",
             value: `${fmt(luasBekisting, 2)} m²`,
+            highlight: true,
           },
         ],
       };
@@ -3385,34 +3436,34 @@ export const CALCULATORS: CalcDef[] = [
     type: "kolom",
     label: "Kolom Beton",
     description:
-      "Beton + bekisting + pembesian untuk kolom (penampang persegi/empat persegi panjang). Output utama: volume beton (m³).",
+      "Kolom beton bertulang RAB Pro level: pisah Besi Utama + Support + Ring/Begel + Kawat Ikat. Output volume beton (m³), info breakdown panjang & berat besi.",
     outputUnit: "m³",
     outputLabel: "Volume Beton Kolom",
     inputs: [
       // Dimensi
       {
         key: "Lx",
-        label: "Sisi X Penampang",
+        label: "Lebar 1 (b1)",
         unit: "m",
-        default: 0.2,
+        default: 0.15,
         min: 0,
-        hint: "Default 20 cm = 0.2 m",
+        hint: "Sisi X penampang",
         group: "Dimensi Kolom",
       },
       {
         key: "Ly",
-        label: "Sisi Y Penampang",
+        label: "Lebar 2 (b2)",
         unit: "m",
-        default: 0.2,
+        default: 0.15,
         min: 0,
-        hint: "Sama Lx kalau persegi, beda kalau persegi panjang",
+        hint: "Sisi Y. Sama Lx kalau persegi.",
         group: "Dimensi Kolom",
       },
       {
         key: "T",
         label: "Tinggi Kolom",
         unit: "m",
-        default: 3,
+        default: 4.5,
         min: 0,
         group: "Dimensi Kolom",
       },
@@ -3420,8 +3471,17 @@ export const CALCULATORS: CalcDef[] = [
         key: "n",
         label: "Jumlah Kolom",
         unit: "buah",
-        default: 1,
+        default: 3,
         min: 1,
+        group: "Dimensi Kolom",
+      },
+      {
+        key: "k",
+        label: "Selimut Beton (k)",
+        unit: "m",
+        default: 0.02,
+        min: 0,
+        hint: "Tebal kulit beton ke muka tulangan. Default 2 cm.",
         group: "Dimensi Kolom",
       },
       // Beton
@@ -3432,20 +3492,22 @@ export const CALCULATORS: CalcDef[] = [
         default: 225,
         group: "Spesifikasi Beton",
         options: [
-          { value: 175, label: "K-175" },
-          { value: 225, label: "K-225 (umum)" },
-          { value: 275, label: "K-275" },
-          { value: 300, label: "K-300" },
+          { value: 175, label: "K-175 (fc 14.5)" },
+          { value: 225, label: "K-225 (fc 19.3)" },
+          { value: 275, label: "K-275 (fc 22.5)" },
+          { value: 300, label: "K-300 (fc 24.9)" },
         ],
       },
-      // Tulangan utama
+      // Besi Utama
       {
-        key: "diaTulangan",
-        label: "Ø Tulangan Utama",
+        key: "D1",
+        label: "Ø Besi Utama (D1)",
         unit: "mm",
-        default: 12,
-        group: "Tulangan Utama",
+        default: 10,
+        hint: "Tulangan di tiap sudut",
+        group: "Besi Utama",
         options: [
+          { value: 8, label: "Ø8 mm (0.39 kg/m)" },
           { value: 10, label: "Ø10 mm (0.62 kg/m)" },
           { value: 12, label: "Ø12 mm (0.89 kg/m)" },
           { value: 13, label: "Ø13 mm (1.04 kg/m)" },
@@ -3454,21 +3516,44 @@ export const CALCULATORS: CalcDef[] = [
         ],
       },
       {
-        key: "jumlahTulangan",
-        label: "Jumlah Tulangan",
+        key: "n1",
+        label: "Jumlah Besi Utama",
         unit: "btg",
         default: 4,
         min: 4,
         hint: "Min 4 (1 di tiap sudut)",
-        group: "Tulangan Utama",
+        group: "Besi Utama",
       },
-      // Sengkang
+      // Besi Support
       {
-        key: "diaSengkang",
-        label: "Ø Sengkang",
+        key: "D2",
+        label: "Ø Besi Support (D2)",
+        unit: "mm",
+        default: 10,
+        hint: "Tulangan tambahan intermediate. Default sama Utama.",
+        group: "Besi Support",
+        options: [
+          { value: 8, label: "Ø8 mm" },
+          { value: 10, label: "Ø10 mm" },
+          { value: 12, label: "Ø12 mm" },
+        ],
+      },
+      {
+        key: "n2",
+        label: "Jumlah Besi Support",
+        unit: "btg",
+        default: 0,
+        min: 0,
+        hint: "0 = skip. Pakai untuk kolom besar (>30 cm).",
+        group: "Besi Support",
+      },
+      // Besi Ring/Begel (Sengkang)
+      {
+        key: "D3",
+        label: "Ø Ring/Begel (D3)",
         unit: "mm",
         default: 8,
-        group: "Sengkang",
+        group: "Sengkang / Ring",
         options: [
           { value: 6, label: "Ø6 mm (0.22 kg/m)" },
           { value: 8, label: "Ø8 mm (0.39 kg/m)" },
@@ -3476,47 +3561,58 @@ export const CALCULATORS: CalcDef[] = [
         ],
       },
       {
-        key: "jarakSengkang",
-        label: "Jarak Sengkang",
+        key: "R",
+        label: "Jarak Ring (R)",
         unit: "m",
         default: 0.15,
         min: 0.05,
         hint: "Standar 10–15 cm di tumpuan, 15–20 cm di lapangan",
-        group: "Sengkang",
+        group: "Sengkang / Ring",
       },
     ],
     compute: (i) => {
       const Lx = num(i.Lx);
       const Ly = num(i.Ly);
       const T = num(i.T);
-      const n = num(i.n, 1);
-      const diaTulangan = num(i.diaTulangan, 12);
-      const jumlahTulangan = num(i.jumlahTulangan, 4);
-      const diaSengkang = num(i.diaSengkang, 8);
-      const jarakSengkang = num(i.jarakSengkang, 0.15);
+      const nk = num(i.n, 1);
+      const k = num(i.k, 0.02);
+      const D1 = num(i.D1, 10);
+      const n1 = num(i.n1, 4);
+      const D2 = num(i.D2, 10);
+      const n2 = num(i.n2, 0);
+      const D3 = num(i.D3, 8);
+      const R = num(i.R, 0.15);
 
-      // Volume beton per kolom × jumlah
-      const v = Lx * Ly * T * n;
+      // Volume beton
+      const v = Lx * Ly * T * nk;
 
-      // Tulangan utama
-      const beratTulanganPerM = REBAR_WEIGHT[diaTulangan] ?? 0.888;
-      const panjangTulangan = T * jumlahTulangan * n;
-      const beratTulangan = panjangTulangan * beratTulanganPerM;
+      // Berat per meter (fallback ke formula 0.006165 × d²)
+      const wPerM = (d: number) =>
+        REBAR_WEIGHT[d] ?? 0.006165 * d * d;
 
-      // Sengkang: keliling 2(Lx+Ly) + overlap 0.2 m
-      const kelSengkang = 2 * (Lx + Ly) + 0.2;
-      const beratSengkangPerM = REBAR_WEIGHT[diaSengkang] ?? 0.395;
-      const jmlSengkangPerKolom = Math.ceil(T / jarakSengkang) + 1;
-      const totalSengkang = jmlSengkangPerKolom * n;
-      const panjangSengkang = totalSengkang * kelSengkang;
-      const beratSengkang = panjangSengkang * beratSengkangPerM;
+      // Besi Utama: panjang = T × n1 × kolom
+      const lUtama = T * n1 * nk;
+      const wUtama = lUtama * wPerM(D1);
 
-      const totalBesi = beratTulangan + beratSengkang;
+      // Besi Support: panjang = T × n2 × kolom
+      const lSupport = T * n2 * nk;
+      const wSupport = lSupport * wPerM(D2);
+
+      // Ring/Begel: keliling inside (dikurangi 2 × selimut) + overlap 10cm
+      const kelRing = 2 * (Lx - 2 * k + (Ly - 2 * k)) + 0.1;
+      const jmlRingPerKolom = Math.ceil(T / R) + 1;
+      const lRing = kelRing * jmlRingPerKolom * nk;
+      const wRing = lRing * wPerM(D3);
+
+      // Kawat ikat: 1% dari berat besi
+      const wBesi = wUtama + wSupport + wRing;
+      const wKawat = wBesi * 0.01;
+      const totalBesi = wBesi + wKawat;
 
       // Bekisting: 4 sisi × tinggi × jumlah kolom
-      const luasBekisting = 2 * (Lx + Ly) * T * n;
+      const luasBekisting = 2 * (Lx + Ly) * T * nk;
 
-      const formula = `${fmt(Lx, 3)} × ${fmt(Ly, 3)} × ${fmt(T, 2)} × ${fmt(n, 0)} = ${fmt(v, 3)} m³`;
+      const formula = `${fmt(Lx, 3)} × ${fmt(Ly, 3)} × ${fmt(T, 2)} × ${fmt(nk, 0)} = ${fmt(v, 3)} m³`;
 
       return {
         value: v,
@@ -3528,32 +3624,41 @@ export const CALCULATORS: CalcDef[] = [
             highlight: true,
           },
           {
-            label: "Tulangan Utama",
-            value: `${fmt(beratTulangan, 2)} kg`,
+            label: `Besi Utama (Ø${D1})`,
+            value: `${fmt(lUtama, 2)} m → ${fmt(wUtama, 2)} kg`,
+          },
+          ...(n2 > 0
+            ? [
+                {
+                  label: `Besi Support (Ø${D2})`,
+                  value: `${fmt(lSupport, 2)} m → ${fmt(wSupport, 2)} kg`,
+                },
+              ]
+            : []),
+          {
+            label: `Ring/Begel (Ø${D3})`,
+            value: `${jmlRingPerKolom} bh × ${fmt(kelRing, 2)} m = ${fmt(lRing, 2)} m → ${fmt(wRing, 2)} kg`,
           },
           {
-            label: "Sengkang",
-            value: `${fmt(beratSengkang, 2)} kg`,
+            label: "Kawat Ikat (1%)",
+            value: `${fmt(wKawat, 2)} kg`,
           },
           {
-            label: "Total Besi",
+            label: "TOTAL Besi + Kawat",
             value: `${fmt(totalBesi, 2)} kg`,
             highlight: true,
           },
           {
-            label: "Sengkang per Kolom",
-            value: `${jmlSengkangPerKolom} buah`,
-          },
-          {
-            label: "Luas Bekisting",
+            label: "Bekisting Kolom",
             value: `${fmt(luasBekisting, 2)} m²`,
+            highlight: true,
           },
         ],
       };
     },
     Diagram: ({ values }) => (
       <ColumnDiagram
-        sideLabel={`${fmt(num(values.Lx, 0.2), 2)} × ${fmt(num(values.Ly, 0.2), 2)} m`}
+        sideLabel={`${fmt(num(values.Lx, 0.15), 2)} × ${fmt(num(values.Ly, 0.15), 2)} m`}
         heightLabel={`T = ${fmt(num(values.T), 2)} m`}
       />
     ),
@@ -3562,21 +3667,183 @@ export const CALCULATORS: CalcDef[] = [
   {
     type: "plat_lantai",
     label: "Plat Lantai / Dak",
-    description: "Volume beton plat lantai atau dak datar dengan tulangan.",
+    description:
+      "Plat lantai/dak beton bertulang RAB Pro level: tulangan 2-arah (X & Y) di 2 lapis (atas & bawah) + Kawat Ikat + bekisting. Output volume beton (m³).",
     outputUnit: "m³",
     outputLabel: "Volume Beton Plat",
     inputs: [
-      { key: "P", label: "Panjang", unit: "m", default: 6, min: 0 },
-      { key: "L", label: "Lebar", unit: "m", default: 4, min: 0 },
-      { key: "T", label: "Tebal", unit: "m", default: 0.12, min: 0 },
+      // Dimensi
+      {
+        key: "P",
+        label: "Panjang Plat",
+        unit: "m",
+        default: 6,
+        min: 0,
+        group: "Dimensi Plat",
+      },
+      {
+        key: "L",
+        label: "Lebar Plat",
+        unit: "m",
+        default: 4,
+        min: 0,
+        group: "Dimensi Plat",
+      },
+      {
+        key: "T",
+        label: "Tebal Plat",
+        unit: "m",
+        default: 0.12,
+        min: 0.05,
+        hint: "Standar 10–15 cm",
+        group: "Dimensi Plat",
+      },
+      // Beton
+      {
+        key: "mutuBeton",
+        label: "Mutu Beton",
+        unit: "K",
+        default: 225,
+        group: "Spesifikasi Beton",
+        options: [
+          { value: 175, label: "K-175 (fc 14.5)" },
+          { value: 225, label: "K-225 (fc 19.3)" },
+          { value: 275, label: "K-275 (fc 22.5)" },
+          { value: 300, label: "K-300 (fc 24.9)" },
+        ],
+      },
+      // Tulangan Arah X
+      {
+        key: "Dx",
+        label: "Ø Tulangan Arah X",
+        unit: "mm",
+        default: 10,
+        group: "Tulangan Arah X (Memanjang)",
+        options: [
+          { value: 8, label: "Ø8 mm (0.39 kg/m)" },
+          { value: 10, label: "Ø10 mm (0.62 kg/m)" },
+          { value: 12, label: "Ø12 mm (0.89 kg/m)" },
+          { value: 13, label: "Ø13 mm (1.04 kg/m)" },
+        ],
+      },
+      {
+        key: "Sx",
+        label: "Jarak Tulangan Arah X",
+        unit: "m",
+        default: 0.15,
+        min: 0.05,
+        hint: "Standar 10–20 cm",
+        group: "Tulangan Arah X (Memanjang)",
+      },
+      // Tulangan Arah Y
+      {
+        key: "Dy",
+        label: "Ø Tulangan Arah Y",
+        unit: "mm",
+        default: 10,
+        group: "Tulangan Arah Y (Melintang)",
+        options: [
+          { value: 8, label: "Ø8 mm (0.39 kg/m)" },
+          { value: 10, label: "Ø10 mm (0.62 kg/m)" },
+          { value: 12, label: "Ø12 mm (0.89 kg/m)" },
+          { value: 13, label: "Ø13 mm (1.04 kg/m)" },
+        ],
+      },
+      {
+        key: "Sy",
+        label: "Jarak Tulangan Arah Y",
+        unit: "m",
+        default: 0.15,
+        min: 0.05,
+        hint: "Standar 10–20 cm",
+        group: "Tulangan Arah Y (Melintang)",
+      },
+      // Lapis
+      {
+        key: "lapis",
+        label: "Jumlah Lapis",
+        unit: "lapis",
+        default: 2,
+        group: "Konfigurasi",
+        options: [
+          { value: 1, label: "1 lapis (bawah saja)" },
+          { value: 2, label: "2 lapis (atas & bawah)" },
+        ],
+      },
     ],
     compute: (i) => {
       const P = num(i.P);
       const L = num(i.L);
       const T = num(i.T);
+      const Dx = num(i.Dx, 10);
+      const Sx = num(i.Sx, 0.15);
+      const Dy = num(i.Dy, 10);
+      const Sy = num(i.Sy, 0.15);
+      const lapis = num(i.lapis, 2);
+
+      // Volume beton
       const v = P * L * T;
+
+      // Berat per meter (fallback ke formula 0.006165 × d²)
+      const wPerM = (d: number) =>
+        REBAR_WEIGHT[d] ?? 0.006165 * d * d;
+
+      // Tulangan Arah X (memanjang sepanjang P, ditata sepanjang L)
+      // Jumlah batang = ceil(L / Sx) + 1, panjang per batang = P
+      const jmlX = Math.ceil(L / Sx) + 1;
+      const lXPerLapis = jmlX * P;
+      const lX = lXPerLapis * lapis;
+      const wX = lX * wPerM(Dx);
+
+      // Tulangan Arah Y (memanjang sepanjang L, ditata sepanjang P)
+      const jmlY = Math.ceil(P / Sy) + 1;
+      const lYPerLapis = jmlY * L;
+      const lY = lYPerLapis * lapis;
+      const wY = lY * wPerM(Dy);
+
+      // Kawat ikat: 1% dari berat besi
+      const wBesi = wX + wY;
+      const wKawat = wBesi * 0.01;
+      const totalBesi = wBesi + wKawat;
+
+      // Bekisting: alas saja (atas terbuka)
+      const luasBekisting = P * L;
+
       const formula = `${fmt(P, 2)} × ${fmt(L, 2)} × ${fmt(T, 3)} = ${fmt(v, 3)} m³`;
-      return { value: v, formula };
+
+      return {
+        value: v,
+        formula,
+        info: [
+          {
+            label: "Volume Beton",
+            value: `${fmt(v, 3)} m³`,
+            highlight: true,
+          },
+          {
+            label: `Tulangan X (Ø${Dx} @${fmt(Sx * 100, 0)} cm)`,
+            value: `${jmlX} bh × ${fmt(P, 2)} m × ${lapis} lapis = ${fmt(lX, 2)} m → ${fmt(wX, 2)} kg`,
+          },
+          {
+            label: `Tulangan Y (Ø${Dy} @${fmt(Sy * 100, 0)} cm)`,
+            value: `${jmlY} bh × ${fmt(L, 2)} m × ${lapis} lapis = ${fmt(lY, 2)} m → ${fmt(wY, 2)} kg`,
+          },
+          {
+            label: "Kawat Ikat (1%)",
+            value: `${fmt(wKawat, 2)} kg`,
+          },
+          {
+            label: "TOTAL Besi + Kawat",
+            value: `${fmt(totalBesi, 2)} kg`,
+            highlight: true,
+          },
+          {
+            label: "Bekisting Alas",
+            value: `${fmt(luasBekisting, 2)} m²`,
+            highlight: true,
+          },
+        ],
+      };
     },
     Diagram: ({ values }) => (
       <SlabDiagram
