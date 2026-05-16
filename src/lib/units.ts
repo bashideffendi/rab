@@ -27,7 +27,9 @@ export const STANDARD_UNITS = [
   "lbr",
   "sak",
   "ltr",
+  "OJ",
   "OH",
+  "OB",
 ];
 
 /**
@@ -55,10 +57,18 @@ const NORMALIZE_MAP: Record<string, string> = {
   "lump sum": "LS",
   "lumpsum": "LS",
   "lumsum": "LS",
+  // Orang-jam
+  "oj": "OJ",
+  "orang jam": "OJ",
+  "orang-jam": "OJ",
   // Orang-hari
   "oh": "OH",
   "orang hari": "OH",
   "orang-hari": "OH",
+  // Orang-bulan
+  "ob": "OB",
+  "orang bulan": "OB",
+  "orang-bulan": "OB",
   // Buah
   "buah": "bh",
   // Lembar
