@@ -192,7 +192,14 @@ export function ItemAddForm({
         )}
         <VolumeCalculator
           defaultVolume={volume}
-          onChange={(s) => setVolume(s.volume)}
+          onChange={(s) => {
+            setVolume(s.volume);
+            // Custom mode + calculator output unit → auto-fill satuan.
+            // Bantu user yang lupa isi "LS" sendiri pas pilih Lumsum.
+            if (mode === "custom" && s.outputUnit) {
+              setUnit(s.outputUnit);
+            }
+          }}
         />
       </div>
 

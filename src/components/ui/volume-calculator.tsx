@@ -18,6 +18,10 @@ export type VolumeCalculatorState = {
   calculatorType: string | null;
   calculatorInputs: Record<string, number> | null;
   formula: string | null;
+  /** Output unit dari calculator yang aktif (mis. "m³", "LS", "m'"). Null
+   *  untuk mode manual. Parent boleh pakai ini untuk auto-fill field
+   *  satuan di custom item. */
+  outputUnit: string | null;
 };
 
 export function VolumeCalculator({
@@ -77,6 +81,7 @@ export function VolumeCalculator({
         calculatorType: mode,
         calculatorInputs: inputs,
         formula: result.formula,
+        outputUnit: calc.outputUnit,
       });
     } else {
       onChange({
@@ -84,6 +89,7 @@ export function VolumeCalculator({
         calculatorType: null,
         calculatorInputs: null,
         formula: null,
+        outputUnit: null,
       });
     }
   }, [calc, result, mode, inputs, manualVolume, onChange]);

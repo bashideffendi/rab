@@ -3045,6 +3045,98 @@ function PipeDiagram({
   );
 }
 
+function LumsumDiagram({ n }: { n: number }) {
+  // Box "paket" ikon — simple, no perspective. Label "LS" + jumlah paket.
+  const count = Math.max(1, Math.min(6, Math.round(n)));
+  const boxW = 50;
+  const boxH = 56;
+  const gap = 8;
+  const totalW = count * boxW + (count - 1) * gap;
+  const startX = (380 - totalW) / 2;
+  const y = 110;
+  return (
+    <svg
+      viewBox="0 0 380 280"
+      className="h-full w-full"
+      preserveAspectRatio="xMidYMid meet"
+    >
+      <SharedDefs />
+      {Array.from({ length: count }, (_, i) => {
+        const x = startX + i * (boxW + gap);
+        return (
+          <g key={i}>
+            {/* Box body */}
+            <rect
+              x={x}
+              y={y}
+              width={boxW}
+              height={boxH}
+              fill="#fef3c7"
+              stroke="#d97706"
+              strokeWidth="1.5"
+              rx="2"
+            />
+            {/* Tape lines on top */}
+            <line
+              x1={x}
+              y1={y + 16}
+              x2={x + boxW}
+              y2={y + 16}
+              stroke="#d97706"
+              strokeWidth="1"
+              opacity="0.5"
+            />
+            <line
+              x1={x + boxW / 2}
+              y1={y}
+              x2={x + boxW / 2}
+              y2={y + 16}
+              stroke="#d97706"
+              strokeWidth="1"
+              opacity="0.5"
+            />
+            {/* LS label */}
+            <text
+              x={x + boxW / 2}
+              y={y + boxH / 2 + 8}
+              textAnchor="middle"
+              className="fill-current font-mono"
+              fontSize="16"
+              fontWeight="700"
+              fill="#92400e"
+            >
+              LS
+            </text>
+          </g>
+        );
+      })}
+      {/* Caption */}
+      <text
+        x="190"
+        y={y + boxH + 28}
+        textAnchor="middle"
+        className="fill-current font-mono"
+        fontSize="13"
+        fill="#525252"
+      >
+        {fmt(n, 2)} paket lumsum
+      </text>
+      {n > 6 && (
+        <text
+          x="190"
+          y={y + boxH + 46}
+          textAnchor="middle"
+          className="fill-current"
+          fontSize="10"
+          fill="#a3a3a3"
+        >
+          (max 6 yang ditampilkan)
+        </text>
+      )}
+    </svg>
+  );
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Calculator definitions
 // ─────────────────────────────────────────────────────────────────────────────
@@ -4670,6 +4762,36 @@ export const CALCULATORS: CalcDef[] = [
         pLabel={`P = ${fmt(num(values.P), 2)} m`}
         diaLabel={`Ø ${fmt(num(values.diameter, 0.5), 2)}"`}
       />
+    ),
+  },
+  // ─────────────────────────────────────────────────────────────────────────
+  // Lumsum (LS) — pekerjaan paket non-volumetric
+  // ─────────────────────────────────────────────────────────────────────────
+  {
+    type: "lumsum",
+    label: "Lumsum (LS) — Paket Tetap",
+    description:
+      "Pekerjaan paket non-volumetric. Misal mobilisasi/demobilisasi, papan nama proyek, foto dokumentasi, asuransi, K3, pengamanan, listrik & air kerja.",
+    outputUnit: "LS",
+    outputLabel: "Jumlah Paket",
+    inputs: [
+      {
+        key: "n",
+        label: "Jumlah Paket",
+        unit: "LS",
+        default: 1,
+        min: 0,
+        hint: "Biasanya 1 LS. Isi >1 kalau ada beberapa paket terpisah.",
+        group: "Paket",
+      },
+    ],
+    compute: (i) => {
+      const n = num(i.n, 1);
+      const formula = `${fmt(n, 2)} LS`;
+      return { value: n, formula };
+    },
+    Diagram: ({ values }) => (
+      <LumsumDiagram n={num(values.n, 1)} />
     ),
   },
 ];
