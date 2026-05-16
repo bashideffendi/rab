@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { updateProgress } from "../../progress-actions";
 
@@ -29,16 +30,28 @@ const formatIDR = (n: number) =>
 const formatPct = (n: number) =>
   `${n.toLocaleString("id-ID", { maximumFractionDigits: 1 })}%`;
 
+// Match server-side HISTORICAL_WEEK_THRESHOLD di progress-actions.ts.
+// Minggu yang kurang dari currentWeek - HISTORY_THRESHOLD dianggap historical.
+const HISTORY_THRESHOLD = 2;
+
 export function ProgressEditor({
   projectId,
+  projectEditHref,
   items,
   initialProgress,
+  initialPlanned,
   totalWeeks,
+  currentWeek,
+  usingFallback,
 }: {
   projectId: string;
+  projectEditHref: string;
   items: Item[];
   initialProgress: ProgressEntry[];
+  initialPlanned: ProgressEntry[];
   totalWeeks: number;
+  currentWeek: number;
+  usingFallback: boolean;
 }) {
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -62,7 +75,17 @@ export function ProgressEditor({
     [items],
   );
 
-  // Per item: bobot, planned per week, planned cumulative per week, actual cumulative per week
+  // Lookup: itemId → Map<weekNum, plannedPercent> (override dari DB)
+  const plannedOverrides = useMemo(() => {
+    const m = new Map<string, Map<number, number>>();
+    for (const e of initialPlanned) {
+      if (!m.has(e.itemId)) m.set(e.itemId, new Map());
+      m.get(e.itemId)!.set(e.weekNum, e.percent);
+    }
+    return m;
+  }, [initialPlanned]);
+
+  // Per item: bobot, planned per week (override atau flat), kumulatif, actual kumulatif
   const itemMetrics = useMemo(() => {
     return items.map((it) => {
       const bobot =
@@ -70,19 +93,25 @@ export function ProgressEditor({
       const start = it.startWeek ?? 1;
       const dur = Math.max(1, it.durationWeeks ?? 1);
       const end = start + dur - 1;
-      const weeklyPlanned = 100 / dur;
+      const flatPlanned = 100 / dur;
+      const overrides = plannedOverrides.get(it.id);
+      const hasOverride = overrides != null && overrides.size > 0;
+
+      // Per-minggu planned: override DB kalau ada, else flat
+      function plannedAtWeek(w: number): number {
+        if (w < start || w > end) return 0;
+        const v = overrides?.get(w);
+        return v != null ? v : flatPlanned;
+      }
 
       const plannedCumByWeek = new Map<number, number>();
       let cum = 0;
       for (let w = 1; w <= totalWeeks; w++) {
-        if (w >= start && w <= end) cum += weeklyPlanned;
+        cum += plannedAtWeek(w);
         plannedCumByWeek.set(w, Math.min(100, cum));
       }
 
       const actualMap = actuals.get(it.id) ?? new Map();
-      // Treat actual as cumulative per week (input langsung = % completion at end of week)
-      // Tapi user mungkin input increment. Buat sederhana: kita treat input as
-      // cumulative milestone. Validate non-decreasing nanti.
 
       return {
         item: it,
@@ -91,9 +120,10 @@ export function ProgressEditor({
         endWeek: end,
         plannedCumByWeek,
         actualMap,
+        hasOverride,
       };
     });
-  }, [items, projectSubtotal, totalWeeks, actuals]);
+  }, [items, projectSubtotal, totalWeeks, actuals, plannedOverrides]);
 
   // Project-level cumulative per week
   const projectMetrics = useMemo(() => {
@@ -113,9 +143,6 @@ export function ProgressEditor({
     }
     return { planned, actual };
   }, [itemMetrics, totalWeeks]);
-
-  // Saat ini week (untuk highlight kolom)
-  const currentWeek = computeCurrentWeek(items);
 
   const currentPlanned = projectMetrics.planned[currentWeek - 1] ?? 0;
   const currentActual = projectMetrics.actual[currentWeek - 1] ?? 0;
@@ -146,13 +173,53 @@ export function ProgressEditor({
     }
     start(async () => {
       const result = await updateProgress(projectId, JSON.stringify(payload));
-      if (result.error) setError(result.error);
-      else setSavedNote(`Tersimpan ${result.saved ?? 0} entri.`);
+      if (result.error) {
+        setError(result.error);
+      } else {
+        const baseMsg = `Tersimpan ${result.saved ?? 0} entri.`;
+        const hist = result.historicalCount ?? 0;
+        setSavedNote(
+          hist > 0
+            ? `${baseMsg} ${hist} entri minggu lampau dicatat di audit log.`
+            : baseMsg,
+        );
+      }
     });
+  }
+
+  const tableScrollRef = useRef<HTMLDivElement | null>(null);
+
+  function scrollToCurrentWeek() {
+    const container = tableScrollRef.current;
+    if (!container) return;
+    const target = container.querySelector<HTMLElement>(
+      `[data-week="${currentWeek}"]`,
+    );
+    if (!target) return;
+    const containerRect = container.getBoundingClientRect();
+    const targetRect = target.getBoundingClientRect();
+    const offset =
+      target.offsetLeft - container.offsetLeft - containerRect.width / 2 +
+      targetRect.width / 2;
+    container.scrollTo({ left: offset, behavior: "smooth" });
   }
 
   return (
     <div className="space-y-6">
+      {usingFallback && (
+        <div className="rounded-md border border-warning/40 bg-warning/5 px-4 py-3 text-sm text-foreground">
+          <span className="font-semibold">Tanggal mulai belum di-set.</span>{" "}
+          Minggu berjalan dihitung dari tanggal project dibuat (fallback).{" "}
+          <Link
+            href={projectEditHref}
+            className="font-medium text-accent hover:underline"
+          >
+            Set Tanggal SPMK di Edit Project
+          </Link>{" "}
+          untuk akurasi.
+        </div>
+      )}
+
       {/* KPI cards */}
       <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
         <KpiCard
@@ -190,8 +257,23 @@ export function ProgressEditor({
         />
       </div>
 
+      {/* Toolbar */}
+      <div className="flex items-center justify-end">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={scrollToCurrentWeek}
+        >
+          Lompat ke Minggu {currentWeek}
+        </Button>
+      </div>
+
       {/* Editor table */}
-      <div className="overflow-x-auto rounded-lg border border-border bg-card shadow-sm">
+      <div
+        ref={tableScrollRef}
+        className="overflow-x-auto rounded-lg border border-border bg-card shadow-sm"
+      >
         <table className="w-full text-sm">
           <thead className="bg-muted/50 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             <tr>
@@ -203,10 +285,13 @@ export function ProgressEditor({
                 (w) => (
                   <th
                     key={w}
+                    data-week={w}
                     className={`min-w-[68px] px-2 py-3 text-center font-mono ${
                       w === currentWeek
                         ? "bg-accent/10 text-accent"
-                        : ""
+                        : w < currentWeek
+                          ? "text-muted-foreground/70"
+                          : ""
                     }`}
                   >
                     M{w}
@@ -229,6 +314,14 @@ export function ProgressEditor({
                       </span>
                     )}
                     <span className="text-sm font-medium">{m.item.name}</span>
+                    {m.hasOverride && (
+                      <span
+                        className="ml-1.5 inline-flex rounded bg-accent-soft px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-accent"
+                        title="Bobot rencana mingguan pakai override dari Schedule"
+                      >
+                        kurva
+                      </span>
+                    )}
                   </div>
                   <div className="mt-0.5 text-[11px] text-muted-foreground">
                     {m.item.volume.toLocaleString("id-ID")} {m.item.unit} ·{" "}
@@ -243,6 +336,7 @@ export function ProgressEditor({
                     const inSchedule =
                       w >= m.startWeek && w <= m.endWeek;
                     const actualVal = m.actualMap.get(w);
+                    const isHistorical = w < currentWeek - HISTORY_THRESHOLD;
                     return (
                       <td
                         key={w}
@@ -266,7 +360,16 @@ export function ProgressEditor({
                               )
                             }
                             placeholder="—"
-                            className="w-16 rounded border border-border bg-background px-1.5 py-1 text-center font-mono text-xs tabular-nums focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+                            title={
+                              isHistorical
+                                ? "Minggu sudah lewat — edit dicatat di audit log"
+                                : undefined
+                            }
+                            className={`w-16 rounded border px-1.5 py-1 text-center font-mono text-xs tabular-nums focus:outline-none focus:ring-1 focus:ring-accent ${
+                              isHistorical
+                                ? "border-warning/40 bg-warning/5 text-foreground/80"
+                                : "border-border bg-background focus:border-accent"
+                            }`}
                           />
                         ) : (
                           <span className="font-mono text-xs text-muted-foreground/40">
@@ -285,7 +388,9 @@ export function ProgressEditor({
 
       <p className="text-xs text-muted-foreground">
         Input nilai 0–100 sebagai % kumulatif per item di akhir minggu
-        tersebut. Cell di luar jadwal (titik abu) tidak bisa diisi.
+        tersebut. Cell di luar jadwal (titik abu) tidak bisa diisi. Cell
+        berwarna kuning = minggu sudah lewat lebih dari {HISTORY_THRESHOLD}{" "}
+        minggu, edit dicatat di audit log.
       </p>
 
       {/* Kurva S */}
@@ -338,18 +443,6 @@ function getCumActualUntilWeek(
     if (w <= week && val > maxVal) maxVal = val;
   }
   return maxVal;
-}
-
-function computeCurrentWeek(items: Item[]): number {
-  // Compute current project week dari created date project paling awal
-  // → buat MVP, hitung dari minggu paling awal start_week (mis. 1)
-  // dan cek hari ini berapa minggu setelah itu.
-  // Sederhana: anggap minggu sekarang = ceil((today - earliestStartDate) / 7) + 1
-  // Tapi karena kita gak nyimpen tanggal mulai eksplisit, fallback ke 1.
-  // User masih bisa input progres untuk minggu mana aja.
-  // For now: return min(totalWeeks, 4) sebagai default sensible.
-  if (items.length === 0) return 1;
-  return 1; // mvp: highlight week 1 default. nanti bisa improve dengan project_started_at
 }
 
 function countEntries(actuals: Map<string, Map<number, number>>): number {

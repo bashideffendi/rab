@@ -3,7 +3,10 @@
 import { useMemo, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { updateItemsSchedule } from "@/app/projects/schedule-actions";
+import {
+  updateItemsSchedule,
+  updatePlannedDistribution,
+} from "@/app/projects/schedule-actions";
 import { formatIDR } from "@/lib/utils";
 
 type Item = {
@@ -21,6 +24,12 @@ type Item = {
 type ItemEdit = {
   startWeek: string; // "" = unset
   durationWeeks: string;
+};
+
+type PlannedEntry = {
+  itemId: string;
+  weekNum: number;
+  percent: number;
 };
 
 function calcTotal(item: Item): number {
@@ -44,9 +53,11 @@ function sortByCode(a: string | null, b: string | null): number {
 export function ScheduleEditor({
   projectId,
   initialItems,
+  initialPlanned,
 }: {
   projectId: string;
   initialItems: Item[];
+  initialPlanned: PlannedEntry[];
 }) {
   // Sort items by WBS code
   const sortedItems = useMemo(
@@ -67,8 +78,24 @@ export function ScheduleEditor({
     return m;
   });
 
+  // Planned distribution state (override flat). Map<itemId, Map<weekNum, percent>>.
+  // Kalau item gak ada di Map → pakai flat default (100/durasi).
+  const [planned, setPlanned] = useState<Map<string, Map<number, number>>>(
+    () => {
+      const m = new Map<string, Map<number, number>>();
+      for (const e of initialPlanned) {
+        if (!m.has(e.itemId)) m.set(e.itemId, new Map());
+        m.get(e.itemId)!.set(e.weekNum, e.percent);
+      }
+      return m;
+    },
+  );
+
   const [pending, startTransition] = useTransition();
   const [saved, setSaved] = useState(false);
+  const [plannedPending, startPlannedTransition] = useTransition();
+  const [plannedSaved, setPlannedSaved] = useState(false);
+  const [plannedError, setPlannedError] = useState<string | null>(null);
 
   // Compute project subtotal & per-item bobot
   const subtotal = useMemo(
@@ -113,6 +140,68 @@ export function ScheduleEditor({
     startTransition(() => {
       updateItemsSchedule(fd).then(() => setSaved(true));
     });
+  }
+
+  function setPlannedCell(
+    itemId: string,
+    weekNum: number,
+    percent: number,
+  ) {
+    setPlanned((prev) => {
+      const next = new Map(prev);
+      const inner = new Map(next.get(itemId) ?? new Map());
+      if (percent <= 0) {
+        inner.delete(weekNum);
+      } else {
+        inner.set(weekNum, percent);
+      }
+      if (inner.size === 0) {
+        next.delete(itemId);
+      } else {
+        next.set(itemId, inner);
+      }
+      return next;
+    });
+    setPlannedSaved(false);
+    setPlannedError(null);
+  }
+
+  function handlePlannedSave() {
+    setPlannedSaved(false);
+    setPlannedError(null);
+    const payload: PlannedEntry[] = [];
+    for (const it of sortedItems) {
+      const e = edits.get(it.id);
+      const start = Number(e?.startWeek);
+      const dur = Number(e?.durationWeeks);
+      if (!Number.isFinite(start) || !Number.isFinite(dur) || start <= 0 || dur <= 0) {
+        continue;
+      }
+      const inner = planned.get(it.id);
+      if (!inner) continue;
+      for (let w = start; w < start + dur; w++) {
+        const v = inner.get(w);
+        if (v != null) {
+          payload.push({ itemId: it.id, weekNum: w, percent: v });
+        }
+      }
+    }
+
+    startPlannedTransition(async () => {
+      const result = await updatePlannedDistribution(
+        projectId,
+        JSON.stringify(payload),
+      );
+      if (result.error) setPlannedError(result.error);
+      else setPlannedSaved(true);
+    });
+  }
+
+  // Untuk item, ambil bobot per minggu (override DB kalau ada, else flat default).
+  function getPlannedFor(itemId: string, weekNum: number, dur: number): number {
+    const v = planned.get(itemId)?.get(weekNum);
+    if (v != null) return v;
+    return dur > 0 ? 100 / dur : 0;
   }
 
   return (
@@ -221,6 +310,188 @@ export function ScheduleEditor({
           />
         </div>
       )}
+
+      {/* === Distribusi Bobot Mingguan (Opsional) === */}
+      {totalWeeks > 0 && (
+        <details className="rounded-md border border-border bg-card shadow-sm">
+          <summary className="cursor-pointer border-b border-border px-4 py-3 text-sm font-semibold hover:bg-muted/30">
+            Distribusi Bobot Mingguan{" "}
+            <span className="font-normal text-muted-foreground">
+              — Opsional, default flat (100% ÷ durasi). Override per minggu
+              kalau laporan kontraktor pake kurva non-linier.
+            </span>
+          </summary>
+          <PlannedMatrix
+            items={sortedItems}
+            edits={edits}
+            planned={planned}
+            totalWeeks={totalWeeks}
+            getPlannedFor={getPlannedFor}
+            onCellChange={setPlannedCell}
+          />
+          <div className="flex items-center justify-between gap-3 border-t border-border px-4 py-3">
+            <div className="text-xs">
+              {plannedError && (
+                <span className="font-medium text-danger">{plannedError}</span>
+              )}
+              {plannedSaved && !plannedError && (
+                <span className="font-medium text-success">
+                  ✓ Bobot mingguan tersimpan
+                </span>
+              )}
+              {!plannedError && !plannedSaved && (
+                <span className="text-muted-foreground">
+                  Total bobot tiap item harus 100%. Kosongin = pakai default
+                  flat.
+                </span>
+              )}
+            </div>
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              onClick={handlePlannedSave}
+              disabled={plannedPending}
+            >
+              {plannedPending ? "Menyimpan…" : "Simpan Bobot Mingguan"}
+            </Button>
+          </div>
+        </details>
+      )}
+    </div>
+  );
+}
+
+function PlannedMatrix({
+  items,
+  edits,
+  planned,
+  totalWeeks,
+  getPlannedFor,
+  onCellChange,
+}: {
+  items: Item[];
+  edits: Map<string, ItemEdit>;
+  planned: Map<string, Map<number, number>>;
+  totalWeeks: number;
+  getPlannedFor: (itemId: string, weekNum: number, dur: number) => number;
+  onCellChange: (itemId: string, weekNum: number, percent: number) => void;
+}) {
+  const scheduled = items.filter((it) => {
+    const e = edits.get(it.id);
+    const start = Number(e?.startWeek);
+    const dur = Number(e?.durationWeeks);
+    return (
+      Number.isFinite(start) &&
+      Number.isFinite(dur) &&
+      start > 0 &&
+      dur > 0
+    );
+  });
+
+  if (scheduled.length === 0) {
+    return (
+      <div className="px-4 py-6 text-center text-sm text-muted-foreground italic">
+        Belum ada item dengan Mulai &amp; Durasi yang valid.
+      </div>
+    );
+  }
+
+  return (
+    <div className="overflow-x-auto p-4">
+      <table className="w-full text-xs">
+        <thead>
+          <tr className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <th className="sticky left-0 z-10 bg-card px-2 py-2 text-left">
+              Pekerjaan
+            </th>
+            {Array.from({ length: totalWeeks }, (_, i) => i + 1).map((w) => (
+              <th
+                key={w}
+                className="min-w-[64px] px-1 py-2 text-center font-mono"
+              >
+                M{w}
+              </th>
+            ))}
+            <th className="min-w-[64px] px-2 py-2 text-right font-mono">
+              Total
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {scheduled.map((it) => {
+            const e = edits.get(it.id)!;
+            const start = Number(e.startWeek);
+            const dur = Number(e.durationWeeks);
+            const hasOverride = planned.has(it.id);
+            let rowSum = 0;
+            const cells = Array.from({ length: totalWeeks }, (_, i) => i + 1).map(
+              (w) => {
+                if (w < start || w >= start + dur) {
+                  return (
+                    <td key={w} className="px-1 py-1 text-center">
+                      <span className="font-mono text-muted-foreground/30">
+                        ·
+                      </span>
+                    </td>
+                  );
+                }
+                const value = getPlannedFor(it.id, w, dur);
+                rowSum += value;
+                const isOverride = planned.get(it.id)?.has(w);
+                return (
+                  <td key={w} className="px-1 py-1 text-center">
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.1"
+                      inputMode="decimal"
+                      value={value.toFixed(2)}
+                      onChange={(ev) =>
+                        onCellChange(it.id, w, Number(ev.target.value))
+                      }
+                      className={`w-14 rounded border px-1 py-0.5 text-center font-mono text-[11px] tabular-nums focus:outline-none focus:ring-1 focus:ring-accent ${
+                        isOverride
+                          ? "border-accent/40 bg-accent-soft text-accent"
+                          : "border-border bg-background text-muted-foreground"
+                      }`}
+                    />
+                  </td>
+                );
+              },
+            );
+            const sumOk = Math.abs(rowSum - 100) < 0.5;
+            return (
+              <tr key={it.id} className="border-t border-border/50">
+                <td className="sticky left-0 z-10 bg-card px-2 py-1 text-left">
+                  <span className="font-mono text-[10px] text-muted-foreground">
+                    {it.wbsCode}
+                  </span>{" "}
+                  <span className="text-xs">{it.name}</span>
+                  {hasOverride && (
+                    <span className="ml-1.5 inline-flex rounded bg-accent-soft px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-accent">
+                      override
+                    </span>
+                  )}
+                </td>
+                {cells}
+                <td
+                  className={`px-2 py-1 text-right font-mono text-[11px] tabular-nums ${
+                    sumOk
+                      ? "text-success"
+                      : rowSum > 100
+                        ? "text-danger"
+                        : "text-warning"
+                  }`}
+                >
+                  {rowSum.toFixed(1)}%
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
     </div>
   );
 }

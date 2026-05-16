@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { AppShell } from "@/components/app-shell";
 import { requireUser } from "@/lib/auth";
@@ -18,6 +18,12 @@ type ItemRow = {
   unitPrice: string;
   startWeek: number | null;
   durationWeeks: number | null;
+};
+
+type PlannedEntry = {
+  itemId: string;
+  weekNum: number;
+  percent: number;
 };
 
 async function loadProject(id: string, userId: string) {
@@ -66,6 +72,23 @@ async function loadItems(projectId: string): Promise<ItemRow[]> {
   }));
 }
 
+async function loadPlanned(itemIds: string[]): Promise<PlannedEntry[]> {
+  if (itemIds.length === 0) return [];
+  const rows = await db
+    .select({
+      itemId: schema.projectItemPlanned.projectItemId,
+      weekNum: schema.projectItemPlanned.weekNum,
+      percent: schema.projectItemPlanned.percentPlanned,
+    })
+    .from(schema.projectItemPlanned)
+    .where(inArray(schema.projectItemPlanned.projectItemId, itemIds));
+  return rows.map((r) => ({
+    itemId: r.itemId,
+    weekNum: r.weekNum,
+    percent: Number(r.percent),
+  }));
+}
+
 export default async function SchedulePage({
   params,
 }: {
@@ -77,6 +100,7 @@ export default async function SchedulePage({
   if (!project) notFound();
 
   const items = await loadItems(project.id);
+  const planned = await loadPlanned(items.map((i) => i.id));
 
   return (
     <AppShell>
@@ -115,7 +139,11 @@ export default async function SchedulePage({
             .
           </div>
         ) : (
-          <ScheduleEditor projectId={project.id} initialItems={items} />
+          <ScheduleEditor
+            projectId={project.id}
+            initialItems={items}
+            initialPlanned={planned}
+          />
         )}
       </section>
     </AppShell>

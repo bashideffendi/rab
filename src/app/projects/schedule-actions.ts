@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { requireUser, verifyProjectOwnership } from "@/lib/auth";
 
@@ -53,4 +53,129 @@ export async function updateItemsSchedule(formData: FormData) {
 
   revalidatePath(`/projects/${projectId}/schedule`);
   revalidatePath(`/projects/${projectId}`);
+}
+
+type PlannedEntry = {
+  itemId: string;
+  weekNum: number;
+  percent: number; // 0-100
+};
+
+export type UpdatePlannedResult = {
+  ok?: true;
+  error?: string;
+  saved?: number;
+};
+
+/**
+ * Bulk upsert bobot rencana per minggu per item.
+ * - Verify project ownership.
+ * - Filter ke item milik project ini.
+ * - Cell dengan percent <= 0 → hapus (kalau ada existing).
+ * - Cell > 0 → insert atau update.
+ */
+export async function updatePlannedDistribution(
+  projectId: string,
+  payloadJson: string,
+): Promise<UpdatePlannedResult> {
+  let payload: PlannedEntry[];
+  try {
+    payload = JSON.parse(payloadJson);
+    if (!Array.isArray(payload)) throw new Error("Payload harus array.");
+  } catch (e) {
+    return {
+      error: e instanceof Error ? e.message : "Payload JSON tidak valid.",
+    };
+  }
+
+  const user = await requireUser();
+  try {
+    await verifyProjectOwnership(projectId, user.id);
+  } catch (e) {
+    return {
+      error: e instanceof Error ? e.message : "Akses ditolak.",
+    };
+  }
+
+  const cleaned = payload
+    .filter((p) => p && typeof p.itemId === "string" && p.itemId)
+    .map((p) => ({
+      itemId: p.itemId,
+      weekNum: Math.max(1, Math.min(520, Math.floor(Number(p.weekNum) || 0))),
+      percent: Math.max(0, Math.min(100, Number(p.percent) || 0)),
+    }))
+    .filter((p) => p.weekNum > 0);
+
+  if (cleaned.length === 0) {
+    return { ok: true, saved: 0 };
+  }
+
+  // Verify all itemIds belong to this project
+  const itemIds = Array.from(new Set(cleaned.map((c) => c.itemId)));
+  const validItems = await db
+    .select({ id: schema.projectItems.id })
+    .from(schema.projectItems)
+    .where(
+      and(
+        inArray(schema.projectItems.id, itemIds),
+        eq(schema.projectItems.projectId, projectId),
+      ),
+    );
+  const validIdSet = new Set(validItems.map((r) => r.id));
+  const filtered = cleaned.filter((c) => validIdSet.has(c.itemId));
+
+  if (filtered.length === 0) {
+    return { ok: true, saved: 0 };
+  }
+
+  // Split: cells dengan percent > 0 untuk upsert, cells dengan percent = 0 untuk delete
+  const upserts = filtered.filter((p) => p.percent > 0);
+  const deletes = filtered.filter((p) => p.percent === 0);
+
+  try {
+    if (upserts.length > 0) {
+      await db
+        .insert(schema.projectItemPlanned)
+        .values(
+          upserts.map((p) => ({
+            projectItemId: p.itemId,
+            weekNum: p.weekNum,
+            percentPlanned: p.percent.toFixed(2),
+          })),
+        )
+        .onConflictDoUpdate({
+          target: [
+            schema.projectItemPlanned.projectItemId,
+            schema.projectItemPlanned.weekNum,
+          ],
+          set: {
+            percentPlanned: sql`excluded.percent_planned`,
+            updatedAt: sql`now()`,
+          },
+        });
+    }
+
+    for (const d of deletes) {
+      await db
+        .delete(schema.projectItemPlanned)
+        .where(
+          and(
+            eq(schema.projectItemPlanned.projectItemId, d.itemId),
+            eq(schema.projectItemPlanned.weekNum, d.weekNum),
+          ),
+        );
+    }
+  } catch (e) {
+    return {
+      error:
+        e instanceof Error
+          ? `Gagal simpan bobot rencana: ${e.message}`
+          : "Gagal simpan bobot rencana.",
+    };
+  }
+
+  revalidatePath(`/projects/${projectId}/schedule`);
+  revalidatePath(`/projects/${projectId}/progress`);
+  revalidatePath(`/projects/${projectId}`);
+  return { ok: true, saved: upserts.length + deletes.length };
 }

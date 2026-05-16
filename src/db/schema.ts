@@ -99,6 +99,9 @@ export const projects = pgTable(
     luasTanah: numeric("luas_tanah", { precision: 12, scale: 2 }),
     luasBangunan: numeric("luas_bangunan", { precision: 12, scale: 2 }),
     coverImageUrl: text("cover_image_url"),
+    // Tanggal mulai pelaksanaan (SPMK / kontrak). Dipakai buat hitung minggu
+    // berjalan di Progress page. Null → fallback ke createdAt.
+    startedAt: date("started_at"),
     ppnPercent: numeric("ppn_percent", { precision: 5, scale: 2 })
       .notNull()
       .default("11.00"),
@@ -299,6 +302,41 @@ export const projectItems = pgTable(
     index("project_items_project_idx").on(t.projectId),
     index("project_items_wbs_idx").on(t.wbsItemId),
     index("project_items_ahsp_idx").on(t.ahspItemId),
+  ],
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PROJECT ITEM PLANNED — bobot rencana per minggu per item (non-linier)
+// Default: kalau item gak punya entri di sini, planned dihitung flat
+// (100% / durasi per minggu). Tabel ini dipake untuk override per minggu —
+// mirror angka bobot mingguan dari laporan/kontrak kontraktor yang gak flat.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const projectItemPlanned = pgTable(
+  "project_item_planned",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    projectItemId: uuid("project_item_id")
+      .notNull()
+      .references(() => projectItems.id, { onDelete: "cascade" }),
+    weekNum: integer("week_num").notNull(),
+    percentPlanned: numeric("percent_planned", { precision: 5, scale: 2 })
+      .notNull()
+      .default("0.00"),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("project_item_planned_item_idx").on(t.projectItemId),
+    uniqueIndex("project_item_planned_unique_idx").on(
+      t.projectItemId,
+      t.weekNum,
+    ),
   ],
 );
 

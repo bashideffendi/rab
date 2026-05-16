@@ -28,7 +28,8 @@ type ProjectField =
   | "alamat"
   | "projectType"
   | "luasTanah"
-  | "luasBangunan";
+  | "luasBangunan"
+  | "startedAt";
 
 export type CreateProjectFormState = {
   error?: string;
@@ -67,6 +68,24 @@ function parseCoord(
   const n = Number(s.replace(",", "."));
   if (!Number.isFinite(n) || n < min || n > max) return null;
   return n.toFixed(7);
+}
+
+function parseDateOrNull(v: FormDataEntryValue | null): {
+  value: string | null;
+  invalid: boolean;
+} {
+  if (v == null) return { value: null, invalid: false };
+  const s = v.toString().trim();
+  if (!s) return { value: null, invalid: false };
+  // Format expected: YYYY-MM-DD (HTML date input).
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+    return { value: null, invalid: true };
+  }
+  const d = new Date(`${s}T00:00:00`);
+  if (Number.isNaN(d.getTime())) {
+    return { value: null, invalid: true };
+  }
+  return { value: s, invalid: false };
 }
 
 function parseLuas(v: FormDataEntryValue | null): {
@@ -223,6 +242,7 @@ export async function updateProject(
   const luasBangunanParsed = parseLuas(formData.get("luasBangunan"));
   const tahunRaw = (formData.get("tahun") ?? "").toString().trim();
   const tahunNum = tahunRaw ? Number(tahunRaw) : NaN;
+  const startedAtParsed = parseDateOrNull(formData.get("startedAt"));
   const ppnPercent = parsePercent(formData.get("ppnPercent"), "11.00");
   const overheadPercent = parsePercent(
     formData.get("overheadPercent"),
@@ -267,6 +287,9 @@ export async function updateProject(
     fieldErrors.luasBangunan =
       "Luas bangunan tidak valid (angka 0 - 10.000.000 m²).";
 
+  if (startedAtParsed.invalid)
+    fieldErrors.startedAt = "Format tanggal tidak valid (gunakan YYYY-MM-DD).";
+
   if (!isProjectStatus(status)) fieldErrors.status = "Status tidak valid.";
 
   if (Object.keys(fieldErrors).length > 0) {
@@ -295,6 +318,7 @@ export async function updateProject(
         luasTanah: luasTanahParsed.value,
         luasBangunan: luasBangunanParsed.value,
         tahun,
+        startedAt: startedAtParsed.value,
         ppnPercent,
         overheadPercent,
         dibulatkanKe,

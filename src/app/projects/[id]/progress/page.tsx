@@ -29,11 +29,36 @@ type ProgressEntry = {
 
 async function loadProject(id: string, userId: string) {
   const rows = await db
-    .select({ id: schema.projects.id, name: schema.projects.name })
+    .select({
+      id: schema.projects.id,
+      name: schema.projects.name,
+      startedAt: schema.projects.startedAt,
+      createdAt: schema.projects.createdAt,
+    })
     .from(schema.projects)
     .where(and(eq(schema.projects.id, id), eq(schema.projects.userId, userId)))
     .limit(1);
   return rows[0] ?? null;
+}
+
+/**
+ * Hitung minggu berjalan berdasarkan tanggal mulai pelaksanaan.
+ * - Pake `startedAt` (kalau auditor udah isi).
+ * - Fallback ke `createdAt` kalau belum.
+ * - Output clamp ke [1, totalWeeks] supaya highlight selalu valid.
+ */
+function computeCurrentWeek(
+  startedAt: string | null,
+  createdAt: Date,
+  totalWeeks: number,
+): number {
+  const start = startedAt ? new Date(`${startedAt}T00:00:00`) : createdAt;
+  const now = new Date();
+  const diffMs = now.getTime() - start.getTime();
+  if (diffMs < 0) return 1; // proyek belum mulai
+  const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const week = Math.floor(days / 7) + 1;
+  return Math.max(1, Math.min(totalWeeks, week));
 }
 
 async function loadItems(projectId: string): Promise<ItemRow[]> {
@@ -62,7 +87,10 @@ async function loadItems(projectId: string): Promise<ItemRow[]> {
       eq(schema.ahspItems.id, schema.projectItems.ahspItemId),
     )
     .where(eq(schema.projectItems.projectId, projectId))
-    .orderBy(asc(schema.projectItems.sortOrder));
+    .orderBy(
+      asc(schema.projectItems.startWeek),
+      asc(schema.projectItems.sortOrder),
+    );
 
   return rows.map((r) => {
     const volume = Number(r.volume ?? 0);
@@ -99,6 +127,23 @@ async function loadProgress(itemIds: string[]): Promise<ProgressEntry[]> {
   }));
 }
 
+async function loadPlanned(itemIds: string[]): Promise<ProgressEntry[]> {
+  if (itemIds.length === 0) return [];
+  const rows = await db
+    .select({
+      itemId: schema.projectItemPlanned.projectItemId,
+      weekNum: schema.projectItemPlanned.weekNum,
+      percent: schema.projectItemPlanned.percentPlanned,
+    })
+    .from(schema.projectItemPlanned)
+    .where(inArray(schema.projectItemPlanned.projectItemId, itemIds));
+  return rows.map((r) => ({
+    itemId: r.itemId,
+    weekNum: r.weekNum,
+    percent: Number(r.percent),
+  }));
+}
+
 export default async function ProgressPage({
   params,
 }: {
@@ -110,7 +155,9 @@ export default async function ProgressPage({
   if (!project) notFound();
 
   const items = await loadItems(project.id);
-  const progress = await loadProgress(items.map((i) => i.id));
+  const itemIds = items.map((i) => i.id);
+  const progress = await loadProgress(itemIds);
+  const planned = await loadPlanned(itemIds);
 
   // Cek apakah ada item yang udah di-schedule
   const scheduled = items.filter(
@@ -121,6 +168,12 @@ export default async function ProgressPage({
       Math.max(max, (it.startWeek ?? 0) + (it.durationWeeks ?? 0) - 1),
     0,
   );
+  const currentWeek = computeCurrentWeek(
+    project.startedAt,
+    project.createdAt,
+    Math.max(totalWeeks, 1),
+  );
+  const usingFallback = project.startedAt == null;
 
   return (
     <AppShell>
@@ -161,9 +214,13 @@ export default async function ProgressPage({
         ) : (
           <ProgressEditor
             projectId={project.id}
+            projectEditHref={`/projects/${project.id}/edit`}
             items={scheduled}
             initialProgress={progress}
+            initialPlanned={planned}
             totalWeeks={Math.max(totalWeeks, 1)}
+            currentWeek={currentWeek}
+            usingFallback={usingFallback}
           />
         )}
       </section>

@@ -4,6 +4,14 @@ import { revalidatePath } from "next/cache";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { requireUser, verifyProjectOwnership } from "@/lib/auth";
+import { logAudit } from "@/lib/audit";
+
+/**
+ * Jumlah minggu ke belakang dari minggu berjalan yang dianggap "historical".
+ * Entri yang lebih tua dari ini akan tetap di-save (soft lock), tapi dicatat
+ * di project_audit_log untuk transparansi.
+ */
+const HISTORICAL_WEEK_THRESHOLD = 2;
 
 type ProgressEntry = {
   itemId: string;
@@ -16,7 +24,20 @@ export type UpdateProgressResult = {
   ok?: true;
   error?: string;
   saved?: number;
+  historicalCount?: number;
 };
+
+function computeCurrentWeek(
+  startedAt: string | null,
+  createdAt: Date,
+): number {
+  const start = startedAt ? new Date(`${startedAt}T00:00:00`) : createdAt;
+  const now = new Date();
+  const diffMs = now.getTime() - start.getTime();
+  if (diffMs < 0) return 1;
+  const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  return Math.max(1, Math.floor(days / 7) + 1);
+}
 
 /**
  * Bulk upsert progress entries.
@@ -82,6 +103,21 @@ export async function updateProgress(
     return { ok: true, saved: 0 };
   }
 
+  // Hitung minggu berjalan project ini (buat deteksi historical edits)
+  const projectRows = await db
+    .select({
+      startedAt: schema.projects.startedAt,
+      createdAt: schema.projects.createdAt,
+    })
+    .from(schema.projects)
+    .where(eq(schema.projects.id, projectId))
+    .limit(1);
+  const currentWeek = projectRows[0]
+    ? computeCurrentWeek(projectRows[0].startedAt, projectRows[0].createdAt)
+    : 1;
+  const lockedBefore = currentWeek - HISTORICAL_WEEK_THRESHOLD;
+  const historical = filtered.filter((p) => p.weekNum < lockedBefore);
+
   // Bulk upsert via INSERT ... ON CONFLICT DO UPDATE
   try {
     await db
@@ -114,7 +150,28 @@ export async function updateProgress(
     };
   }
 
+  if (historical.length > 0) {
+    await logAudit({
+      projectId,
+      userId: user.id,
+      action: "progress_historical_edit",
+      summary: `Edit realisasi minggu lampau (${historical.length} entri)`,
+      details: {
+        historicalCount: historical.length,
+        currentWeek,
+        lockedBefore,
+        weekNumbers: Array.from(
+          new Set(historical.map((h) => h.weekNum)),
+        ).sort((a, b) => a - b),
+      },
+    });
+  }
+
   revalidatePath(`/projects/${projectId}/progress`);
   revalidatePath(`/projects/${projectId}`);
-  return { ok: true, saved: filtered.length };
+  return {
+    ok: true,
+    saved: filtered.length,
+    historicalCount: historical.length,
+  };
 }

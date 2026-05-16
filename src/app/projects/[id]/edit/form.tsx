@@ -211,21 +211,36 @@ export function EditProjectForm({
           />
         </Field>
         <Field
-          label="Alamat Lengkap"
-          htmlFor="alamat"
-          required
-          error={state.fieldErrors?.alamat}
-          hint="Cari di peta atau ketik manual."
+          label="Tanggal Mulai Pelaksanaan (SPMK)"
+          htmlFor="startedAt"
+          error={state.fieldErrors?.startedAt}
+          hint="Buat hitung minggu berjalan di Progress Tracking. Kosongin kalau belum ada SPMK."
         >
-          <AlamatPicker
-            id="alamat"
-            defaultValue={project.alamat ?? ""}
-            defaultLat={project.lat ?? ""}
-            defaultLng={project.lng ?? ""}
-            required
+          <Input
+            id="startedAt"
+            name="startedAt"
+            type="date"
+            defaultValue={project.startedAt ?? ""}
+            className="font-mono"
           />
         </Field>
       </div>
+
+      <Field
+        label="Alamat Lengkap"
+        htmlFor="alamat"
+        required
+        error={state.fieldErrors?.alamat}
+        hint="Cari di peta atau ketik manual."
+      >
+        <AlamatPicker
+          id="alamat"
+          defaultValue={project.alamat ?? ""}
+          defaultLat={project.lat ?? ""}
+          defaultLng={project.lng ?? ""}
+          required
+        />
+      </Field>
 
       <div className="rounded-md border border-border bg-muted/30 p-4">
         <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
