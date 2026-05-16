@@ -11,7 +11,6 @@ export const STANDARD_UNITS = [
   "m³",
   "m²",
   "m'",
-  "m",
   "bh",
   "unit",
   "titik",
