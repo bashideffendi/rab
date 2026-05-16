@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/input";
+import { UnitInput } from "@/components/ui/unit-input";
 import { Field } from "@/components/ui/field";
 import { AhspPicker } from "@/components/ui/ahsp-picker";
 import { VolumeCalculator } from "@/components/ui/volume-calculator";
@@ -151,14 +152,14 @@ export function ItemAddForm({
                 htmlFor="item-unit"
                 error={state.fieldErrors?.unit}
               >
-                <Input
+                <UnitInput
                   id="item-unit"
                   name="unit"
-                  placeholder="m3"
+                  placeholder="m³"
                   maxLength={20}
                   className="font-mono"
                   value={unit}
-                  onChange={(e) => setUnit(e.target.value)}
+                  onChange={setUnit}
                 />
               </Field>
             </div>

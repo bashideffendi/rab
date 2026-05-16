@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { and, eq, isNull, lte, or, gte, desc } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { requireUser, verifyProjectOwnership } from "@/lib/auth";
+import { normalizeUnit } from "@/lib/units";
 
 const NUM_RE = /^\d+(\.\d+)?$/;
 
@@ -150,7 +151,9 @@ export async function createProjectItem(
   const volumeRaw = (formData.get("volume") ?? "").toString().trim();
   const ahspItemIdRaw = (formData.get("ahspItemId") ?? "").toString().trim();
   const nameRaw = (formData.get("name") ?? "").toString().trim();
-  const unitRaw = (formData.get("unit") ?? "").toString().trim();
+  const unitRaw = normalizeUnit(
+    (formData.get("unit") ?? "").toString(),
+  );
   const unitPriceRaw = (formData.get("unitPrice") ?? "").toString().trim();
 
   // Volume calculator fields (Phase 7)
@@ -331,7 +334,9 @@ export async function updateProjectItem(
   const wbsItemRaw = (formData.get("wbsItemId") ?? "").toString().trim();
   const wbsItemId = wbsItemRaw ? wbsItemRaw : null;
   const customName = (formData.get("name") ?? "").toString().trim();
-  const customUnit = (formData.get("unit") ?? "").toString().trim();
+  const customUnit = normalizeUnit(
+    (formData.get("unit") ?? "").toString(),
+  );
   const volume = parseNum(formData.get("volume"));
   const customUnitPrice = parseNum(formData.get("unitPrice"));
 

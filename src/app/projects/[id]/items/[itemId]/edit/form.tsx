@@ -1,11 +1,11 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/input";
+import { UnitInput } from "@/components/ui/unit-input";
 import { Field } from "@/components/ui/field";
 import {
   updateProjectItem,
@@ -36,6 +36,7 @@ export function EditItemForm({
   const router = useRouter();
   const action = updateProjectItem.bind(null, itemId, projectId);
   const [state, formAction, pending] = useActionState(action, initialState);
+  const [unit, setUnit] = useState(initial.unit);
 
   useEffect(() => {
     if (!pending && !state.error && !state.fieldErrors && state !== initialState) {
@@ -96,10 +97,11 @@ export function EditItemForm({
           required
           error={state.fieldErrors?.unit}
         >
-          <Input
+          <UnitInput
             id="unit"
             name="unit"
-            defaultValue={initial.unit}
+            value={unit}
+            onChange={setUnit}
             maxLength={20}
             className="font-mono"
           />
