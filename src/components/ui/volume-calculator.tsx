@@ -28,6 +28,8 @@ export function VolumeCalculator({
   defaultMode = "manual",
   defaultVolume = "",
   defaultInputs = null,
+  mode: modeProp,
+  onModeChange,
   onChange,
   volumeFieldName = "volume",
   calcTypeFieldName = "calculatorType",
@@ -37,13 +39,23 @@ export function VolumeCalculator({
   defaultMode?: string;
   defaultVolume?: string;
   defaultInputs?: Record<string, number> | null;
+  /** Kalau di-pass, mode jadi controlled — parent ngendaliin lewat
+   *  onModeChange. Berguna buat sync mode dari luar (mis. saat user
+   *  pilih satuan "LS" dari datalist → auto switch ke "lumsum"). */
+  mode?: string;
+  onModeChange?: (mode: string) => void;
   onChange?: (state: VolumeCalculatorState) => void;
   volumeFieldName?: string;
   calcTypeFieldName?: string;
   calcInputsFieldName?: string;
   formulaFieldName?: string;
 }) {
-  const [mode, setMode] = useState<string>(defaultMode);
+  const [internalMode, setInternalMode] = useState<string>(defaultMode);
+  const mode = modeProp ?? internalMode;
+  const setMode = (next: string) => {
+    if (modeProp === undefined) setInternalMode(next);
+    onModeChange?.(next);
+  };
   const [manualVolume, setManualVolume] = useState(defaultVolume);
   const [inputs, setInputs] = useState<Record<string, number>>(
     defaultInputs ?? {},

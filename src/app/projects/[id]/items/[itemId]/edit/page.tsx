@@ -116,6 +116,11 @@ export default async function EditItemPage({
             unit: item.customUnit ?? "",
             volume: item.volume,
             unitPrice: item.customUnitPrice ?? "",
+            calculatorType: item.calculatorType,
+            calculatorInputs: (item.calculatorInputs as Record<
+              string,
+              number
+            > | null) ?? null,
           }}
         />
       </section>

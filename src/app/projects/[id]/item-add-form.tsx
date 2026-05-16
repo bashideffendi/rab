@@ -43,6 +43,20 @@ export function ItemAddForm({
   const [unit, setUnit] = useState("");
   const [volume, setVolume] = useState("");
   const [unitPrice, setUnitPrice] = useState("");
+  const [calcMode, setCalcMode] = useState("manual");
+
+  // Sync unit "LS" ↔ calculator mode "lumsum". User boleh pilih LS via
+  // datalist satuan tanpa harus buka calculator — kalkulator auto-switch.
+  // Reverse juga: kalau user ganti unit dari LS ke lain, calculator reset
+  // ke manual.
+  useEffect(() => {
+    if (unit === "LS" && calcMode !== "lumsum") {
+      setCalcMode("lumsum");
+      setVolume("1.0000");
+    } else if (unit !== "LS" && calcMode === "lumsum") {
+      setCalcMode("manual");
+    }
+  }, [unit, calcMode]);
 
   // Sync from state.values kalau action balik dengan error
   useEffect(() => {
@@ -73,6 +87,7 @@ export function ItemAddForm({
       setUnit("");
       setVolume("");
       setUnitPrice("");
+      setCalcMode("manual");
       nameRef.current?.focus();
     }
   }, [pending, state]);
@@ -193,6 +208,8 @@ export function ItemAddForm({
         )}
         <VolumeCalculator
           defaultVolume={volume}
+          mode={calcMode}
+          onModeChange={setCalcMode}
           onChange={(s) => {
             setVolume(s.volume);
             // Custom mode + calculator output unit → auto-fill satuan.

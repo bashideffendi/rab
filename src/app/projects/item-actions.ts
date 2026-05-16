@@ -340,6 +340,28 @@ export async function updateProjectItem(
   const volume = parseNum(formData.get("volume"));
   const customUnitPrice = parseNum(formData.get("unitPrice"));
 
+  // Volume calculator fields (parse + save sehingga edit form bisa preserve)
+  const calculatorTypeRaw = (formData.get("calculatorType") ?? "")
+    .toString()
+    .trim();
+  const calculatorType = calculatorTypeRaw || null;
+  const calculatorInputsRaw = (formData.get("calculatorInputs") ?? "")
+    .toString()
+    .trim();
+  let calculatorInputs: Record<string, number> | null = null;
+  if (calculatorInputsRaw) {
+    try {
+      const parsed = JSON.parse(calculatorInputsRaw);
+      if (parsed && typeof parsed === "object") calculatorInputs = parsed;
+    } catch {
+      // ignore — submit tanpa breakdown
+    }
+  }
+  const volumeFormulaRaw = (formData.get("volumeFormula") ?? "")
+    .toString()
+    .trim();
+  const volumeFormula = volumeFormulaRaw || null;
+
   const fieldErrors: NonNullable<UpdateItemFormState["fieldErrors"]> = {};
   if (!customName) fieldErrors.name = "Nama pekerjaan wajib diisi.";
   else if (customName.length > 200)
@@ -372,6 +394,9 @@ export async function updateProjectItem(
         customUnit,
         customUnitPrice: customUnitPrice!,
         volume: volume!,
+        calculatorType,
+        calculatorInputs,
+        volumeFormula,
         updatedAt: new Date(),
       })
       .where(
