@@ -222,7 +222,7 @@ export async function ItemsSection({
                 <th className="px-3 py-3 font-semibold">Sat</th>
                 <th className="px-3 py-3 text-right font-semibold">Harga Sat</th>
                 <th className="px-3 py-3 text-right font-semibold">Total</th>
-                <th className="w-32 px-3 py-3 font-semibold">Aksi</th>
+                <th className="w-20 px-3 py-3 font-semibold">Aksi</th>
               </tr>
             </thead>
             <tbody>

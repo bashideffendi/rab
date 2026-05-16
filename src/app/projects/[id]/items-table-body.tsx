@@ -21,11 +21,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { ItemDeleteButton } from "./item-delete-button";
 import { formatIDR } from "@/lib/utils";
-import {
-  moveItemDown,
-  moveItemUp,
-  reorderItemsInGroup,
-} from "@/app/projects/item-reorder-actions";
+import { reorderItemsInGroup } from "@/app/projects/item-reorder-actions";
 
 export type ItemRow = {
   id: string;
@@ -151,13 +147,11 @@ function SortableGroup({
           items={items.map((i) => i.id)}
           strategy={verticalListSortingStrategy}
         >
-          {items.map((it, idx) => (
+          {items.map((it) => (
             <SortableItemRow
               key={it.id}
               projectId={projectId}
               item={it}
-              isFirst={idx === 0}
-              isLast={idx === items.length - 1}
             />
           ))}
         </SortableContext>
@@ -172,7 +166,7 @@ function SortableGroup({
         <td className="px-3 py-2 text-right font-mono text-sm font-bold tabular-nums text-foreground">
           {formatIDR(group.subtotal)}
         </td>
-        <td className="w-32"></td>
+        <td className="w-20"></td>
       </tr>
     </>
   );
@@ -181,13 +175,9 @@ function SortableGroup({
 function SortableItemRow({
   projectId,
   item,
-  isFirst,
-  isLast,
 }: {
   projectId: string;
   item: ItemRow;
-  isFirst: boolean;
-  isLast: boolean;
 }) {
   const {
     attributes,
@@ -276,32 +266,8 @@ function SortableItemRow({
       <td className="px-3 py-2 text-right font-mono font-medium tabular-nums">
         {formatIDR(total)}
       </td>
-      <td className="w-32 px-3 py-2">
+      <td className="w-20 px-3 py-2">
         <div className="flex items-center justify-end gap-1">
-          <form action={moveItemUp}>
-            <input type="hidden" name="itemId" value={item.id} />
-            <input type="hidden" name="projectId" value={projectId} />
-            <button
-              type="submit"
-              disabled={isFirst}
-              aria-label={`Pindah ${item.name} ke atas`}
-              className="rounded border border-transparent px-1.5 py-1 text-xs text-muted-foreground transition-colors hover:border-accent/40 hover:text-accent disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:border-transparent disabled:hover:text-muted-foreground"
-            >
-              ▲
-            </button>
-          </form>
-          <form action={moveItemDown}>
-            <input type="hidden" name="itemId" value={item.id} />
-            <input type="hidden" name="projectId" value={projectId} />
-            <button
-              type="submit"
-              disabled={isLast}
-              aria-label={`Pindah ${item.name} ke bawah`}
-              className="rounded border border-transparent px-1.5 py-1 text-xs text-muted-foreground transition-colors hover:border-accent/40 hover:text-accent disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:border-transparent disabled:hover:text-muted-foreground"
-            >
-              ▼
-            </button>
-          </form>
           <Link
             href={`/projects/${projectId}/items/${item.id}/edit`}
             className="rounded border border-transparent px-1.5 py-1 text-xs text-muted-foreground transition-colors hover:border-accent/40 hover:text-accent"

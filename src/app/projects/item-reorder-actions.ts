@@ -1,54 +1,24 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { and, asc, eq, isNull } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { requireUser, verifyProjectOwnership } from "@/lib/auth";
 
 /**
- * Item reorder dalam group WBS yang sama (atau group "tanpa WBS"). Items
- * di group berbeda gak bisa di-swap — itu butuh ubah wbsItemId, bukan
- * sortOrder.
- *
- * Strategy:
- * - `moveItemUp` / `moveItemDown`: swap sortOrder dengan item adjacent.
- * - `reorderItemsInGroup`: bulk renumber sortOrder sesuai urutan ID
- *   yang dikirim (untuk drag-drop). Lebih kuat — bisa pindah jauh.
+ * Bulk reorder sortOrder sesuai urutan ID yang dikirim — dipakai oleh
+ * drag-and-drop. Semua item harus dalam group WBS yang sama (dicek
+ * server-side).
  */
-
-async function loadGroupItems(
-  projectId: string,
-  wbsItemId: string | null,
-): Promise<Array<{ id: string; sortOrder: number }>> {
-  const condition = wbsItemId
-    ? and(
-        eq(schema.projectItems.projectId, projectId),
-        eq(schema.projectItems.wbsItemId, wbsItemId),
-      )
-    : and(
-        eq(schema.projectItems.projectId, projectId),
-        isNull(schema.projectItems.wbsItemId),
-      );
-  const rows = await db
-    .select({
-      id: schema.projectItems.id,
-      sortOrder: schema.projectItems.sortOrder,
-    })
-    .from(schema.projectItems)
-    .where(condition)
-    .orderBy(asc(schema.projectItems.sortOrder));
-  return rows;
-}
 
 async function loadItemMeta(
   itemId: string,
   projectId: string,
-): Promise<{ id: string; wbsItemId: string | null; sortOrder: number } | null> {
+): Promise<{ id: string; wbsItemId: string | null } | null> {
   const rows = await db
     .select({
       id: schema.projectItems.id,
       wbsItemId: schema.projectItems.wbsItemId,
-      sortOrder: schema.projectItems.sortOrder,
     })
     .from(schema.projectItems)
     .where(
@@ -59,54 +29,6 @@ async function loadItemMeta(
     )
     .limit(1);
   return rows[0] ?? null;
-}
-
-async function swapWithNeighbor(
-  itemId: string,
-  projectId: string,
-  direction: "up" | "down",
-): Promise<void> {
-  const user = await requireUser();
-  await verifyProjectOwnership(projectId, user.id);
-
-  const cur = await loadItemMeta(itemId, projectId);
-  if (!cur) return;
-
-  const group = await loadGroupItems(projectId, cur.wbsItemId);
-  const idx = group.findIndex((g) => g.id === itemId);
-  if (idx < 0) return;
-
-  const neighborIdx = direction === "up" ? idx - 1 : idx + 1;
-  if (neighborIdx < 0 || neighborIdx >= group.length) return; // udah di ujung
-
-  const neighbor = group[neighborIdx];
-
-  // Swap sortOrder. Pakai trick "set both ke value baru" supaya kalau
-  // dua items punya sortOrder sama (legacy data), tetep konsisten.
-  await db
-    .update(schema.projectItems)
-    .set({ sortOrder: neighbor.sortOrder, updatedAt: new Date() })
-    .where(eq(schema.projectItems.id, cur.id));
-  await db
-    .update(schema.projectItems)
-    .set({ sortOrder: cur.sortOrder, updatedAt: new Date() })
-    .where(eq(schema.projectItems.id, neighbor.id));
-
-  revalidatePath(`/projects/${projectId}`);
-}
-
-export async function moveItemUp(formData: FormData) {
-  const itemId = (formData.get("itemId") ?? "").toString();
-  const projectId = (formData.get("projectId") ?? "").toString();
-  if (!itemId || !projectId) return;
-  await swapWithNeighbor(itemId, projectId, "up");
-}
-
-export async function moveItemDown(formData: FormData) {
-  const itemId = (formData.get("itemId") ?? "").toString();
-  const projectId = (formData.get("projectId") ?? "").toString();
-  if (!itemId || !projectId) return;
-  await swapWithNeighbor(itemId, projectId, "down");
 }
 
 /**
