@@ -1,9 +1,8 @@
-import Link from "next/link";
 import { asc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { ItemAddForm } from "./item-add-form";
 import { StageButton } from "./stage-button";
-import { ItemDeleteButton } from "./item-delete-button";
+import { ItemsTableBody } from "./items-table-body";
 import { formatIDR } from "@/lib/utils";
 import { roundToNearest, terbilangRupiah } from "@/lib/terbilang";
 
@@ -223,17 +222,11 @@ export async function ItemsSection({
                 <th className="px-3 py-3 font-semibold">Sat</th>
                 <th className="px-3 py-3 text-right font-semibold">Harga Sat</th>
                 <th className="px-3 py-3 text-right font-semibold">Total</th>
-                <th className="w-20 px-3 py-3 font-semibold">Aksi</th>
+                <th className="w-32 px-3 py-3 font-semibold">Aksi</th>
               </tr>
             </thead>
             <tbody>
-              {groups.map((g) => (
-                <GroupRows
-                  key={g.wbsCode ?? "no-wbs"}
-                  group={g}
-                  projectId={projectId}
-                />
-              ))}
+              <ItemsTableBody projectId={projectId} groups={groups} />
             </tbody>
             <tfoot className="bg-muted/40 text-sm">
               <tr>
@@ -332,102 +325,3 @@ export async function ItemsSection({
   );
 }
 
-function GroupRows({
-  group,
-  projectId,
-}: {
-  group: Group;
-  projectId: string;
-}) {
-  const headerLabel =
-    group.wbsCode === null
-      ? "Tanpa WBS"
-      : `${group.wbsCode} — ${group.wbsName ?? ""}`;
-
-  return (
-    <>
-      <tr className="border-t-2 border-accent/30 bg-accent/10">
-        <td colSpan={6} className="px-3 py-2.5">
-          <span className="text-sm font-bold text-accent">{headerLabel}</span>
-          <span className="ml-3 rounded-full bg-accent/20 px-2 py-0.5 text-xs font-medium text-accent">
-            {group.items.length} item
-          </span>
-        </td>
-      </tr>
-      {group.items.map((it) => {
-        const total = calcTotal(it.volume, it.unitPrice);
-        return (
-          <tr
-            key={it.id}
-            className="border-t border-border hover:bg-muted/20"
-          >
-            <td className="px-3 py-2">
-              <div>{it.name}</div>
-              {it.ahspCode && (
-                <div className="mt-0.5 flex items-center gap-2 font-mono text-[10px] text-muted-foreground">
-                  <span className="rounded border border-accent/40 bg-accent/5 px-1.5 py-0.5 text-accent">
-                    AHSP
-                  </span>
-                  <span>{it.ahspCode}</span>
-                  {it.ahspSourceDoc && (
-                    <span title={it.ahspSourceDoc}>
-                      · {it.ahspSourceModule ?? it.ahspSourceDoc}
-                    </span>
-                  )}
-                </div>
-              )}
-            </td>
-            <td className="px-3 py-2 text-right font-mono tabular-nums">
-              <div className="flex flex-col items-end">
-                <span>{Number(it.volume).toLocaleString("id-ID")}</span>
-                {it.volumeFormula && (
-                  <span
-                    className="cursor-help text-[10px] font-normal text-muted-foreground"
-                    title={`Rumus: ${it.volumeFormula}`}
-                  >
-                    📐 {it.volumeFormula.split("=")[0]?.trim() ?? "Calculator"}
-                  </span>
-                )}
-              </div>
-            </td>
-            <td className="px-3 py-2 text-muted-foreground">{it.unit}</td>
-            <td className="px-3 py-2 text-right font-mono tabular-nums">
-              {formatIDR(it.unitPrice)}
-            </td>
-            <td className="px-3 py-2 text-right font-mono font-medium tabular-nums">
-              {formatIDR(total)}
-            </td>
-            <td className="w-20 px-3 py-2">
-              <div className="flex items-center justify-end gap-1">
-                <Link
-                  href={`/projects/${projectId}/items/${it.id}/edit`}
-                  className="rounded border border-transparent px-1.5 py-1 text-xs text-muted-foreground transition-colors hover:border-accent/40 hover:text-accent"
-                  aria-label={`Edit ${it.name}`}
-                >
-                  edit
-                </Link>
-                <ItemDeleteButton
-                  id={it.id}
-                  projectId={projectId}
-                  name={it.name}
-                />
-              </div>
-            </td>
-          </tr>
-        );
-      })}
-      <tr className="border-t border-border bg-muted/30">
-        <td
-          colSpan={4}
-          className="px-3 py-2 text-right text-xs font-semibold text-muted-foreground"
-        >
-          Subtotal {group.wbsCode ?? "tanpa WBS"}
-        </td>
-        <td className="px-3 py-2 text-right font-mono text-sm font-bold tabular-nums text-foreground">
-          {formatIDR(group.subtotal)}
-        </td>
-        <td className="w-20"></td>
-      </tr>
-    </>
-  );
-}
