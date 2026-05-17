@@ -7,7 +7,7 @@ import {
   updateItemsSchedule,
   updatePlannedDistribution,
 } from "@/app/projects/schedule-actions";
-import { formatIDR } from "@/lib/utils";
+import { compareWbsCode, formatIDR } from "@/lib/utils";
 
 type Item = {
   id: string;
@@ -36,19 +36,6 @@ function calcTotal(item: Item): number {
   return Number(item.volume) * Number(item.unitPrice);
 }
 
-function sortByCode(a: string | null, b: string | null): number {
-  if (a === null && b === null) return 0;
-  if (a === null) return 1;
-  if (b === null) return -1;
-  const ap = a.split(".").map(Number);
-  const bp = b.split(".").map(Number);
-  for (let i = 0; i < Math.max(ap.length, bp.length); i++) {
-    const av = ap[i] ?? 0;
-    const bv = bp[i] ?? 0;
-    if (av !== bv) return av - bv;
-  }
-  return 0;
-}
 
 export function ScheduleEditor({
   projectId,
@@ -62,7 +49,7 @@ export function ScheduleEditor({
   // Sort items by WBS code
   const sortedItems = useMemo(
     () =>
-      [...initialItems].sort((a, b) => sortByCode(a.wbsCode, b.wbsCode)),
+      [...initialItems].sort((a, b) => compareWbsCode(a.wbsCode, b.wbsCode)),
     [initialItems],
   );
 

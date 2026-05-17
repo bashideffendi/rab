@@ -3,7 +3,7 @@ import { db, schema } from "@/db";
 import { ItemAddForm } from "./item-add-form";
 import { StageButton } from "./stage-button";
 import { ItemsTableBody } from "./items-table-body";
-import { formatIDR } from "@/lib/utils";
+import { compareWbsCode, formatIDR } from "@/lib/utils";
 import { roundToNearest, terbilangRupiah } from "@/lib/terbilang";
 
 type ItemRow = {
@@ -80,15 +80,15 @@ async function loadItems(projectId: string): Promise<ItemRow[]> {
 }
 
 async function loadWbsOptions(projectId: string): Promise<WbsOption[]> {
-  return db
+  const rows = await db
     .select({
       id: schema.wbsItems.id,
       code: schema.wbsItems.code,
       name: schema.wbsItems.name,
     })
     .from(schema.wbsItems)
-    .where(eq(schema.wbsItems.projectId, projectId))
-    .orderBy(asc(schema.wbsItems.code));
+    .where(eq(schema.wbsItems.projectId, projectId));
+  return rows.sort((a, b) => compareWbsCode(a.code, b.code));
 }
 
 // Removed loadAhspOptions — replaced by searchable AhspPicker yang pakai
@@ -100,21 +100,6 @@ function calcTotal(volume: string, unitPrice: string): number {
   const p = Number(unitPrice);
   if (!Number.isFinite(v) || !Number.isFinite(p)) return 0;
   return v * p;
-}
-
-function sortByCode(a: string | null, b: string | null): number {
-  if (a === null && b === null) return 0;
-  if (a === null) return 1;
-  if (b === null) return -1;
-  const ap = a.split(".").map(Number);
-  const bp = b.split(".").map(Number);
-  const len = Math.max(ap.length, bp.length);
-  for (let i = 0; i < len; i++) {
-    const av = ap[i] ?? 0;
-    const bv = bp[i] ?? 0;
-    if (av !== bv) return av - bv;
-  }
-  return 0;
 }
 
 type Group = {
@@ -142,7 +127,7 @@ function groupByWbs(items: ItemRow[]): Group[] {
     g.subtotal += calcTotal(it.volume, it.unitPrice);
   }
   return Array.from(map.values()).sort((a, b) =>
-    sortByCode(a.wbsCode, b.wbsCode),
+    compareWbsCode(a.wbsCode, b.wbsCode),
   );
 }
 

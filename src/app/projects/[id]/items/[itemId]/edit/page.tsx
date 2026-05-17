@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { and, asc, eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { AppShell } from "@/components/app-shell";
 import { EditItemForm } from "./form";
 import { requireUser, verifyProjectOwnership } from "@/lib/auth";
+import { compareWbsCode } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -29,15 +30,15 @@ async function loadItem(
 }
 
 async function loadWbs(projectId: string): Promise<WbsOption[]> {
-  return db
+  const rows = await db
     .select({
       id: schema.wbsItems.id,
       code: schema.wbsItems.code,
       name: schema.wbsItems.name,
     })
     .from(schema.wbsItems)
-    .where(eq(schema.wbsItems.projectId, projectId))
-    .orderBy(asc(schema.wbsItems.code));
+    .where(eq(schema.wbsItems.projectId, projectId));
+  return rows.sort((a, b) => compareWbsCode(a.code, b.code));
 }
 
 async function loadProjectName(projectId: string): Promise<string | null> {

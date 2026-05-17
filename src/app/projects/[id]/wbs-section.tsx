@@ -1,7 +1,8 @@
-import { asc, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { WbsAddForm } from "./wbs-add-form";
 import { WbsRow } from "./wbs-row";
+import { compareWbsCode } from "@/lib/utils";
 
 type WbsRow = {
   id: string;
@@ -19,23 +20,9 @@ async function loadWbs(projectId: string): Promise<WbsRow[]> {
       level: schema.wbsItems.level,
     })
     .from(schema.wbsItems)
-    .where(eq(schema.wbsItems.projectId, projectId))
-    .orderBy(asc(schema.wbsItems.code));
+    .where(eq(schema.wbsItems.projectId, projectId));
 
-  return rows.sort((a, b) => sortByCode(a.code, b.code));
-}
-
-// natural sort code "1.10" > "1.2"
-function sortByCode(a: string, b: string): number {
-  const ap = a.split(".").map(Number);
-  const bp = b.split(".").map(Number);
-  const len = Math.max(ap.length, bp.length);
-  for (let i = 0; i < len; i++) {
-    const av = ap[i] ?? 0;
-    const bv = bp[i] ?? 0;
-    if (av !== bv) return av - bv;
-  }
-  return 0;
+  return rows.sort((a, b) => compareWbsCode(a.code, b.code));
 }
 
 export async function WbsSection({ projectId }: { projectId: string }) {
