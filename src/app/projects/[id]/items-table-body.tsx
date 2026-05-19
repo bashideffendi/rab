@@ -36,6 +36,7 @@ export type ItemRow = {
   ahspSourceModule: string | null;
   ahspSourceSection: string | null;
   volumeFormula: string | null;
+  notes: string | null;
 };
 
 export type ItemGroup = {
@@ -229,7 +230,18 @@ function SortableItemRow({
             </svg>
           </button>
           <div className="flex-1">
-            <div>{item.name}</div>
+            <div className="flex items-start gap-1.5">
+              <span>{item.name}</span>
+              {item.notes && (
+                <span
+                  className="mt-0.5 cursor-help text-xs leading-none text-accent"
+                  title={item.notes}
+                  aria-label={`Catatan: ${item.notes}`}
+                >
+                  📝
+                </span>
+              )}
+            </div>
             {item.ahspCode && (
               <div className="mt-0.5 flex items-center gap-2 font-mono text-[10px] text-muted-foreground">
                 <span className="rounded border border-accent/40 bg-accent/5 px-1.5 py-0.5 text-accent">
@@ -241,6 +253,11 @@ function SortableItemRow({
                     · {item.ahspSourceModule ?? item.ahspSourceDoc}
                   </span>
                 )}
+              </div>
+            )}
+            {item.notes && (
+              <div className="mt-0.5 text-[11px] italic text-muted-foreground line-clamp-2">
+                {item.notes}
               </div>
             )}
           </div>

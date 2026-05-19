@@ -122,6 +122,7 @@ export default async function EditItemPage({
               string,
               number
             > | null) ?? null,
+            notes: item.notes ?? "",
           }}
         />
       </section>

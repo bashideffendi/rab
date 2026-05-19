@@ -29,6 +29,8 @@ export async function createWbsItem(
 ): Promise<CreateWbsFormState> {
   const code = (formData.get("code") ?? "").toString().trim();
   const name = (formData.get("name") ?? "").toString().trim();
+  const notesRaw = (formData.get("notes") ?? "").toString();
+  const notes = notesRaw.trim() ? notesRaw : null;
 
   if (!code) {
     return { fieldErrors: { code: "Code WBS wajib diisi (mis. 1.2.1)." } };
@@ -89,6 +91,7 @@ export async function createWbsItem(
       name,
       level,
       sortOrder: 0,
+      notes,
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Gagal simpan WBS.";
@@ -122,6 +125,8 @@ export async function updateWbsItem(
 ): Promise<UpdateWbsFormState> {
   const code = (formData.get("code") ?? "").toString().trim();
   const name = (formData.get("name") ?? "").toString().trim();
+  const notesRaw = (formData.get("notes") ?? "").toString();
+  const notes = notesRaw.trim() ? notesRaw : null;
 
   if (!code) {
     return { fieldErrors: { code: "Code wajib." } };
@@ -177,7 +182,7 @@ export async function updateWbsItem(
 
     await db
       .update(schema.wbsItems)
-      .set({ code, name, level, parentId })
+      .set({ code, name, level, parentId, notes })
       .where(
         and(
           eq(schema.wbsItems.id, id),

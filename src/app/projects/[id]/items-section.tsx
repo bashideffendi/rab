@@ -19,6 +19,7 @@ type ItemRow = {
   ahspSourceModule: string | null;
   ahspSourceSection: string | null;
   volumeFormula: string | null;
+  notes: string | null;
 };
 
 type WbsOption = {
@@ -50,6 +51,7 @@ async function loadItems(projectId: string): Promise<ItemRow[]> {
       ahspSourceModule: schema.ahspItems.sourceModule,
       ahspSourceSection: schema.ahspItems.sourceSection,
       volumeFormula: schema.projectItems.volumeFormula,
+      notes: schema.projectItems.notes,
     })
     .from(schema.projectItems)
     .leftJoin(
@@ -76,6 +78,7 @@ async function loadItems(projectId: string): Promise<ItemRow[]> {
     ahspSourceModule: r.ahspSourceModule,
     ahspSourceSection: r.ahspSourceSection,
     volumeFormula: r.volumeFormula,
+    notes: r.notes,
   }));
 }
 

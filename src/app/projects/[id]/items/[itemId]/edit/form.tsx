@@ -34,6 +34,7 @@ export function EditItemForm({
     unitPrice: string;
     calculatorType: string | null;
     calculatorInputs: Record<string, number> | null;
+    notes: string;
   };
 }) {
   const router = useRouter();
@@ -42,6 +43,7 @@ export function EditItemForm({
 
   const [unit, setUnit] = useState(initial.unit);
   const [volume, setVolume] = useState(initial.volume);
+  const [notes, setNotes] = useState(initial.notes);
   const [calcMode, setCalcMode] = useState<string>(
     initial.calculatorType ?? "manual",
   );
@@ -52,15 +54,13 @@ export function EditItemForm({
     }
   }, [pending, state, projectId, router]);
 
-  // Sync unit "LS" ↔ calculator "lumsum" (sama kayak item-add-form).
+  // Auto-fill volume = 1 saat user pilih satuan "LS" (sama kayak item-add).
+  // Opsi Lumsum di dropdown HITUNG VOLUME udah di-hide.
   useEffect(() => {
-    if (unit === "LS" && calcMode !== "lumsum") {
-      setCalcMode("lumsum");
+    if (unit === "LS" && !volume) {
       setVolume("1.0000");
-    } else if (unit !== "LS" && calcMode === "lumsum") {
-      setCalcMode("manual");
     }
-  }, [unit, calcMode]);
+  }, [unit, volume]);
 
   return (
     <form action={formAction} className="flex flex-col gap-5">
@@ -153,6 +153,19 @@ export function EditItemForm({
           render hidden inputnya sendiri (manual mode). Sebenarnya VC udah
           submit volume via name="volume", jadi ini gak diperlukan. Tapi
           kita expose `volume` state untuk debug/preview di future. */}
+
+      <Field label="Catatan (opsional)" htmlFor="edit-item-notes">
+        <textarea
+          id="edit-item-notes"
+          name="notes"
+          rows={3}
+          maxLength={1000}
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          placeholder="Mis. material di-supply langsung pemilik, atau spec khusus"
+          className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm shadow-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+        />
+      </Field>
 
       {state.error && (
         <div className="rounded border border-danger/40 bg-danger/5 px-3 py-2 text-sm text-danger">

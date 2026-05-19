@@ -150,6 +150,7 @@ export const wbsItems = pgTable(
     name: text("name").notNull(),
     level: integer("level").notNull().default(0),
     sortOrder: integer("sort_order").notNull().default(0),
+    notes: text("notes"),
   },
   (t) => [
     index("wbs_items_project_idx").on(t.projectId),

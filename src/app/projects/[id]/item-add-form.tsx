@@ -43,20 +43,17 @@ export function ItemAddForm({
   const [unit, setUnit] = useState("");
   const [volume, setVolume] = useState("");
   const [unitPrice, setUnitPrice] = useState("");
+  const [notes, setNotes] = useState("");
   const [calcMode, setCalcMode] = useState("manual");
 
-  // Sync unit "LS" ↔ calculator mode "lumsum". User boleh pilih LS via
-  // datalist satuan tanpa harus buka calculator — kalkulator auto-switch.
-  // Reverse juga: kalau user ganti unit dari LS ke lain, calculator reset
-  // ke manual.
+  // Helper: auto-fill volume = 1 saat user pilih satuan "LS" (paket non-
+  // volumetric defaultnya 1 paket). Calculator mode tetep "manual" — opsi
+  // Lumsum di dropdown HITUNG VOLUME udah di-hide.
   useEffect(() => {
-    if (unit === "LS" && calcMode !== "lumsum") {
-      setCalcMode("lumsum");
+    if (unit === "LS" && !volume) {
       setVolume("1.0000");
-    } else if (unit !== "LS" && calcMode === "lumsum") {
-      setCalcMode("manual");
     }
-  }, [unit, calcMode]);
+  }, [unit, volume]);
 
   // Sync from state.values kalau action balik dengan error
   useEffect(() => {
@@ -70,6 +67,7 @@ export function ItemAddForm({
       setUnit(state.values.unit);
       setVolume(state.values.volume);
       setUnitPrice(state.values.unitPrice);
+      setNotes(state.values.notes);
     }
   }, [state.values]);
 
@@ -87,6 +85,7 @@ export function ItemAddForm({
       setUnit("");
       setVolume("");
       setUnitPrice("");
+      setNotes("");
       setCalcMode("manual");
       nameRef.current?.focus();
     }
@@ -231,6 +230,22 @@ export function ItemAddForm({
           />
         </div>
       )}
+
+      {/* Catatan / comment item — optional, free text */}
+      <div className="mt-3">
+        <Field label="Catatan (opsional)" htmlFor="item-notes">
+          <textarea
+            id="item-notes"
+            name="notes"
+            rows={2}
+            maxLength={1000}
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Mis. material di-supply langsung pemilik, atau spec khusus"
+            className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm shadow-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+          />
+        </Field>
+      </div>
 
       {state.warning && (
         <div className="mt-3 rounded-md border border-warning/40 bg-warning/5 px-3 py-2 text-xs text-warning">

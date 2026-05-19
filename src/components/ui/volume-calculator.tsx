@@ -126,7 +126,7 @@ export function VolumeCalculator({
           className="rounded-md border border-border bg-card px-3 py-2 text-sm shadow-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
         >
           <option value="manual">📝 Manual — input volume langsung</option>
-          {CALCULATORS.map((c) => (
+          {CALCULATORS.filter((c) => !c.hidden).map((c) => (
             <option key={c.type} value={c.type}>
               📐 {c.label}
             </option>

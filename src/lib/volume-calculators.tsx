@@ -53,6 +53,9 @@ export type CalcDef = {
   inputs: CalcInputDef[];
   compute: (inputs: Record<string, number>) => ComputeResult;
   Diagram: (props: { values: Record<string, number> }) => ReactNode;
+  /** Sembunyikan dari dropdown picker. Calculator masih bisa di-resolve via
+   *  getCalculator() untuk preserve data lama. */
+  hidden?: boolean;
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -3305,6 +3308,249 @@ export const CALCULATORS: CalcDef[] = [
   },
 
   {
+    type: "footplate",
+    label: "Footplate / Pondasi Tapak Beton",
+    description:
+      "Pondasi tapak (footplate) beton bertulang per titik. Beda dari Galian Pondasi Tapak — ini menghitung BETON + TULANGAN-nya, bukan galian tanahnya. Output utama: volume beton (m³). Info: tulangan grid (arah X & Y), stek ke kolom, bekisting samping.",
+    outputUnit: "m³",
+    outputLabel: "Volume Beton",
+    inputs: [
+      // Dimensi
+      {
+        key: "P",
+        label: "Panjang Tapak (P)",
+        unit: "m",
+        default: 1,
+        min: 0,
+        hint: "Sisi arah X per titik footplate",
+        group: "Dimensi Footplate",
+      },
+      {
+        key: "L",
+        label: "Lebar Tapak (L)",
+        unit: "m",
+        default: 1,
+        min: 0,
+        hint: "Sisi arah Y per titik footplate",
+        group: "Dimensi Footplate",
+      },
+      {
+        key: "T",
+        label: "Tebal/Tinggi (T)",
+        unit: "m",
+        default: 0.25,
+        min: 0,
+        hint: "Tebal pelat footplate. Standar 20–30 cm.",
+        group: "Dimensi Footplate",
+      },
+      {
+        key: "n",
+        label: "Jumlah Titik",
+        unit: "titik",
+        default: 1,
+        min: 1,
+        hint: "Jumlah titik footplate identik",
+        group: "Dimensi Footplate",
+      },
+      {
+        key: "k",
+        label: "Selimut Beton (k)",
+        unit: "m",
+        default: 0.04,
+        min: 0,
+        hint: "Tebal selimut beton ke besi. Default 4 cm untuk pondasi.",
+        group: "Dimensi Footplate",
+      },
+      // Spesifikasi beton
+      {
+        key: "mutuBeton",
+        label: "Mutu Beton",
+        unit: "K",
+        default: 225,
+        group: "Spesifikasi Beton",
+        options: [
+          { value: 175, label: "K-175 (fc 14.5)" },
+          { value: 225, label: "K-225 (fc 19.3)" },
+          { value: 275, label: "K-275 (fc 22.5)" },
+          { value: 300, label: "K-300 (fc 24.9)" },
+        ],
+      },
+      // Tulangan arah X
+      {
+        key: "Dx",
+        label: "Ø Tulangan Arah X",
+        unit: "mm",
+        default: 12,
+        group: "Tulangan Arah X",
+        options: [
+          { value: 10, label: "Ø10 mm (0.62 kg/m)" },
+          { value: 12, label: "Ø12 mm (0.89 kg/m)" },
+          { value: 13, label: "Ø13 mm (1.04 kg/m)" },
+          { value: 16, label: "Ø16 mm (1.58 kg/m)" },
+        ],
+      },
+      {
+        key: "Rx",
+        label: "Jarak Tulangan X",
+        unit: "m",
+        default: 0.15,
+        min: 0.05,
+        hint: "Jarak antar besi arah X. Standar 10–20 cm.",
+        group: "Tulangan Arah X",
+      },
+      // Tulangan arah Y
+      {
+        key: "Dy",
+        label: "Ø Tulangan Arah Y",
+        unit: "mm",
+        default: 12,
+        group: "Tulangan Arah Y",
+        options: [
+          { value: 10, label: "Ø10 mm (0.62 kg/m)" },
+          { value: 12, label: "Ø12 mm (0.89 kg/m)" },
+          { value: 13, label: "Ø13 mm (1.04 kg/m)" },
+          { value: 16, label: "Ø16 mm (1.58 kg/m)" },
+        ],
+      },
+      {
+        key: "Ry",
+        label: "Jarak Tulangan Y",
+        unit: "m",
+        default: 0.15,
+        min: 0.05,
+        hint: "Jarak antar besi arah Y. Standar 10–20 cm.",
+        group: "Tulangan Arah Y",
+      },
+      // Stek/Anker ke kolom
+      {
+        key: "Ds",
+        label: "Ø Stek ke Kolom",
+        unit: "mm",
+        default: 12,
+        group: "Stek Kolom",
+        options: [
+          { value: 10, label: "Ø10 mm (0.62 kg/m)" },
+          { value: 12, label: "Ø12 mm (0.89 kg/m)" },
+          { value: 13, label: "Ø13 mm (1.04 kg/m)" },
+          { value: 16, label: "Ø16 mm (1.58 kg/m)" },
+          { value: 19, label: "Ø19 mm (2.22 kg/m)" },
+        ],
+      },
+      {
+        key: "ns",
+        label: "Jumlah Stek per Titik",
+        unit: "btg",
+        default: 4,
+        min: 4,
+        hint: "Standar 4 batang per titik (ikut jumlah besi utama kolom).",
+        group: "Stek Kolom",
+      },
+      {
+        key: "lstek",
+        label: "Panjang Stek (tertanam + di atas)",
+        unit: "m",
+        default: 0.75,
+        min: 0.3,
+        hint: "Total panjang stek dari dasar footplate ke atas pile. Default 40D + tebal footplate.",
+        group: "Stek Kolom",
+      },
+    ],
+    compute: (i) => {
+      const P = num(i.P);
+      const L = num(i.L);
+      const T = num(i.T);
+      const n = num(i.n, 1);
+      const k = num(i.k, 0.04);
+      const Dx = num(i.Dx, 12);
+      const Rx = num(i.Rx, 0.15);
+      const Dy = num(i.Dy, 12);
+      const Ry = num(i.Ry, 0.15);
+      const Ds = num(i.Ds, 12);
+      const ns = num(i.ns, 4);
+      const lstek = num(i.lstek, 0.75);
+
+      const wPerM = (d: number) => REBAR_WEIGHT[d] ?? 0.006165 * d * d;
+
+      // Volume beton total
+      const vPerTitik = P * L * T;
+      const v = vPerTitik * n;
+
+      // Bekisting: 4 sisi vertikal per titik (atas terbuka, dasar lantai kerja)
+      const luasBekisting = 2 * (P + L) * T * n;
+
+      // Tulangan grid arah X (membentang sepanjang P, didistribusi sepanjang L)
+      const usableX = Math.max(L - 2 * k, 0);
+      const jmlX = usableX > 0 && Rx > 0 ? Math.floor(usableX / Rx) + 1 : 0;
+      const panjangPerBesiX = Math.max(P - 2 * k, 0) + 0.2; // +10cm bend per ujung
+      const lTotalX = jmlX * panjangPerBesiX * n;
+      const wX = lTotalX * wPerM(Dx);
+
+      // Tulangan grid arah Y
+      const usableY = Math.max(P - 2 * k, 0);
+      const jmlY = usableY > 0 && Ry > 0 ? Math.floor(usableY / Ry) + 1 : 0;
+      const panjangPerBesiY = Math.max(L - 2 * k, 0) + 0.2;
+      const lTotalY = jmlY * panjangPerBesiY * n;
+      const wY = lTotalY * wPerM(Dy);
+
+      // Stek ke kolom
+      const lTotalStek = ns * lstek * n;
+      const wStek = lTotalStek * wPerM(Ds);
+
+      // Kawat ikat: 1% berat besi
+      const wBesi = wX + wY + wStek;
+      const wKawat = wBesi * 0.01;
+      const totalBesi = wBesi + wKawat;
+
+      const formula = `${fmt(P, 2)} × ${fmt(L, 2)} × ${fmt(T, 2)} × ${fmt(n, 0)} titik = ${fmt(v, 3)} m³`;
+
+      return {
+        value: v,
+        formula,
+        info: [
+          {
+            label: "Volume Beton",
+            value: `${fmt(v, 3)} m³`,
+            highlight: true,
+          },
+          {
+            label: `Tulangan X (Ø${Dx})`,
+            value: `${jmlX} btg × ${fmt(panjangPerBesiX, 2)} m × ${fmt(n, 0)} = ${fmt(lTotalX, 2)} m → ${fmt(wX, 2)} kg`,
+          },
+          {
+            label: `Tulangan Y (Ø${Dy})`,
+            value: `${jmlY} btg × ${fmt(panjangPerBesiY, 2)} m × ${fmt(n, 0)} = ${fmt(lTotalY, 2)} m → ${fmt(wY, 2)} kg`,
+          },
+          {
+            label: `Stek Kolom (Ø${Ds})`,
+            value: `${ns} btg × ${fmt(lstek, 2)} m × ${fmt(n, 0)} = ${fmt(lTotalStek, 2)} m → ${fmt(wStek, 2)} kg`,
+          },
+          {
+            label: "Kawat Ikat (1%)",
+            value: `${fmt(wKawat, 2)} kg`,
+          },
+          {
+            label: "TOTAL Besi + Kawat",
+            value: `${fmt(totalBesi, 2)} kg`,
+            highlight: true,
+          },
+          {
+            label: "Bekisting Samping",
+            value: `${fmt(luasBekisting, 2)} m²`,
+            highlight: true,
+          },
+        ],
+      };
+    },
+    Diagram: ({ values }) => (
+      <FootingDiagram
+        pLabel={`P = ${fmt(num(values.P), 2)} m`}
+        lLabel={`L = ${fmt(num(values.L), 2)} m`}
+        tLabel={`T = ${fmt(num(values.T), 2)} m`}
+      />
+    ),
+  },
+
+  {
     type: "sloof_balok",
     label: "Sloof / Balok Beton",
     description:
@@ -4766,6 +5012,8 @@ export const CALCULATORS: CalcDef[] = [
   },
   // ─────────────────────────────────────────────────────────────────────────
   // Lumsum (LS) — pekerjaan paket non-volumetric
+  // Hidden dari dropdown (user pilih satuan "LS" + Manual volume). Definisi
+  // di-keep biar item lama yang udah pakai calculatorType="lumsum" gak rusak.
   // ─────────────────────────────────────────────────────────────────────────
   {
     type: "lumsum",
@@ -4774,6 +5022,7 @@ export const CALCULATORS: CalcDef[] = [
       "Pekerjaan paket non-volumetric. Misal mobilisasi/demobilisasi, papan nama proyek, foto dokumentasi, asuransi, K3, pengamanan, listrik & air kerja.",
     outputUnit: "LS",
     outputLabel: "Jumlah Paket",
+    hidden: true,
     inputs: [
       {
         key: "n",

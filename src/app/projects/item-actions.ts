@@ -136,6 +136,7 @@ export type CreateItemFormState = {
     unit: string;
     volume: string;
     unitPrice: string;
+    notes: string;
   };
 };
 
@@ -178,6 +179,9 @@ export async function createProjectItem(
     .trim();
   const volumeFormula = volumeFormulaRaw || null;
 
+  const notesRaw = (formData.get("notes") ?? "").toString();
+  const notes = notesRaw.trim() ? notesRaw : null;
+
   // Snapshot all input — di-attach ke return state kalau error, biar form gak ke-reset
   const inputValues = {
     mode,
@@ -187,6 +191,7 @@ export async function createProjectItem(
     unit: unitRaw,
     volume: volumeRaw,
     unitPrice: unitPriceRaw,
+    notes: notesRaw,
   };
 
   if (!volume) {
@@ -260,6 +265,7 @@ export async function createProjectItem(
         calculatorType,
         calculatorInputs,
         volumeFormula,
+        notes,
         sortOrder: 0,
       });
     } catch (e) {
@@ -308,6 +314,7 @@ export async function createProjectItem(
       calculatorType,
       calculatorInputs,
       volumeFormula,
+      notes,
       sortOrder: 0,
     });
   } catch (e) {
@@ -362,6 +369,9 @@ export async function updateProjectItem(
     .trim();
   const volumeFormula = volumeFormulaRaw || null;
 
+  const notesRaw = (formData.get("notes") ?? "").toString();
+  const notes = notesRaw.trim() ? notesRaw : null;
+
   const fieldErrors: NonNullable<UpdateItemFormState["fieldErrors"]> = {};
   if (!customName) fieldErrors.name = "Nama pekerjaan wajib diisi.";
   else if (customName.length > 200)
@@ -397,6 +407,7 @@ export async function updateProjectItem(
         calculatorType,
         calculatorInputs,
         volumeFormula,
+        notes,
         updatedAt: new Date(),
       })
       .where(

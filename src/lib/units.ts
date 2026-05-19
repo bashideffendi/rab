@@ -26,6 +26,7 @@ export const STANDARD_UNITS = [
   "lbr",
   "sak",
   "ltr",
+  "dus",
   "OJ",
   "OH",
   "OB",
@@ -82,6 +83,10 @@ const NORMALIZE_MAP: Record<string, string> = {
   "l": "ltr",
   // Trip / rit
   "rit": "trip",
+  // Dus / kardus / dos
+  "dos": "dus",
+  "kardus": "dus",
+  "box": "dus",
 };
 
 /**
