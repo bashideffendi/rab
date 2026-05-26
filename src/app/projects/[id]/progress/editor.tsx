@@ -3,6 +3,7 @@
 import { useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { getPeriodConfig, type ProgressPeriod } from "@/lib/period";
 import { updateProgress } from "../../progress-actions";
 
 type Item = {
@@ -43,6 +44,7 @@ export function ProgressEditor({
   totalWeeks,
   currentWeek,
   usingFallback,
+  periodType = "weekly",
 }: {
   projectId: string;
   projectEditHref: string;
@@ -52,7 +54,9 @@ export function ProgressEditor({
   totalWeeks: number;
   currentWeek: number;
   usingFallback: boolean;
+  periodType?: ProgressPeriod;
 }) {
+  const periodConfig = getPeriodConfig(periodType);
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [savedNote, setSavedNote] = useState<string | null>(null);
@@ -180,7 +184,7 @@ export function ProgressEditor({
         const hist = result.historicalCount ?? 0;
         setSavedNote(
           hist > 0
-            ? `${baseMsg} ${hist} entri minggu lampau dicatat di audit log.`
+            ? `${baseMsg} ${hist} entri ${periodConfig.pluralLower} lampau dicatat di audit log.`
             : baseMsg,
         );
       }
@@ -209,7 +213,8 @@ export function ProgressEditor({
       {usingFallback && (
         <div className="rounded-md border border-warning/40 bg-warning/5 px-4 py-3 text-sm text-foreground">
           <span className="font-semibold">Tanggal mulai belum di-set.</span>{" "}
-          Minggu berjalan dihitung dari tanggal project dibuat (fallback).{" "}
+          {periodConfig.label} berjalan dihitung dari tanggal project dibuat
+          (fallback).{" "}
           <Link
             href={projectEditHref}
             className="font-medium text-accent hover:underline"
@@ -223,9 +228,9 @@ export function ProgressEditor({
       {/* KPI cards */}
       <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
         <KpiCard
-          label="Minggu Saat Ini"
-          value={`Minggu ${currentWeek}`}
-          sub={`dari total ${totalWeeks} minggu`}
+          label={`${periodConfig.label} Saat Ini`}
+          value={`${periodConfig.label} ${currentWeek}`}
+          sub={`dari total ${totalWeeks} ${periodConfig.pluralLower}`}
         />
         <KpiCard
           label="Rencana s.d. Saat Ini"
@@ -265,7 +270,7 @@ export function ProgressEditor({
           size="sm"
           onClick={scrollToCurrentWeek}
         >
-          Lompat ke Minggu {currentWeek}
+          Lompat ke {periodConfig.label} {currentWeek}
         </Button>
       </div>
 
@@ -294,7 +299,7 @@ export function ProgressEditor({
                           : ""
                     }`}
                   >
-                    M{w}
+                    {periodConfig.abbrev}{w}
                   </th>
                 ),
               )}
@@ -317,7 +322,7 @@ export function ProgressEditor({
                     {m.hasOverride && (
                       <span
                         className="ml-1.5 inline-flex rounded bg-accent-soft px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-accent"
-                        title="Bobot rencana mingguan pakai override dari Schedule"
+                        title={`Bobot rencana per ${periodConfig.pluralLower} pakai override dari Schedule`}
                       >
                         kurva
                       </span>
@@ -362,7 +367,7 @@ export function ProgressEditor({
                             placeholder="—"
                             title={
                               isHistorical
-                                ? "Minggu sudah lewat — edit dicatat di audit log"
+                                ? `${periodConfig.label} sudah lewat — edit dicatat di audit log`
                                 : undefined
                             }
                             className={`w-16 rounded border px-1.5 py-1 text-center font-mono text-xs tabular-nums focus:outline-none focus:ring-1 focus:ring-accent ${
@@ -387,10 +392,12 @@ export function ProgressEditor({
       </div>
 
       <p className="text-xs text-muted-foreground">
-        Input nilai 0–100 sebagai % kumulatif per item di akhir minggu
-        tersebut. Cell di luar jadwal (titik abu) tidak bisa diisi. Cell
-        berwarna kuning = minggu sudah lewat lebih dari {HISTORY_THRESHOLD}{" "}
-        minggu, edit dicatat di audit log.
+        Input nilai 0–100 sebagai % kumulatif per item di akhir{" "}
+        {periodConfig.pluralLower} tersebut. Cell di luar jadwal (titik abu)
+        tidak bisa diisi. Cell berwarna kuning ={" "}
+        {periodConfig.pluralLower} sudah lewat lebih dari{" "}
+        {HISTORY_THRESHOLD} {periodConfig.pluralLower}, edit dicatat di audit
+        log.
       </p>
 
       {/* Kurva S */}
@@ -399,6 +406,7 @@ export function ProgressEditor({
         planned={projectMetrics.planned}
         actual={projectMetrics.actual}
         currentWeek={currentWeek}
+        abbrev={periodConfig.abbrev}
       />
 
       {/* Save bar */}
@@ -413,7 +421,7 @@ export function ProgressEditor({
           {!error && !savedNote && (
             <p className="text-xs text-muted-foreground">
               Total {countEntries(actuals)} entri tercatat di {totalWeeks}{" "}
-              minggu
+              {periodConfig.pluralLower}
             </p>
           )}
         </div>
@@ -496,11 +504,13 @@ function KurvaS({
   planned,
   actual,
   currentWeek,
+  abbrev,
 }: {
   totalWeeks: number;
   planned: number[];
   actual: number[];
   currentWeek: number;
+  abbrev: string;
 }) {
   const width = 800;
   const height = 280;
@@ -556,28 +566,34 @@ function KurvaS({
         className="h-auto w-full"
         preserveAspectRatio="xMidYMid meet"
       >
-        {/* Grid horizontal */}
-        {[0, 25, 50, 75, 100].map((pct) => (
-          <g key={pct}>
-            <line
-              x1={padX}
-              x2={width - padX}
-              y1={yFor(pct)}
-              y2={yFor(pct)}
-              className="stroke-border"
-              strokeDasharray="2 3"
-            />
-            <text
-              x={padX - 8}
-              y={yFor(pct)}
-              textAnchor="end"
-              alignmentBaseline="middle"
-              className="fill-muted-foreground font-mono text-[10px]"
-            >
-              {pct}%
-            </text>
-          </g>
-        ))}
+        {/* Grid horizontal kelipatan 5%, label tiap 10% (standard kurva S
+            kontraktor — biar gampang baca posisi 27% atau 63%). */}
+        {Array.from({ length: 21 }, (_, i) => i * 5).map((pct) => {
+          const hasLabel = pct % 10 === 0;
+          return (
+            <g key={pct}>
+              <line
+                x1={padX}
+                x2={width - padX}
+                y1={yFor(pct)}
+                y2={yFor(pct)}
+                className={hasLabel ? "stroke-border" : "stroke-border/40"}
+                strokeDasharray={hasLabel ? "2 3" : "1 4"}
+              />
+              {hasLabel && (
+                <text
+                  x={padX - 8}
+                  y={yFor(pct)}
+                  textAnchor="end"
+                  alignmentBaseline="middle"
+                  className="fill-muted-foreground font-mono text-[10px]"
+                >
+                  {pct}%
+                </text>
+              )}
+            </g>
+          );
+        })}
         {/* X-axis ticks */}
         {Array.from({ length: totalWeeks }, (_, i) => i + 1)
           .filter(
@@ -595,7 +611,7 @@ function KurvaS({
               textAnchor="middle"
               className="fill-muted-foreground font-mono text-[10px]"
             >
-              M{w}
+              {abbrev}{w}
             </text>
           ))}
         {/* Current week marker */}

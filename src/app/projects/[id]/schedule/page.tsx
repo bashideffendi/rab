@@ -4,6 +4,7 @@ import { and, asc, eq, inArray } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { AppShell } from "@/components/app-shell";
 import { requireUser } from "@/lib/auth";
+import { getPeriodConfig } from "@/lib/period";
 import { ScheduleEditor } from "./editor";
 
 export const dynamic = "force-dynamic";
@@ -31,6 +32,7 @@ async function loadProject(id: string, userId: string) {
     .select({
       id: schema.projects.id,
       name: schema.projects.name,
+      progressPeriod: schema.projects.progressPeriod,
     })
     .from(schema.projects)
     .where(and(eq(schema.projects.id, id), eq(schema.projects.userId, userId)))
@@ -101,6 +103,7 @@ export default async function SchedulePage({
 
   const items = await loadItems(project.id);
   const planned = await loadPlanned(items.map((i) => i.id));
+  const periodConfig = getPeriodConfig(project.progressPeriod);
 
   return (
     <AppShell>
@@ -120,9 +123,10 @@ export default async function SchedulePage({
             Jadwal Pekerjaan & Gantt Chart
           </h1>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            Tentukan minggu mulai dan durasi pengerjaan setiap item. Bobot
-            pekerjaan dihitung otomatis berdasarkan persentase nilai terhadap
-            total project. Gantt chart diperbarui secara real-time.
+            Tentukan {periodConfig.pluralLower} mulai dan durasi pengerjaan
+            setiap item. Bobot pekerjaan dihitung otomatis berdasarkan
+            persentase nilai terhadap total project. Gantt chart diperbarui
+            secara real-time.
           </p>
         </header>
 
@@ -143,6 +147,7 @@ export default async function SchedulePage({
             projectId={project.id}
             initialItems={items}
             initialPlanned={planned}
+            periodType={periodConfig.type}
           />
         )}
       </section>

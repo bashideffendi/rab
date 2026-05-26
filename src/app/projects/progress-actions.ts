@@ -5,13 +5,18 @@ import { and, eq, inArray, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { requireUser, verifyProjectOwnership } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
+import { computeCurrentPeriod, getPeriodConfig } from "@/lib/period";
 
 /**
- * Jumlah minggu ke belakang dari minggu berjalan yang dianggap "historical".
+ * Jumlah periode ke belakang dari periode berjalan yang dianggap "historical".
  * Entri yang lebih tua dari ini akan tetap di-save (soft lock), tapi dicatat
  * di project_audit_log untuk transparansi.
+ *
+ * Threshold = 2 periode terlepas dari period type:
+ * - Weekly: 2 minggu
+ * - Daily: 2 hari
  */
-const HISTORICAL_WEEK_THRESHOLD = 2;
+const HISTORICAL_PERIOD_THRESHOLD = 2;
 
 type ProgressEntry = {
   itemId: string;
@@ -27,17 +32,6 @@ export type UpdateProgressResult = {
   historicalCount?: number;
 };
 
-function computeCurrentWeek(
-  startedAt: string | null,
-  createdAt: Date,
-): number {
-  const start = startedAt ? new Date(`${startedAt}T00:00:00`) : createdAt;
-  const now = new Date();
-  const diffMs = now.getTime() - start.getTime();
-  if (diffMs < 0) return 1;
-  const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  return Math.max(1, Math.floor(days / 7) + 1);
-}
 
 /**
  * Bulk upsert progress entries.
@@ -103,19 +97,25 @@ export async function updateProgress(
     return { ok: true, saved: 0 };
   }
 
-  // Hitung minggu berjalan project ini (buat deteksi historical edits)
+  // Hitung periode berjalan project ini (buat deteksi historical edits)
   const projectRows = await db
     .select({
       startedAt: schema.projects.startedAt,
       createdAt: schema.projects.createdAt,
+      progressPeriod: schema.projects.progressPeriod,
     })
     .from(schema.projects)
     .where(eq(schema.projects.id, projectId))
     .limit(1);
-  const currentWeek = projectRows[0]
-    ? computeCurrentWeek(projectRows[0].startedAt, projectRows[0].createdAt)
+  const periodConfig = getPeriodConfig(projectRows[0]?.progressPeriod);
+  const currentPeriod = projectRows[0]
+    ? computeCurrentPeriod(
+        projectRows[0].startedAt,
+        projectRows[0].createdAt,
+        periodConfig,
+      )
     : 1;
-  const lockedBefore = currentWeek - HISTORICAL_WEEK_THRESHOLD;
+  const lockedBefore = currentPeriod - HISTORICAL_PERIOD_THRESHOLD;
   const historical = filtered.filter((p) => p.weekNum < lockedBefore);
 
   // Bulk upsert via INSERT ... ON CONFLICT DO UPDATE
@@ -155,12 +155,13 @@ export async function updateProgress(
       projectId,
       userId: user.id,
       action: "progress_historical_edit",
-      summary: `Edit realisasi minggu lampau (${historical.length} entri)`,
+      summary: `Edit realisasi ${periodConfig.pluralLower} lampau (${historical.length} entri)`,
       details: {
         historicalCount: historical.length,
-        currentWeek,
+        currentPeriod,
+        periodType: periodConfig.type,
         lockedBefore,
-        weekNumbers: Array.from(
+        periodNumbers: Array.from(
           new Set(historical.map((h) => h.weekNum)),
         ).sort((a, b) => a - b),
       },

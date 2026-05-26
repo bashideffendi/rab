@@ -6,6 +6,7 @@ import { and, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { requireUser } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
+import { isProgressPeriod, type ProgressPeriod } from "@/lib/period";
 
 const PROJECT_STATUSES = ["draft", "active", "archived"] as const;
 type ProjectStatus = (typeof PROJECT_STATUSES)[number];
@@ -29,7 +30,17 @@ type ProjectField =
   | "projectType"
   | "luasTanah"
   | "luasBangunan"
-  | "startedAt";
+  | "startedAt"
+  | "progressPeriod";
+
+function parseProgressPeriod(
+  v: FormDataEntryValue | null,
+  fallback: ProgressPeriod = "weekly",
+): ProgressPeriod {
+  if (v == null) return fallback;
+  const s = v.toString().trim();
+  return isProgressPeriod(s) ? s : fallback;
+}
 
 export type CreateProjectFormState = {
   error?: string;
@@ -125,6 +136,7 @@ export async function createProject(
     "0.00",
   );
   const dibulatkanKe = parseInt0OrPositive(formData.get("dibulatkanKe"), 1000);
+  const progressPeriod = parseProgressPeriod(formData.get("progressPeriod"));
 
   const fieldErrors: Partial<Record<ProjectField, string>> = {};
   if (!name) fieldErrors.name = "Nama project wajib diisi.";
@@ -191,6 +203,7 @@ export async function createProject(
         ppnPercent,
         overheadPercent,
         dibulatkanKe,
+        progressPeriod,
       })
       .returning({ id: schema.projects.id });
     inserted = rows[0];
@@ -249,6 +262,7 @@ export async function updateProject(
     "0.00",
   );
   const dibulatkanKe = parseInt0OrPositive(formData.get("dibulatkanKe"), 1000);
+  const progressPeriod = parseProgressPeriod(formData.get("progressPeriod"));
 
   const fieldErrors: Partial<Record<UpdateField, string>> = {};
   if (!name) fieldErrors.name = "Nama project wajib diisi.";
@@ -322,6 +336,7 @@ export async function updateProject(
         ppnPercent,
         overheadPercent,
         dibulatkanKe,
+        progressPeriod,
         updatedAt: new Date(),
       })
       .where(
@@ -390,6 +405,7 @@ export async function duplicateProject(formData: FormData) {
       ppnPercent: source.ppnPercent,
       overheadPercent: source.overheadPercent,
       dibulatkanKe: source.dibulatkanKe,
+      progressPeriod: source.progressPeriod,
       isTemplate: false,
     })
     .returning({ id: schema.projects.id });

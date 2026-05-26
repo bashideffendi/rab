@@ -102,6 +102,11 @@ export const projects = pgTable(
     // Tanggal mulai pelaksanaan (SPMK / kontrak). Dipakai buat hitung minggu
     // berjalan di Progress page. Null → fallback ke createdAt.
     startedAt: date("started_at"),
+    // Period unit untuk Schedule + Progress: 'weekly' (default) atau 'daily'.
+    // Mengubah kolom ini setelah ada data progress = data jadi misleading
+    // (angka 12 di weekly = minggu 12, di daily = hari 12). UI lock setelah
+    // ada progress entry, atau warning reset.
+    progressPeriod: text("progress_period").notNull().default("weekly"),
     ppnPercent: numeric("ppn_percent", { precision: 5, scale: 2 })
       .notNull()
       .default("11.00"),

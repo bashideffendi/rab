@@ -9,6 +9,7 @@ import { AlamatPicker } from "@/components/ui/alamat-picker";
 import { createProject, type CreateProjectFormState } from "../actions";
 import { titleCaseOnBlur } from "@/lib/text-format";
 import { PROJECT_TYPES } from "@/lib/project-types";
+import { PROGRESS_PERIODS } from "@/lib/period";
 
 type RegionOption = {
   id: string;
@@ -255,6 +256,25 @@ export function NewProjectForm({
               step="100"
               min="0"
             />
+          </Field>
+        </div>
+        <div className="mt-4">
+          <Field
+            label="Periode Progress"
+            htmlFor="progressPeriod"
+            hint="Unit waktu untuk Schedule + Progress Tracking. Pilih sesuai durasi project."
+          >
+            <Select
+              id="progressPeriod"
+              name="progressPeriod"
+              defaultValue="weekly"
+            >
+              {PROGRESS_PERIODS.map((p) => (
+                <option key={p.value} value={p.value}>
+                  {p.label} — {p.hint}
+                </option>
+              ))}
+            </Select>
           </Field>
         </div>
       </div>

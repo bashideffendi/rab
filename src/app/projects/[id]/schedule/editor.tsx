@@ -7,6 +7,7 @@ import {
   updateItemsSchedule,
   updatePlannedDistribution,
 } from "@/app/projects/schedule-actions";
+import { getPeriodConfig, type ProgressPeriod } from "@/lib/period";
 import { compareWbsCode, formatIDR } from "@/lib/utils";
 
 type Item = {
@@ -36,16 +37,28 @@ function calcTotal(item: Item): number {
   return Number(item.volume) * Number(item.unitPrice);
 }
 
+// Cap input minggu di 520 (~10 tahun) biar table gak meledak kalau user
+// ngetik angka raksasa. Empty string lewat (user belum input).
+function clampStr(raw: string, min: number, max: number): string {
+  if (raw === "") return raw;
+  const n = Number(raw);
+  if (!Number.isFinite(n)) return raw;
+  return String(Math.max(min, Math.min(max, Math.floor(n))));
+}
+
 
 export function ScheduleEditor({
   projectId,
   initialItems,
   initialPlanned,
+  periodType = "weekly",
 }: {
   projectId: string;
   initialItems: Item[];
   initialPlanned: PlannedEntry[];
+  periodType?: ProgressPeriod;
 }) {
+  const periodConfig = getPeriodConfig(periodType);
   // Sort items by WBS code
   const sortedItems = useMemo(
     () =>
@@ -202,8 +215,12 @@ export function ScheduleEditor({
               <th className="px-3 py-3">Pekerjaan</th>
               <th className="px-3 py-3 text-right">Total</th>
               <th className="px-3 py-3 text-right">Bobot %</th>
-              <th className="w-24 px-3 py-3 text-center">Mulai (Mg)</th>
-              <th className="w-24 px-3 py-3 text-center">Durasi (Mg)</th>
+              <th className="w-24 px-3 py-3 text-center">
+                Mulai ({periodConfig.abbrev})
+              </th>
+              <th className="w-24 px-3 py-3 text-center">
+                Durasi ({periodConfig.abbrev})
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -230,10 +247,11 @@ export function ScheduleEditor({
                     <Input
                       type="number"
                       min="1"
+                      max="520"
                       placeholder="—"
                       value={e.startWeek}
                       onChange={(ev) =>
-                        updateEdit(it.id, { startWeek: ev.target.value })
+                        updateEdit(it.id, { startWeek: clampStr(ev.target.value, 1, 520) })
                       }
                       className="text-center font-mono"
                     />
@@ -242,10 +260,11 @@ export function ScheduleEditor({
                     <Input
                       type="number"
                       min="1"
+                      max="520"
                       placeholder="—"
                       value={e.durationWeeks}
                       onChange={(ev) =>
-                        updateEdit(it.id, { durationWeeks: ev.target.value })
+                        updateEdit(it.id, { durationWeeks: clampStr(ev.target.value, 1, 520) })
                       }
                       className="text-center font-mono"
                     />
@@ -262,7 +281,9 @@ export function ScheduleEditor({
         <div className="text-sm">
           <span className="text-muted-foreground">Total durasi project: </span>
           <strong className="text-foreground">
-            {totalWeeks > 0 ? `${totalWeeks} minggu` : "—"}
+            {totalWeeks > 0
+              ? `${totalWeeks} ${periodConfig.pluralLower}`
+              : "—"}
           </strong>
         </div>
         <div className="flex items-center gap-3">
@@ -287,7 +308,7 @@ export function ScheduleEditor({
           <div className="border-b border-border px-4 py-3">
             <h3 className="text-base font-semibold">Gantt Chart</h3>
             <p className="text-xs text-muted-foreground">
-              Visual timeline {totalWeeks} minggu
+              Visual timeline {totalWeeks} {periodConfig.pluralLower}
             </p>
           </div>
           <GanttChart
@@ -302,10 +323,11 @@ export function ScheduleEditor({
       {totalWeeks > 0 && (
         <details className="rounded-md border border-border bg-card shadow-sm">
           <summary className="cursor-pointer border-b border-border px-4 py-3 text-sm font-semibold hover:bg-muted/30">
-            Distribusi Bobot Mingguan{" "}
+            Distribusi Bobot per {periodConfig.label}{" "}
             <span className="font-normal text-muted-foreground">
-              — Opsional, default flat (100% ÷ durasi). Override per minggu
-              kalau laporan kontraktor pake kurva non-linier.
+              — Opsional, default flat (100% ÷ durasi). Override per{" "}
+              {periodConfig.pluralLower} kalau laporan kontraktor pake kurva
+              non-linier.
             </span>
           </summary>
           <PlannedMatrix
@@ -315,6 +337,7 @@ export function ScheduleEditor({
             totalWeeks={totalWeeks}
             getPlannedFor={getPlannedFor}
             onCellChange={setPlannedCell}
+            abbrev={periodConfig.abbrev}
           />
           <div className="flex items-center justify-between gap-3 border-t border-border px-4 py-3">
             <div className="text-xs">
@@ -323,7 +346,7 @@ export function ScheduleEditor({
               )}
               {plannedSaved && !plannedError && (
                 <span className="font-medium text-success">
-                  ✓ Bobot mingguan tersimpan
+                  ✓ Bobot {periodConfig.pluralLower} tersimpan
                 </span>
               )}
               {!plannedError && !plannedSaved && (
@@ -340,7 +363,9 @@ export function ScheduleEditor({
               onClick={handlePlannedSave}
               disabled={plannedPending}
             >
-              {plannedPending ? "Menyimpan…" : "Simpan Bobot Mingguan"}
+              {plannedPending
+                ? "Menyimpan…"
+                : `Simpan Bobot ${periodConfig.label}`}
             </Button>
           </div>
         </details>
@@ -356,6 +381,7 @@ function PlannedMatrix({
   totalWeeks,
   getPlannedFor,
   onCellChange,
+  abbrev,
 }: {
   items: Item[];
   edits: Map<string, ItemEdit>;
@@ -363,6 +389,7 @@ function PlannedMatrix({
   totalWeeks: number;
   getPlannedFor: (itemId: string, weekNum: number, dur: number) => number;
   onCellChange: (itemId: string, weekNum: number, percent: number) => void;
+  abbrev: string;
 }) {
   const scheduled = items.filter((it) => {
     const e = edits.get(it.id);
@@ -397,7 +424,7 @@ function PlannedMatrix({
                 key={w}
                 className="min-w-[64px] px-1 py-2 text-center font-mono"
               >
-                M{w}
+                {abbrev}{w}
               </th>
             ))}
             <th className="min-w-[64px] px-2 py-2 text-right font-mono">

@@ -4,6 +4,7 @@ import { and, asc, eq, inArray } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { AppShell } from "@/components/app-shell";
 import { requireUser } from "@/lib/auth";
+import { computeCurrentPeriod, getPeriodConfig } from "@/lib/period";
 import { ProgressEditor } from "./editor";
 
 export const dynamic = "force-dynamic";
@@ -34,31 +35,12 @@ async function loadProject(id: string, userId: string) {
       name: schema.projects.name,
       startedAt: schema.projects.startedAt,
       createdAt: schema.projects.createdAt,
+      progressPeriod: schema.projects.progressPeriod,
     })
     .from(schema.projects)
     .where(and(eq(schema.projects.id, id), eq(schema.projects.userId, userId)))
     .limit(1);
   return rows[0] ?? null;
-}
-
-/**
- * Hitung minggu berjalan berdasarkan tanggal mulai pelaksanaan.
- * - Pake `startedAt` (kalau auditor udah isi).
- * - Fallback ke `createdAt` kalau belum.
- * - Output clamp ke [1, totalWeeks] supaya highlight selalu valid.
- */
-function computeCurrentWeek(
-  startedAt: string | null,
-  createdAt: Date,
-  totalWeeks: number,
-): number {
-  const start = startedAt ? new Date(`${startedAt}T00:00:00`) : createdAt;
-  const now = new Date();
-  const diffMs = now.getTime() - start.getTime();
-  if (diffMs < 0) return 1; // proyek belum mulai
-  const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  const week = Math.floor(days / 7) + 1;
-  return Math.max(1, Math.min(totalWeeks, week));
 }
 
 async function loadItems(projectId: string): Promise<ItemRow[]> {
@@ -168,11 +150,13 @@ export default async function ProgressPage({
       Math.max(max, (it.startWeek ?? 0) + (it.durationWeeks ?? 0) - 1),
     0,
   );
-  const currentWeek = computeCurrentWeek(
+  const periodConfig = getPeriodConfig(project.progressPeriod);
+  const rawCurrent = computeCurrentPeriod(
     project.startedAt,
     project.createdAt,
-    Math.max(totalWeeks, 1),
+    periodConfig,
   );
+  const currentWeek = Math.max(1, Math.min(Math.max(totalWeeks, 1), rawCurrent));
   const usingFallback = project.startedAt == null;
 
   return (
@@ -193,9 +177,9 @@ export default async function ProgressPage({
             Realisasi vs Rencana
           </h1>
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-            Input persen aktual per item per minggu. Sistem menghitung kumulatif
-            rencana (dari schedule) vs realisasi, plus deviasinya. Kurva S
-            otomatis tampil di bawah.
+            Input persen aktual per item per {periodConfig.pluralLower}. Sistem
+            menghitung kumulatif rencana (dari schedule) vs realisasi, plus
+            deviasinya. Kurva S otomatis tampil di bawah.
           </p>
         </header>
 
@@ -209,7 +193,7 @@ export default async function ProgressPage({
           <EmptyState
             href={`/projects/${project.id}/schedule`}
             cta="halaman Schedule"
-            message="Belum ada item yang di-schedule. Set minggu mulai dan durasi tiap item dulu di Schedule."
+            message={`Belum ada item yang di-schedule. Set ${periodConfig.pluralLower} mulai dan durasi tiap item dulu di Schedule.`}
           />
         ) : (
           <ProgressEditor
@@ -221,6 +205,7 @@ export default async function ProgressPage({
             totalWeeks={Math.max(totalWeeks, 1)}
             currentWeek={currentWeek}
             usingFallback={usingFallback}
+            periodType={periodConfig.type}
           />
         )}
       </section>

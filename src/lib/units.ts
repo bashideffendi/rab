@@ -24,9 +24,11 @@ export const STANDARD_UNITS = [
   "bulan",
   "lonjor",
   "lbr",
-  "sak",
+  "zak",
   "ltr",
   "dus",
+  "lusin",
+  "roll",
   "OJ",
   "OH",
   "OB",
@@ -76,8 +78,13 @@ const NORMALIZE_MAP: Record<string, string> = {
   // Lonjor / batang
   "btg": "lonjor",
   "batang": "lonjor",
-  // Sak / zak (semen)
-  "zak": "sak",
+  // Zak / sak (semen) — BPS pake "zak"
+  "sak": "zak",
+  // Lusin (12 buah)
+  "lsn": "lusin",
+  // Roll
+  "rol": "roll",
+  "rll": "roll",
   // Liter
   "liter": "ltr",
   "l": "ltr",

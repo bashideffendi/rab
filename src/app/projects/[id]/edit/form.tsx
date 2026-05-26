@@ -10,6 +10,7 @@ import { updateProject, type UpdateProjectFormState } from "../../actions";
 import type { schema } from "@/db";
 import { titleCaseOnBlur } from "@/lib/text-format";
 import { PROJECT_TYPES } from "@/lib/project-types";
+import { PROGRESS_PERIODS } from "@/lib/period";
 
 type ProjectRow = typeof schema.projects.$inferSelect;
 
@@ -281,6 +282,25 @@ export function EditProjectForm({
               step="100"
               min="0"
             />
+          </Field>
+        </div>
+        <div className="mt-4">
+          <Field
+            label="Periode Progress"
+            htmlFor="progressPeriod"
+            hint="Unit waktu Schedule + Progress. ⚠️ Mengubah setelah ada data progress akan bikin angka misleading (nomor 12 jadi 'hari 12' bukan 'minggu 12'). Reset progress dulu kalau ganti."
+          >
+            <Select
+              id="progressPeriod"
+              name="progressPeriod"
+              defaultValue={project.progressPeriod}
+            >
+              {PROGRESS_PERIODS.map((p) => (
+                <option key={p.value} value={p.value}>
+                  {p.label} — {p.hint}
+                </option>
+              ))}
+            </Select>
           </Field>
         </div>
       </div>

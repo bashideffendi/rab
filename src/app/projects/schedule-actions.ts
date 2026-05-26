@@ -33,14 +33,24 @@ export async function updateItemsSchedule(formData: FormData) {
     throw new Error("Payload harus array.");
   }
 
+  // Clamp ke 1..520 (10 tahun) biar gak ada angka liar yang nge-render table
+  // raksasa di Schedule/Progress page.
+  const clampWeek = (v: number | null): number | null => {
+    if (v == null) return null;
+    if (!Number.isFinite(v)) return null;
+    const n = Math.floor(v);
+    if (n <= 0) return null;
+    return Math.min(520, n);
+  };
+
   // Update per item (sequentially — gak terlalu banyak biasanya)
   for (const p of payload) {
     if (!p.itemId) continue;
     await db
       .update(schema.projectItems)
       .set({
-        startWeek: p.startWeek,
-        durationWeeks: p.durationWeeks,
+        startWeek: clampWeek(p.startWeek),
+        durationWeeks: clampWeek(p.durationWeeks),
         updatedAt: new Date(),
       })
       .where(
