@@ -1,4 +1,4 @@
-import { and, ilike, or, sql, type SQL } from "drizzle-orm";
+import { and, eq, ilike, or, sql, type SQL } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { getCurrentUser } from "@/lib/auth";
 import { expandQuery } from "@/lib/ahsp-search";
@@ -35,8 +35,14 @@ export async function GET(request: Request) {
         unit: schema.ahspItems.unit,
         category: schema.ahspItems.category,
         sourceDoc: schema.ahspItems.sourceDoc,
+        versionName: schema.ahspVersions.name,
+        versionCurrent: schema.ahspVersions.isCurrent,
       })
       .from(schema.ahspItems)
+      .leftJoin(
+        schema.ahspVersions,
+        eq(schema.ahspItems.versionId, schema.ahspVersions.id),
+      )
       .orderBy(schema.ahspItems.code)
       .limit(limit);
     return Response.json(rows);
@@ -76,8 +82,14 @@ export async function GET(request: Request) {
       unit: schema.ahspItems.unit,
       category: schema.ahspItems.category,
       sourceDoc: schema.ahspItems.sourceDoc,
+      versionName: schema.ahspVersions.name,
+      versionCurrent: schema.ahspVersions.isCurrent,
     })
     .from(schema.ahspItems)
+    .leftJoin(
+      schema.ahspVersions,
+      eq(schema.ahspItems.versionId, schema.ahspVersions.id),
+    )
     .where(whereClause)
     .orderBy(
       // Custom rank: exact code = 0, code prefix = 1, name match = 2

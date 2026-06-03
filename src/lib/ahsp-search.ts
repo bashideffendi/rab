@@ -12,22 +12,24 @@
  * Pure function, no DB — dipakai di /api/ahsp/search dan buat hint di picker.
  */
 
-// Konversi mutu beton karakteristik K (kg/cm², kubus) → f'c (MPa, silinder),
-// mengikuti tabel ekuivalensi SNI yang dipakai di AHSP PUPR.
-const K_TO_FC: Record<string, string> = {
-  "100": "7,4",
-  "125": "9,8",
-  "150": "12,2",
-  "175": "14,5",
-  "200": "16,9",
-  "225": "19,3",
-  "250": "21,7",
-  "275": "24",
-  "300": "26,4",
-  "350": "31,2",
-  "400": "33,2",
-  "450": "37,4",
-  "500": "41,5",
+// Mutu beton karakteristik K (kg/cm², kubus) → f'c (MPa, silinder). Tiap K
+// kasih nilai presisi (×0,083) PLUS mutu standar SE DJBK terdekat — data AHSP
+// pakai f'c BULAT (7,5/10/15/17/20/25/30/35/40), bukan nilai presisi. Tanpa
+// nilai bulat, "K-225" cuma cocok item ilustratif, bukan "f'c 20 MPa" riil.
+const K_TO_FC: Record<string, string[]> = {
+  "100": ["7,4", "7,5"],
+  "125": ["9,8", "10"],
+  "150": ["12,2", "12,5", "15"],
+  "175": ["14,5", "15"],
+  "200": ["16,9", "17"],
+  "225": ["19,3", "20"],
+  "250": ["21,7", "20", "25"],
+  "275": ["24", "25"],
+  "300": ["26,4", "25", "30"],
+  "350": ["31,2", "30", "35"],
+  "400": ["33,2", "35"],
+  "450": ["37,4", "40"],
+  "500": ["41,5", "45"],
 };
 
 // Sinonim istilah BOW/SNI/lapangan → istilah yang dipakai di nama AHSP.
@@ -62,10 +64,12 @@ export function expandQuery(query: string): string[][] {
     const grade = tok.match(/^K(\d{2,3})$/i);
     if (grade) {
       const k = grade[1];
-      const fc = K_TO_FC[k];
-      if (fc) {
-        patterns.add(fc); // "19,3"
-        patterns.add(fc.replace(",", ".")); // "19.3"
+      const fcs = K_TO_FC[k];
+      if (fcs) {
+        for (const fc of fcs) {
+          patterns.add(fc); // "20" / "19,3"
+          patterns.add(fc.replace(",", ".")); // "19.3"
+        }
         patterns.add(`K ${k}`);
         patterns.add(`K-${k}`);
         patterns.add(`K${k}`);
@@ -87,6 +91,6 @@ export function expandQuery(query: string): string[][] {
 export function fcHintFor(query: string): { k: string; fc: string } | null {
   const m = query.match(/\bK[-\s]?(\d{2,3})\b/i);
   if (!m) return null;
-  const fc = K_TO_FC[m[1]];
-  return fc ? { k: m[1], fc } : null;
+  const fcs = K_TO_FC[m[1]];
+  return fcs ? { k: m[1], fc: fcs[0] } : null;
 }

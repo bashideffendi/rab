@@ -7,6 +7,26 @@ import { fcHintFor } from "@/lib/ahsp-search";
 const isIllustrative = (sourceDoc?: string | null) =>
   /illustrative|ilustratif/i.test(sourceDoc ?? "");
 
+/** Tag edisi AHSP: hijau utk versi berlaku, amber utk edisi lama (superseded). */
+function VersionTag({
+  name,
+  current,
+}: {
+  name?: string | null;
+  current?: boolean | null;
+}) {
+  if (!name) return null;
+  const cls = current === false ? "text-amber-600" : "text-emerald-600";
+  const tag = current === false ? " (lama)" : current ? " ✓" : "";
+  return (
+    <span className={cls}>
+      {" · "}
+      {name}
+      {tag}
+    </span>
+  );
+}
+
 export type AhspOption = {
   id: string;
   code: string;
@@ -14,6 +34,8 @@ export type AhspOption = {
   unit: string;
   category: string;
   sourceDoc?: string | null;
+  versionName?: string | null;
+  versionCurrent?: boolean | null;
 };
 
 /**
@@ -125,7 +147,10 @@ export function AhspPicker({
             </p>
             <p className="text-xs text-muted-foreground">
               {selected.unit}
-              {selected.sourceDoc ? ` · ${selected.sourceDoc}` : ""}
+              <VersionTag
+                name={selected.versionName ?? selected.sourceDoc}
+                current={selected.versionCurrent}
+              />
             </p>
           </div>
           <button
@@ -205,7 +230,10 @@ export function AhspPicker({
                     </div>
                     <p className="text-[10px] text-muted-foreground">
                       Sat: {opt.unit}
-                      {opt.sourceDoc ? ` · ${opt.sourceDoc}` : ""}
+                      <VersionTag
+                        name={opt.versionName ?? opt.sourceDoc}
+                        current={opt.versionCurrent}
+                      />
                     </p>
                   </button>
                 </li>

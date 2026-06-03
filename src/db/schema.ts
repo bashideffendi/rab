@@ -122,6 +122,11 @@ export const projects = pgTable(
     smkkPercent: numeric("smkk_percent", { precision: 5, scale: 2 })
       .notNull()
       .default("1.50"),
+    // Edisi AHSP default project (FK ahsp_versions). NULL = ikut versi current.
+    ahspVersionId: uuid("ahsp_version_id").references(
+      (): AnyPgColumn => ahspVersions.id,
+      { onDelete: "set null" },
+    ),
     isArchived: boolean("is_archived").notNull().default(false),
     // Template fields: kalau is_template = true, project ini gak pernah keliatan
     // di list user. Cuma muncul di gallery /projects untuk di-clone.
@@ -172,8 +177,30 @@ export const wbsItems = pgTable(
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
-// AHSP REFERENCE — items + components + materials
+// AHSP REFERENCE — versions + items + components + materials
 // ─────────────────────────────────────────────────────────────────────────────
+
+// Edisi/versi regulasi AHSP. SE Dirjen Bina Konstruksi ganti hampir tahunan
+// (SE 30/2025 → SE 47/2026); tiap item nunjuk ke versi-nya biar bisa difilter,
+// di-badge, dan di-swap tanpa nyampur edisi. is_current = backbone aktif.
+export const ahspVersions = pgTable(
+  "ahsp_versions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    code: text("code").notNull(), // slug stabil: "SE-47-2026", "SE-30-2025"
+    name: text("name").notNull(), // "SE DJBK 47/2026"
+    issuingBody: text("issuing_body"),
+    documentNumber: text("document_number"), // "47/SE/Dk/2026"
+    effectiveFrom: date("effective_from"),
+    effectiveTo: date("effective_to"), // NULL = masih berlaku
+    documentUrl: text("document_url"),
+    isCurrent: boolean("is_current").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [uniqueIndex("ahsp_versions_code_idx").on(t.code)],
+);
 
 export const ahspItems = pgTable(
   "ahsp_items",
@@ -183,6 +210,9 @@ export const ahspItems = pgTable(
     name: text("name").notNull(),
     category: ahspCategory("category").notNull(),
     unit: text("unit").notNull(), // "m3", "m2", "kg"
+    versionId: uuid("version_id").references(() => ahspVersions.id, {
+      onDelete: "set null",
+    }),
     sourceDoc: text("source_doc"), // "Permen PUPR No. 1/2022"
     sourceModule: text("source_module"), // "Modul 4 Cipta Karya"
     sourceSection: text("source_section"), // pasal/lampiran specifier
@@ -197,6 +227,7 @@ export const ahspItems = pgTable(
     // sumber (Permen PUPR, SE DJBK, SNI, edisi tahun beda) — semua valid.
     index("ahsp_items_code_idx").on(t.code),
     index("ahsp_items_category_idx").on(t.category),
+    index("ahsp_items_version_idx").on(t.versionId),
   ],
 );
 
