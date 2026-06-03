@@ -33,6 +33,7 @@ async function loadProject(id: string, userId: string) {
       id: schema.projects.id,
       name: schema.projects.name,
       progressPeriod: schema.projects.progressPeriod,
+      startedAt: schema.projects.startedAt,
     })
     .from(schema.projects)
     .where(and(eq(schema.projects.id, id), eq(schema.projects.userId, userId)))
@@ -143,12 +144,29 @@ export default async function SchedulePage({
             .
           </div>
         ) : (
-          <ScheduleEditor
-            projectId={project.id}
-            initialItems={items}
-            initialPlanned={planned}
-            periodType={periodConfig.type}
-          />
+          <>
+            {project.startedAt && (
+              <p className="mb-3 text-xs text-muted-foreground">
+                📅 Mulai pelaksanaan:{" "}
+                <span className="font-medium text-foreground">
+                  {new Date(
+                    `${project.startedAt}T00:00:00`,
+                  ).toLocaleDateString("id-ID", {
+                    day: "2-digit",
+                    month: "long",
+                    year: "numeric",
+                  })}
+                </span>{" "}
+                — {periodConfig.label} 1 dimulai tanggal ini.
+              </p>
+            )}
+            <ScheduleEditor
+              projectId={project.id}
+              initialItems={items}
+              initialPlanned={planned}
+              periodType={periodConfig.type}
+            />
+          </>
         )}
       </section>
     </AppShell>
