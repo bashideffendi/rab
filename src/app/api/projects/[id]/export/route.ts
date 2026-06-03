@@ -36,6 +36,7 @@ async function loadProject(id: string): Promise<
       alamat: schema.projects.alamat,
       ppnPercent: schema.projects.ppnPercent,
       overheadPercent: schema.projects.overheadPercent,
+      smkkPercent: schema.projects.smkkPercent,
       dibulatkanKe: schema.projects.dibulatkanKe,
       regionId: schema.projects.regionId,
     })

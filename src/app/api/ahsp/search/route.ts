@@ -1,6 +1,7 @@
-import { ilike, or, sql } from "drizzle-orm";
+import { and, ilike, or, sql, type SQL } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { getCurrentUser } from "@/lib/auth";
+import { expandQuery } from "@/lib/ahsp-search";
 
 export const dynamic = "force-dynamic";
 
@@ -41,8 +42,32 @@ export async function GET(request: Request) {
     return Response.json(rows);
   }
 
-  // Match by name OR code (case-insensitive). Sort: exact code > code-prefix > name match
-  const pattern = `%${query}%`;
+  // Tokenisasi + alias (K-225 → f'c 19,3 dst, sinonim BOW/SNI). Tiap token
+  // WAJIB cocok (AND); tiap token boleh lewat salah satu alias-nya (OR antar
+  // nama/kode). Ini benerin (a) query multi-kata yang dulu butuh substring
+  // kontigu, dan (b) mutu beton kolokial yang gak ada di data f'c MPa.
+  const tokenClauses = expandQuery(query)
+    .map((patterns) =>
+      or(
+        ...patterns.flatMap((p) => {
+          const like = `%${p}%`;
+          return [
+            ilike(schema.ahspItems.name, like),
+            ilike(schema.ahspItems.code, like),
+          ];
+        }),
+      ),
+    )
+    .filter((c): c is SQL => c != null);
+
+  const whereClause =
+    tokenClauses.length === 0
+      ? ilike(schema.ahspItems.name, `%${query}%`)
+      : tokenClauses.length === 1
+        ? tokenClauses[0]
+        : and(...tokenClauses);
+
+  // Sort: exact code > code-prefix > name match
   const rows = await db
     .select({
       id: schema.ahspItems.id,
@@ -53,12 +78,7 @@ export async function GET(request: Request) {
       sourceDoc: schema.ahspItems.sourceDoc,
     })
     .from(schema.ahspItems)
-    .where(
-      or(
-        ilike(schema.ahspItems.name, pattern),
-        ilike(schema.ahspItems.code, pattern),
-      ),
-    )
+    .where(whereClause)
     .orderBy(
       // Custom rank: exact code = 0, code prefix = 1, name match = 2
       sql`CASE

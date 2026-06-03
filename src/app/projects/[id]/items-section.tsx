@@ -4,7 +4,8 @@ import { ItemAddForm } from "./item-add-form";
 import { StageButton } from "./stage-button";
 import { ItemsTableBody } from "./items-table-body";
 import { compareWbsCode, formatIDR } from "@/lib/utils";
-import { roundToNearest, terbilangRupiah } from "@/lib/terbilang";
+import { terbilangRupiah } from "@/lib/terbilang";
+import { computeRekap, BASIS_REGULASI } from "@/lib/rekap";
 
 type ItemRow = {
   id: string;
@@ -138,12 +139,14 @@ export async function ItemsSection({
   projectId,
   ppnPercent,
   overheadPercent,
+  smkkPercent,
   dibulatkanKe,
   regionId = null,
 }: {
   projectId: string;
   ppnPercent: string;
   overheadPercent: string;
+  smkkPercent: string;
   dibulatkanKe: number;
   regionId?: string | null;
 }) {
@@ -161,13 +164,13 @@ export async function ItemsSection({
 
   const groups = groupByWbs(items);
   const subtotal = groups.reduce((sum, g) => sum + g.subtotal, 0);
-  const overheadPct = Number(overheadPercent);
-  const ppnPct = Number(ppnPercent);
-  const overhead = subtotal * (overheadPct / 100);
-  const subPlusOverhead = subtotal + overhead;
-  const ppn = subPlusOverhead * (ppnPct / 100);
-  const total = subPlusOverhead + ppn;
-  const dibulatkan = roundToNearest(total, dibulatkanKe);
+  const { overheadPct, overhead, smkkPct, smkk, ppnPct, ppn, total, dibulatkan } =
+    computeRekap(subtotal, {
+      overheadPercent,
+      smkkPercent,
+      ppnPercent,
+      dibulatkanKe,
+    });
   const terbilang = items.length > 0 ? terbilangRupiah(dibulatkan) : "";
 
   return (
@@ -243,6 +246,20 @@ export async function ItemsSection({
                   <td></td>
                 </tr>
               )}
+              {smkkPct > 0 && (
+                <tr>
+                  <td
+                    colSpan={4}
+                    className="px-3 py-2 text-right text-muted-foreground"
+                  >
+                    SMKK ({smkkPct}%)
+                  </td>
+                  <td className="px-3 py-2 text-right font-mono tabular-nums">
+                    {formatIDR(smkk)}
+                  </td>
+                  <td></td>
+                </tr>
+              )}
               <tr>
                 <td
                   colSpan={4}
@@ -285,6 +302,14 @@ export async function ItemsSection({
                   className="px-3 py-2 text-right text-xs italic text-muted-foreground"
                 >
                   Terbilang: <span className="not-italic">{terbilang}</span>
+                </td>
+              </tr>
+              <tr>
+                <td
+                  colSpan={6}
+                  className="px-3 pb-2 text-right text-[10px] text-muted-foreground"
+                >
+                  {BASIS_REGULASI}
                 </td>
               </tr>
             </tfoot>

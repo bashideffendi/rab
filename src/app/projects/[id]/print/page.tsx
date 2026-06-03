@@ -13,7 +13,8 @@ import {
 import { db, schema } from "@/db";
 import { requireUser } from "@/lib/auth";
 import { formatIDR, formatDate } from "@/lib/utils";
-import { roundToNearest, terbilangRupiah } from "@/lib/terbilang";
+import { terbilangRupiah } from "@/lib/terbilang";
+import { computeRekap, BASIS_REGULASI } from "@/lib/rekap";
 
 export const dynamic = "force-dynamic";
 
@@ -223,13 +224,13 @@ export default async function PrintPage({
   );
 
   const subtotal = groups.reduce((s, g) => s + g.subtotal, 0);
-  const overheadPct = Number(project.overheadPercent);
-  const ppnPct = Number(project.ppnPercent);
-  const overhead = subtotal * (overheadPct / 100);
-  const subPlusOverhead = subtotal + overhead;
-  const ppn = subPlusOverhead * (ppnPct / 100);
-  const total = subPlusOverhead + ppn;
-  const dibulatkan = roundToNearest(total, project.dibulatkanKe);
+  const { overheadPct, overhead, smkkPct, smkk, ppnPct, ppn, total, dibulatkan } =
+    computeRekap(subtotal, {
+      overheadPercent: project.overheadPercent,
+      smkkPercent: project.smkkPercent,
+      ppnPercent: project.ppnPercent,
+      dibulatkanKe: project.dibulatkanKe,
+    });
 
   const tenaga = breakdown.filter((b) => b.type === "tenaga");
   const bahan = breakdown.filter((b) => b.type === "bahan");
@@ -316,6 +317,9 @@ export default async function PrintPage({
                   value={overhead}
                 />
               )}
+              {smkkPct > 0 && (
+                <SummaryRow label={`SMKK (${smkkPct}%)`} value={smkk} />
+              )}
               <SummaryRow label={`PPN (${ppnPct}%)`} value={ppn} />
               <SummaryRow label="Total" value={total} bold />
               <SummaryRow label="DIBULATKAN" value={dibulatkan} bold accent />
@@ -324,6 +328,7 @@ export default async function PrintPage({
           <p className="mt-3 text-sm italic">
             Terbilang: <span className="not-italic">{terbilangRupiah(dibulatkan)}</span>
           </p>
+          <p className="mt-1 text-[10px] text-zinc-500">{BASIS_REGULASI}</p>
         </section>
 
         {/* === RAB Detail === */}

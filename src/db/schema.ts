@@ -110,10 +110,18 @@ export const projects = pgTable(
     ppnPercent: numeric("ppn_percent", { precision: 5, scale: 2 })
       .notNull()
       .default("11.00"),
+    // Overhead & Keuntungan. Permen PUPR 8/2023 Pasal 11 ayat (3): 10–15%
+    // dari biaya langsung. Default 10% biar RAB gak under-estimate sistematis.
     overheadPercent: numeric("overhead_percent", { precision: 5, scale: 2 })
       .notNull()
-      .default("0.00"),
+      .default("10.00"),
     dibulatkanKe: integer("dibulatkan_ke").notNull().default(1000),
+    // Biaya Penerapan SMKK (Sistem Manajemen Keselamatan Konstruksi) — pos
+    // TERSENDIRI, bukan bagian overhead (Permen PUPR 8/2023 Pasal 22). % dari
+    // biaya langsung; default 1,5% (tipikal gedung risiko sedang).
+    smkkPercent: numeric("smkk_percent", { precision: 5, scale: 2 })
+      .notNull()
+      .default("1.50"),
     isArchived: boolean("is_archived").notNull().default(false),
     // Template fields: kalau is_template = true, project ini gak pernah keliatan
     // di list user. Cuma muncul di gallery /projects untuk di-clone.

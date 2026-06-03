@@ -2,6 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
+import { fcHintFor } from "@/lib/ahsp-search";
+
+const isIllustrative = (sourceDoc?: string | null) =>
+  /illustrative|ilustratif/i.test(sourceDoc ?? "");
 
 export type AhspOption = {
   id: string;
@@ -113,6 +117,11 @@ export function AhspPicker({
                 {selected.code}
               </span>{" "}
               <span>{selected.name}</span>
+              {isIllustrative(selected.sourceDoc) && (
+                <span className="ml-1.5 rounded border border-danger/40 bg-danger/10 px-1 py-0.5 text-[9px] font-medium uppercase tracking-wide text-danger">
+                  Ilustratif
+                </span>
+              )}
             </p>
             <p className="text-xs text-muted-foreground">
               {selected.unit}
@@ -149,6 +158,16 @@ export function AhspPicker({
       {/* Dropdown results */}
       {open && (
         <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-80 overflow-auto rounded-md border border-border bg-card shadow-lg">
+          {(() => {
+            const hint = fcHintFor(query);
+            return hint ? (
+              <div className="border-b border-border bg-accent/5 px-3 py-1.5 text-[10px] text-muted-foreground">
+                Mutu <span className="font-mono">K-{hint.k}</span> ≈{" "}
+                <span className="font-mono">f&apos;c {hint.fc} MPa</span> —
+                dicocokkan ke notasi AHSP.
+              </div>
+            ) : null;
+          })()}
           {loading && (
             <div className="px-3 py-2 text-xs text-muted-foreground">
               Cari…
@@ -178,6 +197,11 @@ export function AhspPicker({
                         {opt.code}
                       </span>
                       <span className="text-sm">{opt.name}</span>
+                      {isIllustrative(opt.sourceDoc) && (
+                        <span className="rounded border border-danger/40 bg-danger/10 px-1 py-0.5 text-[9px] font-medium uppercase tracking-wide text-danger">
+                          Ilustratif
+                        </span>
+                      )}
                     </div>
                     <p className="text-[10px] text-muted-foreground">
                       Sat: {opt.unit}

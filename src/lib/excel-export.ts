@@ -1,5 +1,6 @@
 import ExcelJS from "exceljs";
-import { roundToNearest, terbilangRupiah } from "./terbilang";
+import { terbilangRupiah } from "./terbilang";
+import { computeRekap, BASIS_REGULASI } from "./rekap";
 
 export type ExportProject = {
   name: string;
@@ -11,6 +12,7 @@ export type ExportProject = {
   alamat: string | null;
   ppnPercent: string;
   overheadPercent: string;
+  smkkPercent: string;
   dibulatkanKe: number;
 };
 
@@ -199,21 +201,17 @@ function buildRekapSheet(
     subtotal += g.subtotal;
   }
 
-  // Calc totals
-  const overheadPct = Number(project.overheadPercent);
-  const ppnPct = Number(project.ppnPercent);
-  const overhead = subtotal * (overheadPct / 100);
-  const subPlusOverhead = subtotal + overhead;
-  const ppn = subPlusOverhead * (ppnPct / 100);
-  const total = subPlusOverhead + ppn;
-  const dibulatkan = roundToNearest(total, project.dibulatkanKe);
+  // Calc totals (shared computeRekap — sama persis dgn UI & print)
+  const { overheadPct, overhead, smkkPct, smkk, ppnPct, ppn, dpp, total, dibulatkan } =
+    computeRekap(subtotal, project);
 
   // Summary rows
   cursor++;
   const summaryRows: Array<[string, number, boolean]> = [
     [`Subtotal`, subtotal, false],
     [`Overhead (${overheadPct}%)`, overhead, false],
-    [`Subtotal + Overhead`, subPlusOverhead, false],
+    [`SMKK (${smkkPct}%)`, smkk, false],
+    [`Jumlah sebelum PPN`, dpp, false],
     [`PPN (${ppnPct}%)`, ppn, false],
     [`Total`, total, false],
     [`DIBULATKAN`, dibulatkan, true],
@@ -257,6 +255,16 @@ function buildRekapSheet(
   ws.mergeCells(`A${cursor}:G${cursor}`);
   ws.getCell(`A${cursor}`).value = `Terbilang: ${terbilangRupiah(dibulatkan)}`;
   ws.getCell(`A${cursor}`).font = { italic: true };
+
+  // Basis perhitungan
+  cursor++;
+  ws.mergeCells(`A${cursor}:G${cursor}`);
+  ws.getCell(`A${cursor}`).value = BASIS_REGULASI;
+  ws.getCell(`A${cursor}`).font = {
+    italic: true,
+    size: 9,
+    color: { argb: "FF888888" },
+  };
 }
 
 // ─── RAB sheet (full items table) ───────────────────────────────────────────
@@ -377,17 +385,13 @@ function buildRabSheet(
 
   // Final totals block
   cursor++;
-  const overheadPct = Number(project.overheadPercent);
-  const ppnPct = Number(project.ppnPercent);
-  const overhead = grandTotal * (overheadPct / 100);
-  const subPlusOverhead = grandTotal + overhead;
-  const ppn = subPlusOverhead * (ppnPct / 100);
-  const total = subPlusOverhead + ppn;
-  const dibulatkan = roundToNearest(total, project.dibulatkanKe);
+  const { overheadPct, overhead, smkkPct, smkk, ppnPct, ppn, total, dibulatkan } =
+    computeRekap(grandTotal, project);
 
   const totalsRows: Array<[string, number, boolean]> = [
     ["Subtotal", grandTotal, false],
     [`Overhead (${overheadPct}%)`, overhead, false],
+    [`SMKK (${smkkPct}%)`, smkk, false],
     [`PPN (${ppnPct}%)`, ppn, false],
     ["Total", total, false],
     ["DIBULATKAN", dibulatkan, true],

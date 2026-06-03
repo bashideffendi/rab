@@ -4,8 +4,8 @@ import Anthropic from "@anthropic-ai/sdk";
  * AI extraction layer — call Claude API dengan PDF gambar kerja,
  * dapet draft RAB structured.
  *
- * Default model: claude-sonnet-4-5 (atau yang terbaru). Bisa override
- * via ANTHROPIC_MODEL env var (e.g., set ke claude-haiku-4-5 buat hemat).
+ * Model dibaca dari ANTHROPIC_MODEL env var; fallback ke DEFAULT_MODEL.
+ * Set ANTHROPIC_MODEL (e.g. claude-haiku-4-5 buat hemat) tanpa ubah kode.
  *
  * Output: WBS hierarchical + items dengan estimasi volume + confidence.
  * Server-side matching ke AHSP catalog dilakukan terpisah (lib/ahsp-match).
@@ -32,7 +32,7 @@ export type AIExtractedRab = {
   wbs_items: AIExtractedWbs[];
 };
 
-const DEFAULT_MODEL = "claude-sonnet-4-5";
+const DEFAULT_MODEL = "claude-sonnet-4-6";
 
 const SYSTEM_PROMPT = `Kamu adalah engineer sipil senior estimator yang ahli ngebaca gambar kerja konstruksi Indonesia. Tugasmu: analisa gambar kerja PDF yang di-upload, extract draft Rencana Anggaran Biaya (RAB) yang lengkap dan terstruktur.
 

@@ -247,7 +247,7 @@ export default async function ProjectDetailPage({
           />
           <MetaCard
             label="Konfigurasi RAB"
-            value={`PPN ${project.ppnPercent}% · Overhead ${project.overheadPercent}% · Bulat ${project.dibulatkanKe.toLocaleString("id-ID")}`}
+            value={`PPN ${project.ppnPercent}% · Overhead ${project.overheadPercent}% · SMKK ${project.smkkPercent}% · Bulat ${project.dibulatkanKe.toLocaleString("id-ID")}`}
             icon="⚙️"
           />
         </div>
@@ -355,6 +355,7 @@ export default async function ProjectDetailPage({
           projectId={project.id}
           ppnPercent={project.ppnPercent}
           overheadPercent={project.overheadPercent}
+          smkkPercent={project.smkkPercent}
           dibulatkanKe={project.dibulatkanKe}
           regionId={project.regionId}
         />

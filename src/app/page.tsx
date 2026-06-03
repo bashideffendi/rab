@@ -93,8 +93,8 @@ export default async function Home() {
               </h1>
               <ul className="mt-8 grid max-w-2xl gap-3 sm:grid-cols-2">
                 <HeroBullet
-                  title="AHSP 2026 Permen PUPR"
-                  desc="Koefisien resmi versi terbaru — dapat dilacak ke pasal sumber."
+                  title="AHSP PUPR — SE DJBK"
+                  desc="Koefisien resmi Permen PUPR 8/2023 + SE Dirjen Bina Konstruksi — tiap item dilacak ke sumbernya."
                 />
                 <HeroBullet
                   title="Harga menyesuaikan IKK BPS"
@@ -131,9 +131,9 @@ export default async function Home() {
 
             {/* Stats banner */}
             <div className="mt-16 grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-border bg-border md:grid-cols-4">
-              <Stat label="AHSP 2026" value="2.669+" />
+              <Stat label="Item AHSP" value="2.669+" />
               <Stat label="IKK BPS" value="34 Provinsi" />
-              <Stat label="Sumber" value="Permen PUPR" />
+              <Stat label="Sumber" value="PUPR · SE DJBK" />
               <Stat label="Export" value="Excel · PDF" />
             </div>
           </div>
@@ -353,8 +353,8 @@ function HeroBullet({ title, desc }: { title: string; desc: string }) {
 const features = [
   {
     icon: "📚",
-    title: "AHSP 2026 Permen PUPR",
-    desc: "Library 2.669+ item dari Analisis Harga Satuan Pekerjaan versi 2026 — Permen PUPR dan SE DJBK. Tiap item dapat dilacak ke pasal sumber resmi.",
+    title: "AHSP PUPR — SE DJBK",
+    desc: "Library 2.669+ item Analisis Harga Satuan Pekerjaan sesuai Permen PUPR 8/2023 dan SE Dirjen Bina Konstruksi. Tiap item dapat dilacak ke sumber resminya.",
   },
   {
     icon: "📍",

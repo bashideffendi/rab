@@ -247,8 +247,12 @@ export function EditProjectForm({
         <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Konfigurasi Perhitungan
         </p>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <Field label="PPN (%)" htmlFor="ppnPercent">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Field
+            label="PPN (%)"
+            htmlFor="ppnPercent"
+            hint="Efektif 11% jasa konstruksi (PMK 131/2024)."
+          >
             <Input
               id="ppnPercent"
               name="ppnPercent"
@@ -260,13 +264,33 @@ export function EditProjectForm({
               max="100"
             />
           </Field>
-          <Field label="Overhead (%)" htmlFor="overheadPercent">
+          <Field
+            label="Overhead & Keuntungan (%)"
+            htmlFor="overheadPercent"
+            hint="Permen PUPR 8/2023: 10–15% dari biaya langsung."
+          >
             <Input
               id="overheadPercent"
               name="overheadPercent"
               type="number"
               inputMode="decimal"
               defaultValue={project.overheadPercent}
+              step="0.01"
+              min="0"
+              max="100"
+            />
+          </Field>
+          <Field
+            label="SMKK (%)"
+            htmlFor="smkkPercent"
+            hint="Pos K3 tersendiri — Permen PUPR 8/2023 Pasal 22."
+          >
+            <Input
+              id="smkkPercent"
+              name="smkkPercent"
+              type="number"
+              inputMode="decimal"
+              defaultValue={project.smkkPercent}
               step="0.01"
               min="0"
               max="100"

@@ -133,9 +133,10 @@ export async function createProject(
   const ppnPercent = parsePercent(formData.get("ppnPercent"), "11.00");
   const overheadPercent = parsePercent(
     formData.get("overheadPercent"),
-    "0.00",
+    "10.00",
   );
   const dibulatkanKe = parseInt0OrPositive(formData.get("dibulatkanKe"), 1000);
+  const smkkPercent = parsePercent(formData.get("smkkPercent"), "1.50");
   const progressPeriod = parseProgressPeriod(formData.get("progressPeriod"));
 
   const fieldErrors: Partial<Record<ProjectField, string>> = {};
@@ -202,6 +203,7 @@ export async function createProject(
         tahun,
         ppnPercent,
         overheadPercent,
+        smkkPercent,
         dibulatkanKe,
         progressPeriod,
       })
@@ -259,9 +261,10 @@ export async function updateProject(
   const ppnPercent = parsePercent(formData.get("ppnPercent"), "11.00");
   const overheadPercent = parsePercent(
     formData.get("overheadPercent"),
-    "0.00",
+    "10.00",
   );
   const dibulatkanKe = parseInt0OrPositive(formData.get("dibulatkanKe"), 1000);
+  const smkkPercent = parsePercent(formData.get("smkkPercent"), "1.50");
   const progressPeriod = parseProgressPeriod(formData.get("progressPeriod"));
 
   const fieldErrors: Partial<Record<UpdateField, string>> = {};
@@ -335,6 +338,7 @@ export async function updateProject(
         startedAt: startedAtParsed.value,
         ppnPercent,
         overheadPercent,
+        smkkPercent,
         dibulatkanKe,
         progressPeriod,
         updatedAt: new Date(),
@@ -404,6 +408,7 @@ export async function duplicateProject(formData: FormData) {
       luasBangunan: source.luasBangunan,
       ppnPercent: source.ppnPercent,
       overheadPercent: source.overheadPercent,
+      smkkPercent: source.smkkPercent,
       dibulatkanKe: source.dibulatkanKe,
       progressPeriod: source.progressPeriod,
       isTemplate: false,

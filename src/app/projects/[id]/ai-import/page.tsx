@@ -65,14 +65,14 @@ export default async function AIImportPage({
             <div>
               <div className="flex flex-wrap items-baseline gap-3">
                 <h2 className="text-xl font-bold tracking-tight md:text-2xl">
-                  Claude Sonnet 4.5
+                  Claude (Anthropic)
                 </h2>
                 <span className="rounded-md border border-accent/40 bg-accent/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-accent">
                   Vision AI
                 </span>
               </div>
               <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-                Model multimodal terbaru Anthropic untuk membaca gambar kerja
+                Model multimodal Anthropic untuk membaca gambar kerja
                 konstruksi dan menghasilkan struktur RAB yang siap di-review.
               </p>
             </div>
@@ -81,7 +81,7 @@ export default async function AIImportPage({
             <InfoBlock
               num="01"
               title="Baca gambar kerja"
-              desc="Sonnet menganalisa denah, tampak, potongan, dan detail. Membaca dimensi tertulis (panjang, lebar, tinggi) untuk menghitung volume kasar."
+              desc="AI menganalisa denah, tampak, potongan, dan detail. Membaca dimensi tertulis (panjang, lebar, tinggi) untuk menghitung volume kasar."
             />
             <InfoBlock
               num="02"
