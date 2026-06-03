@@ -1,23 +1,15 @@
-import {
-  and,
-  asc,
-  desc,
-  eq,
-  gte,
-  inArray,
-  isNull,
-  lte,
-  or,
-} from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import {
   buildProjectWorkbook,
   safeFilename,
+  type ExportAhsItem,
   type ExportBreakdownRow,
   type ExportItem,
   type ExportProject,
 } from "@/lib/excel-export";
 import { getCurrentUser, verifyProjectOwnership } from "@/lib/auth";
+import { getLatestMaterialPrices, getIkkMultiplier } from "@/lib/pricing";
 
 export const dynamic = "force-dynamic";
 
@@ -94,40 +86,11 @@ async function loadBreakdown(
 
   if (map.size === 0) return [];
   const matIds = Array.from(map.keys());
-  const today = new Date().toISOString().slice(0, 10);
-  const prices = await db
-    .select({
-      materialId: schema.materialPrices.materialId,
-      price: schema.materialPrices.price,
-      regionId: schema.materialPrices.regionId,
-      validFrom: schema.materialPrices.validFrom,
-    })
-    .from(schema.materialPrices)
-    .where(
-      and(
-        inArray(schema.materialPrices.materialId, matIds),
-        lte(schema.materialPrices.validFrom, today),
-        or(
-          isNull(schema.materialPrices.validTo),
-          gte(schema.materialPrices.validTo, today),
-        ),
-      ),
-    )
-    .orderBy(desc(schema.materialPrices.validFrom));
-
-  const priceByMat = new Map<string, number>();
-  for (const p of prices) {
-    if (priceByMat.has(p.materialId)) continue;
-    if (regionId && p.regionId !== regionId && p.regionId !== null) continue;
-    priceByMat.set(p.materialId, Number(p.price));
-  }
-  for (const p of prices) {
-    if (!priceByMat.has(p.materialId)) {
-      priceByMat.set(p.materialId, Number(p.price));
-    }
-  }
+  const priceMap = await getLatestMaterialPrices(matIds, regionId);
+  const ikk = await getIkkMultiplier(regionId);
   for (const m of map.values()) {
-    m.hargaSatuan = priceByMat.get(m.materialId) ?? 0;
+    const base = priceMap.get(m.materialId)?.price ?? 0;
+    m.hargaSatuan = base * ikk; // IKK applied — konsisten dgn breakdown UI
     m.totalBiaya = m.hargaSatuan * m.totalKebutuhan;
   }
 
@@ -144,7 +107,10 @@ async function loadItems(projectId: string): Promise<ExportItem[]> {
       volume: schema.projectItems.volume,
       customUnitPrice: schema.projectItems.customUnitPrice,
       ahspCode: schema.ahspItems.code,
+      ahspName: schema.ahspItems.name,
+      ahspUnit: schema.ahspItems.unit,
       ahspSourceDoc: schema.ahspItems.sourceDoc,
+      volumeFormula: schema.projectItems.volumeFormula,
     })
     .from(schema.projectItems)
     .leftJoin(
@@ -161,20 +127,117 @@ async function loadItems(projectId: string): Promise<ExportItem[]> {
   return rows.map((r) => ({
     wbsCode: r.wbsCode,
     wbsName: r.wbsName,
-    name: r.customName ?? "(custom item)",
-    unit: r.customUnit ?? "",
+    name: r.customName ?? r.ahspName ?? "(item)",
+    unit: r.customUnit ?? r.ahspUnit ?? "",
     volume: r.volume,
     unitPrice: r.customUnitPrice ?? "0",
     ahspCode: r.ahspCode,
     ahspSourceDoc: r.ahspSourceDoc,
+    volumeFormula: r.volumeFormula,
   }));
 }
 
+async function loadAhs(
+  projectId: string,
+  regionId: string | null,
+): Promise<ExportAhsItem[]> {
+  const rows = await db
+    .select({
+      itemId: schema.projectItems.id,
+      customName: schema.projectItems.customName,
+      customUnit: schema.projectItems.customUnit,
+      customUnitPrice: schema.projectItems.customUnitPrice,
+      volume: schema.projectItems.volume,
+      ahspItemId: schema.projectItems.ahspItemId,
+      ahspCode: schema.ahspItems.code,
+      ahspName: schema.ahspItems.name,
+      ahspUnit: schema.ahspItems.unit,
+      materialId: schema.materials.id,
+      materialName: schema.materials.name,
+      materialType: schema.materials.type,
+      materialUnit: schema.materials.unit,
+      coefficient: schema.ahspComponents.coefficient,
+    })
+    .from(schema.projectItems)
+    .leftJoin(
+      schema.ahspItems,
+      eq(schema.ahspItems.id, schema.projectItems.ahspItemId),
+    )
+    .leftJoin(
+      schema.ahspComponents,
+      eq(schema.ahspComponents.ahspItemId, schema.projectItems.ahspItemId),
+    )
+    .leftJoin(
+      schema.materials,
+      eq(schema.materials.id, schema.ahspComponents.materialId),
+    )
+    .where(eq(schema.projectItems.projectId, projectId))
+    .orderBy(asc(schema.projectItems.sortOrder));
+
+  const matIds = [
+    ...new Set(
+      rows.map((r) => r.materialId).filter((x): x is string => x !== null),
+    ),
+  ];
+  const priceMap = await getLatestMaterialPrices(matIds, regionId);
+  const ikk = await getIkkMultiplier(regionId);
+
+  const TYPE_RANK: Record<string, number> = { tenaga: 0, bahan: 1, alat: 2 };
+  const byItem = new Map<string, ExportAhsItem>();
+  const order: string[] = [];
+  for (const r of rows) {
+    let it = byItem.get(r.itemId);
+    if (!it) {
+      it = {
+        itemNo: 0,
+        ahspCode: r.ahspCode,
+        name: r.customName ?? r.ahspName ?? "(item)",
+        unit: r.customUnit ?? r.ahspUnit ?? "",
+        volume: Number(r.volume) || 0,
+        isCustom: r.ahspItemId === null,
+        customUnitPrice: Number(r.customUnitPrice ?? 0),
+        components: [],
+        hsp: 0,
+      };
+      byItem.set(r.itemId, it);
+      order.push(r.itemId);
+    }
+    if (r.materialId && r.materialType && r.coefficient != null) {
+      const base = priceMap.get(r.materialId)?.price ?? 0;
+      const hargaSatuan = base * ikk;
+      const coef = Number(r.coefficient) || 0;
+      it.components.push({
+        type: r.materialType,
+        name: r.materialName ?? "",
+        unit: r.materialUnit ?? "",
+        coefficient: coef,
+        hargaSatuan,
+        subtotal: coef * hargaSatuan,
+      });
+    }
+  }
+
+  let no = 1;
+  const result: ExportAhsItem[] = [];
+  for (const itemId of order) {
+    const it = byItem.get(itemId)!;
+    it.itemNo = no++;
+    it.components.sort((a, b) => TYPE_RANK[a.type] - TYPE_RANK[b.type]);
+    it.hsp = it.isCustom
+      ? it.customUnitPrice
+      : it.components.reduce((s, c) => s + c.subtotal, 0);
+    result.push(it);
+  }
+  return result;
+}
+
 export async function GET(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
   const { id } = await context.params;
+  const useRoman =
+    new URL(request.url).searchParams.get("format") === "roman";
 
   const user = await getCurrentUser();
   if (!user) {
@@ -196,11 +259,13 @@ export async function GET(
   let project: Awaited<ReturnType<typeof loadProject>> = null;
   let items: ExportItem[] = [];
   let breakdown: ExportBreakdownRow[] = [];
+  let ahs: ExportAhsItem[] = [];
   try {
     project = await loadProject(id);
     items = await loadItems(id);
     if (project) {
       breakdown = await loadBreakdown(id, project.regionId);
+      ahs = await loadAhs(id, project.regionId);
     }
   } catch (e) {
     return new Response(
@@ -221,7 +286,9 @@ export async function GET(
     });
   }
 
-  const wb = await buildProjectWorkbook(project, items, breakdown);
+  const wb = await buildProjectWorkbook(project, items, breakdown, ahs, {
+    useRoman,
+  });
   const buffer = await wb.xlsx.writeBuffer();
 
   const filename = `RAB-${safeFilename(project.name)}-${new Date()

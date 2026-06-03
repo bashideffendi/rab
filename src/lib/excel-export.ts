@@ -25,6 +25,7 @@ export type ExportItem = {
   unitPrice: string;
   ahspCode: string | null;
   ahspSourceDoc: string | null;
+  volumeFormula: string | null;
 };
 
 export type ExportBreakdownRow = {
@@ -34,6 +35,27 @@ export type ExportBreakdownRow = {
   totalKebutuhan: number;
   hargaSatuan: number;
   totalBiaya: number;
+};
+
+export type ExportAhsComponent = {
+  type: "tenaga" | "bahan" | "alat";
+  name: string;
+  unit: string;
+  coefficient: number;
+  hargaSatuan: number;
+  subtotal: number;
+};
+
+export type ExportAhsItem = {
+  itemNo: number;
+  ahspCode: string | null;
+  name: string;
+  unit: string;
+  volume: number;
+  isCustom: boolean;
+  customUnitPrice: number;
+  components: ExportAhsComponent[];
+  hsp: number;
 };
 
 type Group = {
@@ -63,6 +85,48 @@ function sortByCode(a: string | null, b: string | null): number {
     if (av !== bv) return av - bv;
   }
   return 0;
+}
+
+function toRoman(n: number): string {
+  if (!Number.isFinite(n) || n <= 0) return "";
+  const map: Array<[number, string]> = [
+    [10, "X"],
+    [9, "IX"],
+    [5, "V"],
+    [4, "IV"],
+    [1, "I"],
+  ];
+  let r = "";
+  let x = Math.floor(n);
+  for (const [v, s] of map) {
+    while (x >= v) {
+      r += s;
+      x -= v;
+    }
+  }
+  return r;
+}
+
+function toLetter(n: number): string {
+  if (!Number.isFinite(n) || n <= 0) return "";
+  return String.fromCharCode(64 + Math.floor(n)); // 1 → A
+}
+
+/** Label WBS. useRoman: segmen-1 → Romawi (I/II/III), segmen-2 → huruf (A/B). */
+function wbsLabel(
+  code: string | null,
+  name: string | null,
+  useRoman = false,
+): string {
+  if (code === null) return "Tanpa WBS";
+  let display = code;
+  if (useRoman) {
+    const segs = code.split(".");
+    if (segs[0]) segs[0] = toRoman(Number(segs[0])) || segs[0];
+    if (segs[1]) segs[1] = toLetter(Number(segs[1])) || segs[1];
+    display = segs.join(".");
+  }
+  return `${display} — ${name ?? ""}`.trim();
 }
 
 function groupByWbs(items: ExportItem[]): Group[] {
@@ -162,6 +226,7 @@ function buildRekapSheet(
   wb: ExcelJS.Workbook,
   project: ExportProject,
   items: ExportItem[],
+  useRoman = false,
 ) {
   const ws = wb.addWorksheet("REKAP", {
     views: [{ state: "frozen", ySplit: 0 }],
@@ -188,8 +253,7 @@ function buildRekapSheet(
   let no = 1;
   let subtotal = 0;
   for (const g of groups) {
-    const label =
-      g.wbsCode === null ? "Tanpa WBS" : `${g.wbsCode} — ${g.wbsName ?? ""}`;
+    const label = wbsLabel(g.wbsCode, g.wbsName, useRoman);
     const r = ws.getRow(cursor);
     r.values = [no, label, "", "", "", "", g.subtotal];
     r.getCell(1).alignment = { horizontal: "center" };
@@ -272,6 +336,7 @@ function buildRabSheet(
   wb: ExcelJS.Workbook,
   project: ExportProject,
   items: ExportItem[],
+  useRoman = false,
 ) {
   const ws = wb.addWorksheet("RAB", {
     views: [{ state: "frozen", ySplit: 9 }],
@@ -308,10 +373,7 @@ function buildRabSheet(
   let grandTotal = 0;
 
   for (const g of groups) {
-    const groupLabel =
-      g.wbsCode === null
-        ? "Tanpa WBS"
-        : `${g.wbsCode} — ${g.wbsName ?? ""}`.trim();
+    const groupLabel = wbsLabel(g.wbsCode, g.wbsName, useRoman);
     ws.mergeCells(`A${cursor}:G${cursor}`);
     const groupCell = ws.getCell(`A${cursor}`);
     groupCell.value = groupLabel;
@@ -535,18 +597,174 @@ function buildBreakdownSheet(
   };
 }
 
+// ─── AHS sheet (Analisa Harga Satuan per item) ──────────────────────────────
+const AHS_TYPE_LABEL: Record<"tenaga" | "bahan" | "alat", string> = {
+  tenaga: "A. Tenaga Kerja",
+  bahan: "B. Bahan",
+  alat: "C. Peralatan",
+};
+
+function buildAhsSheet(wb: ExcelJS.Workbook, ahs: ExportAhsItem[]) {
+  if (ahs.length === 0) return;
+  const ws = wb.addWorksheet("AHS");
+  ws.columns = [
+    { width: 6 },
+    { width: 44 },
+    { width: 12 },
+    { width: 8 },
+    { width: 18 },
+    { width: 22 },
+  ];
+
+  ws.mergeCells("A1:F1");
+  ws.getCell("A1").value = "ANALISA HARGA SATUAN PEKERJAAN (AHS)";
+  ws.getCell("A1").font = { bold: true, size: 14 };
+  ws.getCell("A1").alignment = { horizontal: "center" };
+  ws.getRow(1).height = 24;
+
+  ws.getRow(3).values = ["No", "Uraian", "Koef.", "Sat", "Harga Satuan", "Jumlah"];
+  styleHeaderRow(ws.getRow(3));
+
+  const rp = '"Rp"#,##0';
+  let cursor = 4;
+
+  for (const item of ahs) {
+    ws.mergeCells(`A${cursor}:F${cursor}`);
+    const hc = ws.getCell(`A${cursor}`);
+    hc.value = `${item.itemNo}.  ${item.ahspCode ? item.ahspCode + "  " : ""}${item.name}  —  Vol ${item.volume.toLocaleString("id-ID")} ${item.unit}`;
+    hc.font = { bold: true, color: { argb: COLOR_GROUP_FG } };
+    hc.fill = { type: "pattern", pattern: "solid", fgColor: { argb: COLOR_GROUP_BG } };
+    cursor++;
+
+    if (item.isCustom || item.components.length === 0) {
+      const r = ws.getRow(cursor);
+      r.values = ["", "Harga satuan custom (tanpa rincian komponen)", "", "", "", item.hsp];
+      r.getCell(6).numFmt = rp;
+      r.getCell(6).alignment = { horizontal: "right" };
+      r.eachCell((c) => (c.border = thinBorder));
+      cursor += 2;
+      continue;
+    }
+
+    for (const type of ["tenaga", "bahan", "alat"] as const) {
+      const comps = item.components.filter((c) => c.type === type);
+      if (comps.length === 0) continue;
+      ws.getCell(`A${cursor}`).value = AHS_TYPE_LABEL[type];
+      ws.getCell(`A${cursor}`).font = { italic: true, bold: true, size: 10 };
+      cursor++;
+      let no = 1;
+      let sub = 0;
+      for (const c of comps) {
+        const r = ws.getRow(cursor);
+        r.values = [no, c.name, c.coefficient, c.unit, c.hargaSatuan, c.subtotal];
+        r.getCell(1).alignment = { horizontal: "center" };
+        r.getCell(3).numFmt = "#,##0.######";
+        r.getCell(3).alignment = { horizontal: "right" };
+        r.getCell(4).alignment = { horizontal: "center" };
+        r.getCell(5).numFmt = rp;
+        r.getCell(5).alignment = { horizontal: "right" };
+        r.getCell(6).numFmt = rp;
+        r.getCell(6).alignment = { horizontal: "right" };
+        r.eachCell((cc) => (cc.border = thinBorder));
+        sub += c.subtotal;
+        no++;
+        cursor++;
+      }
+      ws.mergeCells(`A${cursor}:E${cursor}`);
+      ws.getCell(`A${cursor}`).value = `Jumlah ${AHS_TYPE_LABEL[type]}`;
+      ws.getCell(`A${cursor}`).alignment = { horizontal: "right" };
+      ws.getCell(`A${cursor}`).font = { italic: true };
+      ws.getCell(`F${cursor}`).value = sub;
+      ws.getCell(`F${cursor}`).numFmt = rp;
+      ws.getCell(`F${cursor}`).alignment = { horizontal: "right" };
+      cursor++;
+    }
+
+    ws.mergeCells(`A${cursor}:E${cursor}`);
+    const hsp = ws.getCell(`A${cursor}`);
+    hsp.value = "Harga Satuan Pekerjaan (HSP)";
+    hsp.alignment = { horizontal: "right" };
+    hsp.font = { bold: true, color: { argb: COLOR_TOTAL_FG } };
+    hsp.fill = { type: "pattern", pattern: "solid", fgColor: { argb: COLOR_TOTAL_BG } };
+    const hspV = ws.getCell(`F${cursor}`);
+    hspV.value = item.hsp;
+    hspV.numFmt = rp;
+    hspV.alignment = { horizontal: "right" };
+    hspV.font = { bold: true, color: { argb: COLOR_TOTAL_FG } };
+    hspV.fill = { type: "pattern", pattern: "solid", fgColor: { argb: COLOR_TOTAL_BG } };
+    cursor += 2;
+  }
+}
+
+// ─── Backup Volume sheet (dasar perhitungan volume) ─────────────────────────
+function buildBackupVolumeSheet(wb: ExcelJS.Workbook, items: ExportItem[]) {
+  if (items.length === 0) return;
+  const ws = wb.addWorksheet("Backup Volume");
+  ws.columns = [
+    { width: 6 },
+    { width: 44 },
+    { width: 50 },
+    { width: 8 },
+    { width: 16 },
+  ];
+
+  ws.mergeCells("A1:E1");
+  ws.getCell("A1").value = "BACKUP PERHITUNGAN VOLUME";
+  ws.getCell("A1").font = { bold: true, size: 14 };
+  ws.getCell("A1").alignment = { horizontal: "center" };
+  ws.getRow(1).height = 24;
+
+  ws.getRow(3).values = ["No", "Uraian Pekerjaan", "Dimensi / Rumus", "Sat", "Volume"];
+  styleHeaderRow(ws.getRow(3));
+
+  const groups = groupByWbs(items);
+  let cursor = 4;
+  let no = 1;
+  for (const g of groups) {
+    ws.mergeCells(`A${cursor}:E${cursor}`);
+    const gc = ws.getCell(`A${cursor}`);
+    gc.value = wbsLabel(g.wbsCode, g.wbsName);
+    gc.font = { bold: true, color: { argb: COLOR_GROUP_FG } };
+    gc.fill = { type: "pattern", pattern: "solid", fgColor: { argb: COLOR_GROUP_BG } };
+    cursor++;
+    for (const it of g.items) {
+      const r = ws.getRow(cursor);
+      r.values = [
+        no,
+        it.name,
+        it.volumeFormula ?? "— (volume manual)",
+        it.unit,
+        Number(it.volume) || 0,
+      ];
+      r.getCell(1).alignment = { horizontal: "center" };
+      r.getCell(3).alignment = { wrapText: true };
+      r.getCell(4).alignment = { horizontal: "center" };
+      r.getCell(5).numFmt = "#,##0.####";
+      r.getCell(5).alignment = { horizontal: "right" };
+      r.eachCell((c) => (c.border = thinBorder));
+      no++;
+      cursor++;
+    }
+  }
+}
+
 // ─── Main entry ─────────────────────────────────────────────────────────────
 export async function buildProjectWorkbook(
   project: ExportProject,
   items: ExportItem[],
   breakdown: ExportBreakdownRow[],
+  ahs: ExportAhsItem[] = [],
+  opts: { useRoman?: boolean } = {},
 ): Promise<ExcelJS.Workbook> {
   const wb = new ExcelJS.Workbook();
   wb.creator = "RABin";
   wb.created = new Date();
+  const useRoman = opts.useRoman ?? false;
 
-  buildRekapSheet(wb, project, items);
-  buildRabSheet(wb, project, items);
+  buildRekapSheet(wb, project, items, useRoman);
+  buildRabSheet(wb, project, items, useRoman);
+  buildAhsSheet(wb, ahs);
+  buildBackupVolumeSheet(wb, items);
   if (breakdown.some((r) => r.type === "tenaga"))
     buildBreakdownSheet(wb, "tenaga", breakdown);
   if (breakdown.some((r) => r.type === "bahan"))
