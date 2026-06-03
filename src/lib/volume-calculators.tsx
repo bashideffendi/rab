@@ -4533,6 +4533,128 @@ export const CALCULATORS: CalcDef[] = [
     ),
   },
 
+  // 10b. Rangka Atap Baja Ringan — luas miring m² (beda satuan dari kuda-kuda kayu)
+  {
+    type: "rangka_baja_ringan",
+    label: "Rangka Atap Baja Ringan",
+    description:
+      "Luas atap miring rangka baja ringan (m²) = (panjang + 2×overstek) × (lebar + 2×overstek) / cos(sudut). Satuan m², bukan m³.",
+    outputUnit: "m²",
+    outputLabel: "Luas Atap Miring",
+    inputs: [
+      { key: "P", label: "Panjang Bangunan", unit: "m", default: 8, min: 0 },
+      { key: "L", label: "Lebar Bangunan", unit: "m", default: 6, min: 0 },
+      {
+        key: "overstek",
+        label: "Overstek (tiap sisi)",
+        unit: "m",
+        default: 0.8,
+        min: 0,
+        hint: "Lebar tritisan/overhang tiap sisi. 0 = tanpa overstek.",
+      },
+      {
+        key: "sudut",
+        label: "Sudut Kemiringan",
+        unit: "°",
+        default: 25,
+        min: 0,
+        hint: "Baja ringan umumnya 15–35°",
+      },
+    ],
+    compute: (i) => {
+      const P = num(i.P);
+      const L = num(i.L);
+      const o = num(i.overstek, 0);
+      const sudut = num(i.sudut, 25);
+      const cosSudut = Math.cos((sudut * Math.PI) / 180);
+      const safeCos = cosSudut === 0 ? 1 : cosSudut;
+      const datar = (P + 2 * o) * (L + 2 * o);
+      const v = datar / safeCos;
+      const formula = `((${fmt(P, 2)}+2×${fmt(o, 2)}) × (${fmt(L, 2)}+2×${fmt(o, 2)})) / cos(${fmt(sudut, 0)}°) = ${fmt(v, 2)} m²`;
+      return {
+        value: v,
+        formula,
+        info: [{ label: "Luas datar (denah + overstek)", value: `${fmt(datar, 2)} m²` }],
+      };
+    },
+    Diagram: ({ values }) => (
+      <RoofDiagram
+        pLabel={`P = ${fmt(num(values.P), 2)} m`}
+        lLabel={`L = ${fmt(num(values.L), 2)} m`}
+        sudutLabel={`${fmt(num(values.sudut, 25), 0)}°`}
+      />
+    ),
+  },
+
+  // 10c. Kusen Pintu/Jendela — volume kayu m³ (bingkai, bukan bidang massif)
+  {
+    type: "kusen",
+    label: "Kusen Pintu / Jendela",
+    description:
+      "Volume kayu kusen (m³) = total panjang batang bingkai × luas penampang profil × jumlah. Kusen = rangka tepi, BUKAN bidang massif.",
+    outputUnit: "m³",
+    outputLabel: "Volume Kayu Kusen",
+    inputs: [
+      { key: "tinggi", label: "Tinggi Bukaan", unit: "m", default: 2.1, min: 0 },
+      { key: "lebar", label: "Lebar Bukaan", unit: "m", default: 0.9, min: 0 },
+      {
+        key: "tipe",
+        label: "Tipe",
+        unit: "",
+        default: 3,
+        options: [
+          { value: 3, label: "Pintu (3 sisi)" },
+          { value: 4, label: "Jendela (4 sisi)" },
+        ],
+      },
+      {
+        key: "lebarKayu",
+        label: "Lebar Profil Kayu",
+        unit: "m",
+        default: 0.06,
+        min: 0,
+        hint: "6 cm = 0,06 m",
+      },
+      {
+        key: "tebalKayu",
+        label: "Tebal Profil Kayu",
+        unit: "m",
+        default: 0.12,
+        min: 0,
+        hint: "12 cm = 0,12 m",
+      },
+      { key: "n", label: "Jumlah Unit", unit: "buah", default: 1, min: 1 },
+    ],
+    compute: (i) => {
+      const tinggi = num(i.tinggi, 2.1);
+      const lebar = num(i.lebar, 0.9);
+      const tipe = num(i.tipe, 3);
+      const lebarKayu = num(i.lebarKayu, 0.06);
+      const tebalKayu = num(i.tebalKayu, 0.12);
+      const n = num(i.n, 1);
+      // Pintu 3 sisi (2 tiang + ambang atas); jendela 4 sisi (keliling penuh)
+      const keliling = tipe >= 4 ? 2 * tinggi + 2 * lebar : 2 * tinggi + lebar;
+      const penampang = lebarKayu * tebalKayu;
+      const v = keliling * penampang * n;
+      const formula = `${fmt(keliling, 2)} m × (${fmt(lebarKayu, 3)}×${fmt(tebalKayu, 3)}) × ${fmt(n, 0)} = ${fmt(v, 4)} m³`;
+      return {
+        value: v,
+        formula,
+        info: [
+          { label: "Keliling batang per unit", value: `${fmt(keliling, 2)} m` },
+          { label: "Volume per unit", value: `${fmt(v / (n || 1), 4)} m³` },
+        ],
+      };
+    },
+    Diagram: ({ values }) => (
+      <BeamDiagram
+        pLabel={`tinggi = ${fmt(num(values.tinggi, 2.1), 2)} m`}
+        lLabel={`lebar = ${fmt(num(values.lebar, 0.9), 2)} m`}
+        tLabel={`profil = ${fmt(num(values.tebalKayu, 0.12), 3)} m`}
+      />
+    ),
+  },
+
   // 11. Lantai Keramik / Granit
   {
     type: "lantai_keramik",
@@ -4961,9 +5083,11 @@ export const CALCULATORS: CalcDef[] = [
       const t = num(i.tinggi);
       const a = num(i.penampang, 0.0096);
       const n = num(i.n, 1);
-      // Total panjang elemen kuda-kuda dasar (rafter + bottom + post + 2 strut)
+      // Panjang elemen: bottom chord + 2 kaki miring (rafter) + king post tegak
+      // (tinggi) + 2 skor diagonal (dari geometri panel, bukan asumsi fixed)
       const rafter = Math.sqrt(Math.pow(b / 2, 2) + Math.pow(t, 2));
-      const totalLen = b + 2 * rafter + t + 2 * 1.2; // strut diasumsi 1.2m
+      const skor = Math.sqrt(Math.pow(b / 4, 2) + Math.pow(t / 2, 2));
+      const totalLen = b + 2 * rafter + t + 2 * skor;
       const v = totalLen * a * n;
       const formula = `${fmt(totalLen, 2)} × ${fmt(a, 4)} × ${fmt(n, 0)} = ${fmt(v, 3)} m³`;
       return { value: v, formula };

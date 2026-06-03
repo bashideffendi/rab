@@ -368,6 +368,14 @@ const stagePondasi: StageCalcDef = {
       group: "Dimensi Pondasi",
     },
     {
+      key: "lebarAtasGalian",
+      label: "Lebar Atas Galian",
+      unit: "m",
+      default: 0.8,
+      hint: "Lebar mulut galian di permukaan (≥ lebar dasar; samakan dgn lebar galian kalau dinding tegak lurus)",
+      group: "Dimensi Pondasi",
+    },
+    {
       key: "lebarAtasPondasi",
       label: "Lebar Atas Pondasi",
       unit: "m",
@@ -392,19 +400,19 @@ const stagePondasi: StageCalcDef = {
       group: "Spesifikasi",
     },
     {
+      key: "tebalAanstamping",
+      label: "Tebal Aanstamping",
+      unit: "m",
+      default: 0,
+      hint: "Lapis batu kosong di atas pasir. 0 = skip.",
+      group: "Spesifikasi",
+    },
+    {
       key: "tebalLantaiKerja",
       label: "Tebal Lantai Kerja Beton",
       unit: "m",
       default: 0,
       hint: "Beton tumbuk 1:3:5 dasar. 0 = skip.",
-      group: "Spesifikasi",
-    },
-    {
-      key: "rasioUruganKembali",
-      label: "Rasio Urugan Kembali",
-      unit: "%",
-      default: 30,
-      hint: "% galian yang diurug kembali (sisanya volume pondasi)",
       group: "Spesifikasi",
     },
   ],
@@ -417,10 +425,12 @@ const stagePondasi: StageCalcDef = {
       defaultEnabled: true,
       computeVolume: (i) => {
         const P = n(i.panjangTotal);
-        const L = n(i.lebarGalian, 0.6);
+        const Lb = n(i.lebarGalian, 0.6);
+        const La = n(i.lebarAtasGalian, Lb); // default lurus kalau tak diisi
         const T = n(i.kedalaman, 0.6);
-        const v = P * L * T;
-        const formula = `${fmt(P, 2)} × ${fmt(L, 2)} × ${fmt(T, 2)} = ${fmt(v, 3)} m³`;
+        // Penampang galian = trapesium (dinding tegak/miring; lebar atas ≥ dasar)
+        const v = ((La + Lb) / 2) * T * P;
+        const formula = `((${fmt(La, 2)} + ${fmt(Lb, 2)})/2) × ${fmt(T, 2)} × ${fmt(P, 2)} = ${fmt(v, 3)} m³`;
         return { volume: v, formula };
       },
     },
@@ -435,6 +445,23 @@ const stagePondasi: StageCalcDef = {
         const P = n(i.panjangTotal);
         const L = n(i.lebarGalian, 0.6);
         const T = n(i.tebalUruganPasir, 0.05);
+        if (T <= 0) return null;
+        const v = P * L * T;
+        const formula = `${fmt(P, 2)} × ${fmt(L, 2)} × ${fmt(T, 3)} = ${fmt(v, 3)} m³`;
+        return { volume: v, formula };
+      },
+    },
+    {
+      key: "aanstamping",
+      label: "Aanstamping (Batu Kosong)",
+      ahspKeyword: "aanstamping",
+      ahspUnit: "m3",
+      defaultEnabled: false,
+      showIf: (i) => n(i.tebalAanstamping) > 0,
+      computeVolume: (i) => {
+        const P = n(i.panjangTotal);
+        const L = n(i.lebarGalian, 0.6);
+        const T = n(i.tebalAanstamping);
         if (T <= 0) return null;
         const v = P * L * T;
         const formula = `${fmt(P, 2)} × ${fmt(L, 2)} × ${fmt(T, 3)} = ${fmt(v, 3)} m³`;
@@ -483,12 +510,20 @@ const stagePondasi: StageCalcDef = {
       defaultEnabled: true,
       computeVolume: (i) => {
         const P = n(i.panjangTotal);
-        const L = n(i.lebarGalian, 0.6);
-        const T = n(i.kedalaman, 0.6);
-        const galian = P * L * T;
-        const rasio = n(i.rasioUruganKembali, 30) / 100;
-        const v = galian * rasio;
-        const formula = `(${fmt(galian, 3)} m³ galian) × ${fmt(n(i.rasioUruganKembali, 30), 0)}% = ${fmt(v, 3)} m³`;
+        const Lb = n(i.lebarGalian, 0.6);
+        const La = n(i.lebarAtasGalian, Lb);
+        const kdl = n(i.kedalaman, 0.6);
+        const vGalian = ((La + Lb) / 2) * kdl * P;
+        // Urugan kembali = galian − semua yang mengisi lubang (anti double-count)
+        const aTop = n(i.lebarAtasPondasi, 0.25);
+        const tPon = n(i.tinggiPondasi, 0.5);
+        const vPondasi = ((aTop + Lb) / 2) * tPon * P;
+        const vPasir = P * Lb * n(i.tebalUruganPasir, 0);
+        const vAan = P * Lb * n(i.tebalAanstamping, 0);
+        const vLantai = P * Lb * n(i.tebalLantaiKerja, 0);
+        const vIsian = vPondasi + vPasir + vAan + vLantai;
+        const v = Math.max(0, vGalian - vIsian);
+        const formula = `${fmt(vGalian, 3)} galian − ${fmt(vIsian, 3)} isian = ${fmt(v, 3)} m³`;
         return { volume: v, formula };
       },
     },
