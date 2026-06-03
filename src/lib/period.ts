@@ -82,3 +82,19 @@ export function computeCurrentPeriod(
   const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
   return Math.max(1, Math.floor(days / period.daysPerPeriod) + 1);
 }
+
+/**
+ * Tanggal kalender awal periode ke-N (1-based) dari tanggal mulai project.
+ * Periode 1 = startedAt; periode N = startedAt + (N-1)×daysPerPeriod hari.
+ * Null kalau startedAt belum diisi.
+ */
+export function dateForPeriod(
+  startedAt: string | null,
+  n: number,
+  period: PeriodConfig,
+): Date | null {
+  if (!startedAt) return null;
+  const d = new Date(`${startedAt}T00:00:00`);
+  d.setDate(d.getDate() + (n - 1) * period.daysPerPeriod);
+  return d;
+}

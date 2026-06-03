@@ -182,6 +182,7 @@ export async function createProject(
   const tahun = tahunNum;
 
   const user = await requireUser();
+  const startedAtParsed = parseDateOrNull(formData.get("startedAt"));
 
   let inserted: { id: string } | undefined;
   try {
@@ -201,6 +202,7 @@ export async function createProject(
         luasTanah: luasTanahParsed.value,
         luasBangunan: luasBangunanParsed.value,
         tahun,
+        startedAt: startedAtParsed.value,
         ppnPercent,
         overheadPercent,
         smkkPercent,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import {
   DndContext,
@@ -22,6 +22,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { ItemDeleteButton } from "./item-delete-button";
 import { formatIDR } from "@/lib/utils";
 import { reorderItemsInGroup } from "@/app/projects/item-reorder-actions";
+import { updateItemInline } from "@/app/projects/item-actions";
 
 export type ItemRow = {
   id: string;
@@ -173,6 +174,87 @@ function SortableGroup({
   );
 }
 
+/** Sel volume/harga yang bisa di-edit inline: klik 2× → ketik → Enter/blur. */
+function EditableCell({
+  raw,
+  display,
+  onSave,
+}: {
+  raw: string;
+  display: string;
+  onSave: (v: string) => Promise<{ error?: string }>;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [val, setVal] = useState(raw);
+  const [pending, startTransition] = useTransition();
+  const [err, setErr] = useState<string | null>(null);
+  const saving = useRef(false);
+
+  function commit() {
+    if (saving.current) return;
+    const trimmed = val.trim().replace(",", ".");
+    if (trimmed === "" || trimmed === raw) {
+      setVal(raw);
+      setErr(null);
+      setEditing(false);
+      return;
+    }
+    if (!/^\d+(\.\d+)?$/.test(trimmed)) {
+      setErr("angka?");
+      return;
+    }
+    setErr(null);
+    saving.current = true;
+    startTransition(async () => {
+      const res = await onSave(trimmed);
+      saving.current = false;
+      if (res?.error) setErr(res.error);
+      else setEditing(false);
+    });
+  }
+
+  if (!editing) {
+    return (
+      <span
+        onDoubleClick={() => {
+          setVal(raw);
+          setErr(null);
+          setEditing(true);
+        }}
+        title="Klik 2× untuk edit"
+        className="cursor-pointer rounded px-1 hover:bg-accent/10"
+      >
+        {display}
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex flex-col items-end">
+      <input
+        autoFocus
+        type="text"
+        inputMode="decimal"
+        value={val}
+        disabled={pending}
+        onChange={(e) => setVal(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            commit();
+          } else if (e.key === "Escape") {
+            setVal(raw);
+            setErr(null);
+            setEditing(false);
+          }
+        }}
+        className="w-24 rounded border border-accent bg-card px-1 py-0.5 text-right font-mono text-sm focus:outline-none"
+      />
+      {err && <span className="text-[9px] text-danger">{err}</span>}
+    </span>
+  );
+}
+
 function SortableItemRow({
   projectId,
   item,
@@ -265,7 +347,11 @@ function SortableItemRow({
       </td>
       <td className="px-3 py-2 text-right font-mono tabular-nums">
         <div className="flex flex-col items-end">
-          <span>{Number(item.volume).toLocaleString("id-ID")}</span>
+          <EditableCell
+            raw={item.volume}
+            display={Number(item.volume).toLocaleString("id-ID")}
+            onSave={(v) => updateItemInline(item.id, projectId, "volume", v)}
+          />
           {item.volumeFormula && (
             <span
               className="cursor-help text-[10px] font-normal text-muted-foreground"
@@ -278,7 +364,11 @@ function SortableItemRow({
       </td>
       <td className="px-3 py-2 text-muted-foreground">{item.unit}</td>
       <td className="px-3 py-2 text-right font-mono tabular-nums">
-        {formatIDR(item.unitPrice)}
+        <EditableCell
+          raw={item.unitPrice}
+          display={formatIDR(item.unitPrice)}
+          onSave={(v) => updateItemInline(item.id, projectId, "unitPrice", v)}
+        />
       </td>
       <td className="px-3 py-2 text-right font-mono font-medium tabular-nums">
         {formatIDR(total)}

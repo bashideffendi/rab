@@ -446,3 +446,61 @@ export async function deleteProjectItem(formData: FormData) {
     );
   revalidatePath(`/projects/${projectId}`);
 }
+
+// ─── INLINE EDIT (volume / harga satuan dari tabel) ──────────────────────────
+
+/**
+ * Update cepat satu field (volume ATAU harga satuan) dari inline-edit di tabel.
+ * Plain args, bukan FormData. Edit volume manual me-reset jejak calculator
+ * (calculatorType/Inputs/volumeFormula) biar badge rumus gak misleading.
+ */
+export async function updateItemInline(
+  itemId: string,
+  projectId: string,
+  field: "volume" | "unitPrice",
+  value: string,
+): Promise<{ error?: string }> {
+  const v = parseNum(value);
+  if (v === null) return { error: "Harus angka valid (≥ 0)." };
+
+  const user = await requireUser();
+  try {
+    await verifyProjectOwnership(projectId, user.id);
+  } catch (e) {
+    return {
+      error: e instanceof Error ? e.message : "Gak punya akses ke project ini.",
+    };
+  }
+
+  const now = new Date();
+  const where = and(
+    eq(schema.projectItems.id, itemId),
+    eq(schema.projectItems.projectId, projectId),
+  );
+  try {
+    if (field === "volume") {
+      await db
+        .update(schema.projectItems)
+        .set({
+          volume: v,
+          calculatorType: null,
+          calculatorInputs: null,
+          volumeFormula: null,
+          updatedAt: now,
+        })
+        .where(where);
+    } else {
+      await db
+        .update(schema.projectItems)
+        .set({ customUnitPrice: v, updatedAt: now })
+        .where(where);
+    }
+  } catch (e) {
+    return {
+      error: e instanceof Error ? `Gagal simpan: ${e.message}` : "Gagal simpan.",
+    };
+  }
+
+  revalidatePath(`/projects/${projectId}`);
+  return {};
+}

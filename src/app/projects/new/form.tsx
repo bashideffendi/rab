@@ -199,15 +199,27 @@ export function NewProjectForm({
           />
         </Field>
         <Field
-          label="Alamat Lengkap"
-          htmlFor="alamat"
-          required
-          error={state.fieldErrors?.alamat}
-          hint="Cari nama jalan/kelurahan di peta atau ketik manual."
+          label="Tanggal Mulai (SPMK)"
+          htmlFor="startedAt"
+          hint="Opsional — dasar hitung minggu/hari di Schedule & Progress."
         >
-          <AlamatPicker id="alamat" required />
+          <Input
+            id="startedAt"
+            name="startedAt"
+            type="date"
+            className="font-mono"
+          />
         </Field>
       </div>
+      <Field
+        label="Alamat Lengkap"
+        htmlFor="alamat"
+        required
+        error={state.fieldErrors?.alamat}
+        hint="Cari nama jalan/kelurahan di peta atau ketik manual."
+      >
+        <AlamatPicker id="alamat" required />
+      </Field>
 
       <div className="rounded-md border border-border bg-muted/30 p-4">
         <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
