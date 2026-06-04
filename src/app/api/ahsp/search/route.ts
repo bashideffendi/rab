@@ -97,8 +97,10 @@ export async function GET(request: Request) {
                  OR ${schema.ahspItems.name} ~* '(bongkar|pembongkaran)')
                AND ${query} !~* 'bongkar' THEN 1 ELSE 0 END`,
       // (2) Varian premium/khusus/industri turun (biar default = varian standar,
-      //     bukan termahal: keramik→bukan artistik, pipa→bukan header industri)
-      sql`CASE WHEN ${schema.ahspItems.name} ~* '(artistik|siklop|dekoratif|import|marmer|expose|ekspos|header|silent type|stainless)'
+      //     bukan termahal: keramik→bukan artistik/tactile/border, plint→bukan
+      //     homogenous-polish, pipa→bukan header industri). 'granit' SENGAJA
+      //     tidak masuk (opsi keramik 60×60 granit itu sah dipilih user).
+      sql`CASE WHEN ${schema.ahspItems.name} ~* '(artistik|siklop|dekoratif|import|marmer|expose|ekspos|header|silent type|stainless|tactile|border|homogenous|homogeneous|polish)'
                THEN 1 ELSE 0 END`,
       // (3) Rank kode (exact > prefix > lainnya) — logika lama dipertahankan
       sql`CASE

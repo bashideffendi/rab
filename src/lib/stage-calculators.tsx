@@ -1543,7 +1543,11 @@ const stagePasangan: StageCalcDef = {
         const jb = n(i.jenisBata, 1);
         if (jb === 2) return "pemasangan dinding bata ringan 7,5";
         if (jb === 3) return "pemasangan dinding bata ringan 10";
-        return "pemasangan dinding bata merah";
+        // Volume QTO = dinding 1 lapis (½ batu). Keyword telanjang "dinding bata
+        // merah" nyangkut "tebal 1 BATU 1:6" (2 lapis, ~2× mahal) krn urut-nama.
+        // Token "1/2 batu 5PP" mengunci ½ batu tipe O 1:5 sesuai label dropdown.
+        // (DB simpan "1SP : 5PP" pakai spasi → token "5PP" yang cocok, bukan "1SP:5PP".)
+        return "pemasangan dinding bata merah 1/2 batu 5PP";
       },
       ahspUnit: "m2",
       defaultEnabled: true,
@@ -1849,7 +1853,17 @@ const stageFinishing: StageCalcDef = {
     {
       key: "lantaiKeramik",
       label: "Pemasangan Lantai Keramik",
-      ahspKeyword: "pemasangan lantai keramik",
+      // Ikut ukuranKeramik yang dipilih user (dulu input ini dead → keyword
+      // statis nyangkut "Keramik Tactile" ubin difabel, 2,4× lebih mahal).
+      ahspKeyword: (i) => {
+        const uk = [20, 30, 40, 60].includes(n(i.ukuranKeramik))
+          ? n(i.ukuranKeramik)
+          : 30;
+        // 60×60 = granit (sesuai label dropdown); katalog tak punya keramik
+        // polos 60 → pakai ubin granit (bukan homogenous-polish yang premium).
+        if (uk === 60) return "lantai ubin granit 60x60";
+        return `pemasangan lantai keramik uk. ${uk}x${uk}`;
+      },
       ahspUnit: "m2",
       defaultEnabled: true,
       computeVolume: (i) => {
@@ -1860,7 +1874,9 @@ const stageFinishing: StageCalcDef = {
     {
       key: "skirting",
       label: "Skirting / Lis Lantai",
-      ahspKeyword: "plint",
+      // "plint" generik nyangkut "plint homogenous tile Polish" (granit premium
+      // ~1,3×). "plint keramik" konsisten sama lantai keramik di stage ini.
+      ahspKeyword: "plint keramik",
       ahspUnit: "m",
       defaultEnabled: false,
       showIf: (i) => n(i.kelilingLantai) > 0,
@@ -2374,23 +2390,37 @@ const stageBukaan: StageCalcDef = {
       },
     },
     {
-      key: "engsel",
-      label: "Engsel (pintu + jendela)",
-      ahspKeyword: "engsel",
+      // Dipisah dari engsel jendela: keyword "engsel" telanjang nyangkut "engsel
+      // angin" (casement stay, hardware beda + termahal) krn urut-nama. Engsel
+      // pintu (butt hinge) & jendela (kupu-kupu) harga + fungsi beda.
+      key: "engselPintu",
+      label: "Engsel Pintu",
+      ahspKeyword: "engsel pintu",
       ahspUnit: "bh",
       defaultEnabled: true,
-      showIf: (i) =>
-        n(i.jmlPintu) * n(i.engselPintu, 3) +
-          n(i.jmlJendela) * n(i.engselJendela, 2) >
-        0,
+      showIf: (i) => n(i.jmlPintu) * n(i.engselPintu, 3) > 0,
       computeVolume: (i) => {
-        const ep = n(i.jmlPintu) * n(i.engselPintu, 3);
-        const ej = n(i.jmlJendela) * n(i.engselJendela, 2);
-        const v = ep + ej;
+        const v = n(i.jmlPintu) * n(i.engselPintu, 3);
         if (v <= 0) return null;
         return {
           volume: v,
-          formula: `${n(i.jmlPintu)}×${n(i.engselPintu, 3)} + ${n(i.jmlJendela)}×${n(i.engselJendela, 2)} = ${v} bh`,
+          formula: `${n(i.jmlPintu)} pintu × ${n(i.engselPintu, 3)} = ${v} bh`,
+        };
+      },
+    },
+    {
+      key: "engselJendela",
+      label: "Engsel Jendela (kupu-kupu)",
+      ahspKeyword: "engsel jendela",
+      ahspUnit: "bh",
+      defaultEnabled: true,
+      showIf: (i) => n(i.jmlJendela) * n(i.engselJendela, 2) > 0,
+      computeVolume: (i) => {
+        const v = n(i.jmlJendela) * n(i.engselJendela, 2);
+        if (v <= 0) return null;
+        return {
+          volume: v,
+          formula: `${n(i.jmlJendela)} jendela × ${n(i.engselJendela, 2)} = ${v} bh`,
         };
       },
     },
