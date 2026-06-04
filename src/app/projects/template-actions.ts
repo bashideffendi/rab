@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { and, asc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { requireUser } from "@/lib/auth";
+import { computeAhspPrices } from "@/lib/pricing";
 
 /**
  * Clone template ke project baru milik user.
@@ -85,6 +86,14 @@ export async function cloneTemplate(formData: FormData) {
     .where(eq(schema.projectItems.projectId, template.id))
     .orderBy(asc(schema.projectItems.sortOrder));
 
+  // Recompute harga AHSP via lib/pricing (region NULL = nasional, IKK 1).
+  const tplAhspIds = [
+    ...new Set(
+      templateItems.map((it) => it.ahspItemId).filter((x): x is string => !!x),
+    ),
+  ];
+  const tplAhspPrices = await computeAhspPrices(tplAhspIds, null);
+
   for (const it of templateItems) {
     let customName = it.customName;
     let customUnit = it.customUnit;
@@ -104,8 +113,7 @@ export async function cloneTemplate(formData: FormData) {
       if (ahspRows[0]) {
         customName = ahspRows[0].name;
         customUnit = ahspRows[0].unit;
-        // Recalc price (region NULL → multiplier 1 = nasional)
-        customUnitPrice = await calcAhspBasePrice(it.ahspItemId);
+        customUnitPrice = tplAhspPrices.get(it.ahspItemId)?.price ?? "0";
       }
     }
 
@@ -125,40 +133,4 @@ export async function cloneTemplate(formData: FormData) {
   redirect(`/projects/${newProject.id}`);
 }
 
-/**
- * Hitung base price AHSP (Σ koefisien × harga material nasional).
- * Sama logic dgn calculateAhspUnitPrice tapi tanpa IKK multiplier
- * (project baru dari template default region NULL).
- */
-async function calcAhspBasePrice(ahspItemId: string): Promise<string> {
-  const components = await db
-    .select({
-      coefficient: schema.ahspComponents.coefficient,
-      materialId: schema.materials.id,
-    })
-    .from(schema.ahspComponents)
-    .innerJoin(
-      schema.materials,
-      eq(schema.materials.id, schema.ahspComponents.materialId),
-    )
-    .where(eq(schema.ahspComponents.ahspItemId, ahspItemId));
-
-  if (components.length === 0) return "0";
-
-  let total = 0;
-  for (const comp of components) {
-    const priceRow = await db
-      .select({ price: schema.materialPrices.price })
-      .from(schema.materialPrices)
-      .where(eq(schema.materialPrices.materialId, comp.materialId))
-      .orderBy(asc(schema.materialPrices.validFrom))
-      .limit(1);
-    if (!priceRow[0]) continue;
-    const coef = Number(comp.coefficient);
-    const price = Number(priceRow[0].price);
-    if (Number.isFinite(coef) && Number.isFinite(price)) {
-      total += coef * price;
-    }
-  }
-  return total.toFixed(2);
-}
+// Harga AHSP kini via computeAhspPrices (lib/pricing) — fix bug ASC harga tertua.

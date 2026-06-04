@@ -2,9 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { asc, eq, inArray } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { requireUser, verifyProjectOwnership } from "@/lib/auth";
+import { computeAhspPrices } from "@/lib/pricing";
 
 /**
  * Apply approved AI-extracted items ke project.
@@ -58,6 +59,13 @@ export async function applyAiExtraction(formData: FormData) {
 
   const user = await requireUser();
   await verifyProjectOwnership(projectId, user.id);
+
+  const [projRow] = await db
+    .select({ regionId: schema.projects.regionId })
+    .from(schema.projects)
+    .where(eq(schema.projects.id, projectId))
+    .limit(1);
+  const projectRegionId = projRow?.regionId ?? null;
 
   let payload: ApplyPayload;
   try {
@@ -137,72 +145,14 @@ export async function applyAiExtraction(formData: FormData) {
       .from(schema.ahspItems)
       .where(inArray(schema.ahspItems.id, ahspIdList));
 
-    // Bulk fetch all components for these AHSP
-    const allComponents = await db
-      .select({
-        ahspItemId: schema.ahspComponents.ahspItemId,
-        materialId: schema.materials.id,
-        coefficient: schema.ahspComponents.coefficient,
-      })
-      .from(schema.ahspComponents)
-      .innerJoin(
-        schema.materials,
-        eq(schema.materials.id, schema.ahspComponents.materialId),
-      )
-      .where(inArray(schema.ahspComponents.ahspItemId, ahspIdList));
-
-    // Collect unique material IDs
-    const materialIds = new Set<string>();
-    for (const c of allComponents) materialIds.add(c.materialId);
-
-    // Bulk fetch latest material price per material (any region for v1)
-    const materialIdList = Array.from(materialIds);
-    const allPrices = materialIdList.length
-      ? await db
-          .select({
-            materialId: schema.materialPrices.materialId,
-            price: schema.materialPrices.price,
-            validFrom: schema.materialPrices.validFrom,
-          })
-          .from(schema.materialPrices)
-          .where(inArray(schema.materialPrices.materialId, materialIdList))
-          .orderBy(asc(schema.materialPrices.validFrom))
-      : [];
-
-    // Build map: latest price per material
-    const priceByMat = new Map<string, number>();
-    for (const p of allPrices) {
-      const existing = priceByMat.get(p.materialId);
-      // Keep first (oldest validFrom asc — but we want latest, so use last)
-      // Update logic: replace if exists
-      priceByMat.set(p.materialId, Number(p.price));
-    }
-
-    // Group components by AHSP, compute base price each
-    const componentsByAhsp = new Map<
-      string,
-      Array<{ materialId: string; coefficient: string }>
-    >();
-    for (const c of allComponents) {
-      const list = componentsByAhsp.get(c.ahspItemId) ?? [];
-      list.push({ materialId: c.materialId, coefficient: c.coefficient });
-      componentsByAhsp.set(c.ahspItemId, list);
-    }
-
+    // Harga via lib/pricing (region-aware + IKK, satu sumber kebenaran) —
+    // fix bug lama: ASC + tanpa filter tanggal/region + tanpa IKK.
+    const ahspPrices = await computeAhspPrices(ahspIdList, projectRegionId);
     for (const m of ahspMasters) {
-      const components = componentsByAhsp.get(m.id) ?? [];
-      let basePrice = 0;
-      for (const c of components) {
-        const matPrice = priceByMat.get(c.materialId) ?? 0;
-        const coef = Number(c.coefficient);
-        if (Number.isFinite(matPrice) && Number.isFinite(coef)) {
-          basePrice += matPrice * coef;
-        }
-      }
       ahspMasterMap.set(m.id, {
         name: m.name,
         unit: m.unit,
-        basePrice,
+        basePrice: Number(ahspPrices.get(m.id)?.price ?? 0),
       });
     }
   }

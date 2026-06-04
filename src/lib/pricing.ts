@@ -85,3 +85,64 @@ export async function getIkkMultiplier(
   const n = ikk != null ? Number(ikk) : NaN;
   return Number.isFinite(n) && n > 0 ? n / 100 : 1;
 }
+
+/**
+ * Hitung harga satuan (HSP biaya langsung) untuk banyak AHSP sekaligus —
+ * SATU sumber kebenaran, region-aware + IKK. Dipakai semua jalur create item
+ * (item-actions, stage-actions, ai-actions, template-actions) biar konsisten.
+ *
+ *   price[ahsp] = (Σ koef × harga_material_terbaru) × IKK(region)
+ *
+ * Cuma 3 query buat N AHSP (komponen bulk + harga bulk + IKK), bukan N+1.
+ * Return Map ahspId → { price (string 2 desimal), missing (nama material tanpa harga) }.
+ */
+export async function computeAhspPrices(
+  ahspIds: string[],
+  regionId?: string | null,
+  asOf?: string,
+): Promise<Map<string, { price: string; missing: string[] }>> {
+  const result = new Map<string, { price: string; missing: string[] }>();
+  if (ahspIds.length === 0) return result;
+
+  const comps = await db
+    .select({
+      ahspItemId: schema.ahspComponents.ahspItemId,
+      materialId: schema.ahspComponents.materialId,
+      materialName: schema.materials.name,
+      coefficient: schema.ahspComponents.coefficient,
+    })
+    .from(schema.ahspComponents)
+    .innerJoin(
+      schema.materials,
+      eq(schema.materials.id, schema.ahspComponents.materialId),
+    )
+    .where(inArray(schema.ahspComponents.ahspItemId, ahspIds));
+
+  const matIds = [...new Set(comps.map((c) => c.materialId))];
+  const priceMap = await getLatestMaterialPrices(matIds, regionId, asOf);
+  const ikk = await getIkkMultiplier(regionId);
+
+  const byAhsp = new Map<string, typeof comps>();
+  for (const c of comps) {
+    const list = byAhsp.get(c.ahspItemId) ?? [];
+    list.push(c);
+    byAhsp.set(c.ahspItemId, list);
+  }
+
+  for (const id of ahspIds) {
+    const list = byAhsp.get(id) ?? [];
+    let base = 0;
+    const missing: string[] = [];
+    for (const c of list) {
+      const price = priceMap.get(c.materialId)?.price;
+      const coef = Number(c.coefficient);
+      if (price == null) {
+        missing.push(c.materialName);
+        continue;
+      }
+      if (Number.isFinite(coef) && Number.isFinite(price)) base += coef * price;
+    }
+    result.set(id, { price: (base * ikk).toFixed(2), missing });
+  }
+  return result;
+}
