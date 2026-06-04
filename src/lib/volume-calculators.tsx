@@ -5010,12 +5010,20 @@ export const CALCULATORS: CalcDef[] = [
     type: "atap",
     label: "Atap (Genteng / Spandek)",
     description:
-      "Luas atap miring dihitung dari panjang × lebar / cos(sudut kemiringan).",
+      "Luas atap miring = (panjang + 2×overstek) × (lebar + 2×overstek) / cos(sudut). Overstek = tritisan tiap sisi (lindungi dinding dari hujan).",
     outputUnit: "m²",
     outputLabel: "Luas Atap Miring",
     inputs: [
       { key: "P", label: "Panjang Bangunan", unit: "m", default: 8, min: 0 },
       { key: "L", label: "Lebar Bangunan", unit: "m", default: 6, min: 0 },
+      {
+        key: "overstek",
+        label: "Overstek (tiap sisi)",
+        unit: "m",
+        default: 0.6,
+        min: 0,
+        hint: "Lebar tritisan/overhang tiap sisi. 0 = tanpa overstek.",
+      },
       {
         key: "sudut",
         label: "Sudut Kemiringan",
@@ -5028,12 +5036,22 @@ export const CALCULATORS: CalcDef[] = [
     compute: (i) => {
       const P = num(i.P);
       const L = num(i.L);
+      const o = num(i.overstek, 0);
       const sudut = num(i.sudut, 30);
       const cosSudut = Math.cos((sudut * Math.PI) / 180);
       const safeCos = cosSudut === 0 ? 1 : cosSudut;
-      const v = (P * L) / safeCos;
-      const formula = `(${fmt(P, 2)} × ${fmt(L, 2)}) / cos(${fmt(sudut, 0)}°) = ${fmt(v, 2)} m²`;
-      return { value: v, formula };
+      // Penutup atap harus menutup luas yang sama dgn rangka (termasuk tritisan).
+      // Sebelumnya tanpa overstek → under-estimate ~30-50% material genteng.
+      const datar = (P + 2 * o) * (L + 2 * o);
+      const v = datar / safeCos;
+      const formula = `((${fmt(P, 2)}+2×${fmt(o, 2)}) × (${fmt(L, 2)}+2×${fmt(o, 2)})) / cos(${fmt(sudut, 0)}°) = ${fmt(v, 2)} m²`;
+      return {
+        value: v,
+        formula,
+        info: [
+          { label: "Luas datar (denah + overstek)", value: `${fmt(datar, 2)} m²` },
+        ],
+      };
     },
     Diagram: ({ values }) => (
       <RoofDiagram

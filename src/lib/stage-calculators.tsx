@@ -2719,15 +2719,18 @@ const stageTangga: StageCalcDef = {
         const opt = n(i.optrede, 0.18);
         const ant = n(i.antrede, 0.28);
         const tebal = n(i.tebalPlat, 0.15);
-        const jmlAnak = Math.max(1, Math.round(H / opt));
-        const run = jmlAnak * ant;
+        // Riser (optrede) = N; pijakan antrede di flight miring = N−1 (pijakan
+        // teratas = pelat lantai atas, bukan tread beton). run = (N−1)×ant.
+        const nRiser = Math.max(1, Math.round(H / opt));
+        const nGoing = Math.max(1, nRiser - 1);
+        const run = nGoing * ant;
         const Lmiring = Math.sqrt(run * run + H * H);
         const vWaist = W * tebal * Lmiring;
-        const vAnak = 0.5 * ant * opt * W * jmlAnak;
+        const vAnak = 0.5 * ant * opt * W * nGoing;
         const v = vWaist + vAnak;
         return {
           volume: v,
-          formula: `Plat miring ${fmt(W, 2)}×${fmt(tebal, 2)}×${fmt(Lmiring, 2)} + ${jmlAnak} anak (½×${fmt(ant, 2)}×${fmt(opt, 2)}×${fmt(W, 2)}) = ${fmt(v, 3)} m³`,
+          formula: `Plat miring ${fmt(W, 2)}×${fmt(tebal, 2)}×${fmt(Lmiring, 2)} + ${nGoing} anak (½×${fmt(ant, 2)}×${fmt(opt, 2)}×${fmt(W, 2)}) = ${fmt(v, 3)} m³`,
         };
       },
     },
@@ -2744,8 +2747,9 @@ const stageTangga: StageCalcDef = {
         const ant = n(i.antrede, 0.28);
         const dia = n(i.diaTul, 13);
         const jarak = n(i.jarakTul, 0.15);
-        const jmlAnak = Math.max(1, Math.round(H / opt));
-        const run = jmlAnak * ant;
+        const nRiser = Math.max(1, Math.round(H / opt));
+        const nGoing = Math.max(1, nRiser - 1); // pijakan flight = riser − 1
+        const run = nGoing * ant;
         const Lmiring = Math.sqrt(run * run + H * H);
         // 1 lapis bawah: tulangan utama sepanjang miring + tulangan bagi melintang
         const nUtama = Math.floor(W / jarak) + 1;
@@ -2769,15 +2773,16 @@ const stageTangga: StageCalcDef = {
         const W = n(i.lebarTangga, 1);
         const opt = n(i.optrede, 0.18);
         const ant = n(i.antrede, 0.28);
-        const jmlAnak = Math.max(1, Math.round(H / opt));
-        const run = jmlAnak * ant;
+        const nRiser = Math.max(1, Math.round(H / opt));
+        const nGoing = Math.max(1, nRiser - 1);
+        const run = nGoing * ant;
         const Lmiring = Math.sqrt(run * run + H * H);
-        const alas = W * Lmiring; // bekisting bawah plat miring
-        const anak = opt * W * jmlAnak; // bekisting tegak tiap anak tangga
+        const alas = W * Lmiring; // bekisting bawah plat miring (run = N−1 pijakan)
+        const anak = opt * W * nRiser; // muka tegak SEMUA riser (N) → tetap nRiser
         const v = alas + anak;
         return {
           volume: v,
-          formula: `Alas ${fmt(W, 2)}×${fmt(Lmiring, 2)} + ${jmlAnak} anak×${fmt(opt, 2)}×${fmt(W, 2)} = ${fmt(v, 2)} m²`,
+          formula: `Alas ${fmt(W, 2)}×${fmt(Lmiring, 2)} + ${nRiser} anak×${fmt(opt, 2)}×${fmt(W, 2)} = ${fmt(v, 2)} m²`,
         };
       },
     },
