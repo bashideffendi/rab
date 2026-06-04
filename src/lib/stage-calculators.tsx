@@ -2483,6 +2483,257 @@ const stageTangga: StageCalcDef = {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Stage: STRUKTUR PRAKTIS — kolom/ring/sloof praktis pengekang dinding bata.
+// CATATAN PENTING: jumlah kolom praktis = ESTIMASI (rumus konfinemen umum SNI
+// 2847 + praktik lapangan), volume tiap item BISA DIEDIT user setelah ditambah.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Estimasi jumlah kolom praktis pengekang dinding. ESTIMASI konservatif: base
+ *  dari max(spasi ≤3,5 m, 1 per 12 m²) + ~0,5 per bukaan (sudut/pertemuan/tepi
+ *  bukaan). Hasil bisa di-override via inline-edit volume. */
+function kolomPraktisCount(Pd: number, Td: number, nBukaan: number): number {
+  const base = Math.max(Pd / 3.5, (Pd * Td) / 12);
+  return Math.max(2, Math.round(base) + Math.round(nBukaan / 2));
+}
+
+const stagePraktis: StageCalcDef = {
+  type: "stage_praktis",
+  label: "Struktur Praktis (kolom/ring praktis)",
+  description:
+    "Kolom praktis + ring balok (+ sloof praktis opsional) pengekang dinding bata. Jumlah kolom DIESTIMASI dari panjang & luas dinding — volume bisa diedit setelah ditambah.",
+  inputs: [
+    {
+      key: "Pdinding",
+      label: "Total Panjang Dinding",
+      unit: "m",
+      default: 30,
+      group: "Dimensi Dinding",
+    },
+    {
+      key: "Tdinding",
+      label: "Tinggi Dinding",
+      unit: "m",
+      default: 3,
+      group: "Dimensi Dinding",
+    },
+    {
+      key: "jumlahPintu",
+      label: "Jumlah Pintu",
+      unit: "bh",
+      default: 5,
+      group: "Bukaan",
+    },
+    {
+      key: "jumlahJendela",
+      label: "Jumlah Jendela",
+      unit: "bh",
+      default: 6,
+      group: "Bukaan",
+    },
+    {
+      key: "dimKolom",
+      label: "Dimensi Kolom Praktis",
+      unit: "cm",
+      default: 11,
+      group: "Spesifikasi",
+      options: [
+        { value: 11, label: "11×11" },
+        { value: 13, label: "13×13" },
+        { value: 15, label: "15×15 (SNI)" },
+      ],
+    },
+    {
+      key: "mutuPraktis",
+      label: "Mutu Beton",
+      unit: "K",
+      default: 175,
+      group: "Spesifikasi",
+      options: [
+        { value: 175, label: "K-175" },
+        { value: 225, label: "K-225" },
+      ],
+    },
+    {
+      key: "aktifSloof",
+      label: "Sloof Praktis",
+      unit: "",
+      default: 0,
+      group: "Spesifikasi",
+      options: [
+        { value: 0, label: "Tidak (sudah ada sloof struktur)" },
+        { value: 1, label: "Ya" },
+      ],
+    },
+  ],
+  items: [
+    {
+      key: "kolomPraktisBeton",
+      label: "Kolom Praktis — Beton",
+      ahspKeyword: (i) => mutuBetonKeyword(n(i.mutuPraktis, 175)),
+      ahspUnit: "m3",
+      defaultEnabled: true,
+      computeVolume: (i) => {
+        const Pd = n(i.Pdinding, 30);
+        const Td = n(i.Tdinding, 3);
+        const nB = n(i.jumlahPintu, 5) + n(i.jumlahJendela, 6);
+        const nKP = kolomPraktisCount(Pd, Td, nB);
+        const b = n(i.dimKolom, 11) / 100;
+        const v = b * b * Td * nKP;
+        return {
+          volume: v,
+          formula: `${nKP} kolom (estimasi) × ${fmt(b, 2)}×${fmt(b, 2)}×${fmt(Td, 2)} = ${fmt(v, 3)} m³`,
+        };
+      },
+    },
+    {
+      key: "kolomPraktisBesi",
+      label: "Kolom Praktis — Pembesian",
+      ahspKeyword: "penulangan kolom balok sloof",
+      ahspUnit: "kg",
+      defaultEnabled: true,
+      computeVolume: (i) => {
+        const Pd = n(i.Pdinding, 30);
+        const Td = n(i.Tdinding, 3);
+        const nB = n(i.jumlahPintu, 5) + n(i.jumlahJendela, 6);
+        const nKP = kolomPraktisCount(Pd, Td, nB);
+        const b = n(i.dimKolom, 11) / 100;
+        const k = 0.02;
+        const lUtama = Td * 4 * nKP;
+        const wUtama = lUtama * rebarWeight(10);
+        const kelBegel = stirrupPerimeter(b, b, k, 8);
+        const jmlBegel = (Math.ceil(Td / 0.15) + 1) * nKP;
+        const wBegel = kelBegel * jmlBegel * rebarWeight(8);
+        const total = wUtama + wBegel;
+        return {
+          volume: total,
+          formula: `${nKP} kolom: utama 4D10 ${fmt(lUtama, 1)} m + begel D8 kait 135° → ${fmt(total, 1)} kg`,
+        };
+      },
+    },
+    {
+      key: "kolomPraktisBekisting",
+      label: "Kolom Praktis — Bekisting",
+      ahspKeyword: "bekisting kolom",
+      ahspUnit: "m2",
+      defaultEnabled: true,
+      computeVolume: (i) => {
+        const Pd = n(i.Pdinding, 30);
+        const Td = n(i.Tdinding, 3);
+        const nB = n(i.jumlahPintu, 5) + n(i.jumlahJendela, 6);
+        const nKP = kolomPraktisCount(Pd, Td, nB);
+        const b = n(i.dimKolom, 11) / 100;
+        // 2 sisi sebidang dinding (2 sisi lain nempel bata, tanpa bekisting).
+        const v = 2 * b * Td * nKP;
+        return {
+          volume: v,
+          formula: `${nKP} kolom × 2 sisi × ${fmt(b, 2)}×${fmt(Td, 2)} = ${fmt(v, 2)} m²`,
+        };
+      },
+    },
+    {
+      key: "ringBalokBeton",
+      label: "Ring Balok Praktis — Beton",
+      ahspKeyword: (i) => mutuBetonKeyword(n(i.mutuPraktis, 175)),
+      ahspUnit: "m3",
+      defaultEnabled: true,
+      computeVolume: (i) => {
+        const Pd = n(i.Pdinding, 30);
+        const v = 0.11 * 0.15 * Pd;
+        return {
+          volume: v,
+          formula: `0,11×0,15×${fmt(Pd, 2)} = ${fmt(v, 3)} m³`,
+        };
+      },
+    },
+    {
+      key: "ringBalokBesi",
+      label: "Ring Balok Praktis — Pembesian",
+      ahspKeyword: "penulangan kolom balok sloof",
+      ahspUnit: "kg",
+      defaultEnabled: true,
+      computeVolume: (i) => {
+        const Pd = n(i.Pdinding, 30);
+        const samb =
+          Pd > STOCK_BAR_LENGTH ? Math.floor(Pd / STOCK_BAR_LENGTH) : 0;
+        const lUtama = Pd * 4 + samb * lapSplice(10) * 4;
+        const wUtama = lUtama * rebarWeight(10);
+        const kelBegel = stirrupPerimeter(0.11, 0.15, 0.02, 8);
+        const jmlBegel = Math.ceil(Pd / 0.15) + 1;
+        const wBegel = kelBegel * jmlBegel * rebarWeight(8);
+        const total = wUtama + wBegel;
+        return {
+          volume: total,
+          formula: `utama 4D10 ${fmt(lUtama, 1)} m${samb > 0 ? " (+lewatan)" : ""} + begel D8 → ${fmt(total, 1)} kg`,
+        };
+      },
+    },
+    {
+      key: "ringBalokBekisting",
+      label: "Ring Balok Praktis — Bekisting",
+      ahspKeyword: "bekisting sloof",
+      ahspUnit: "m2",
+      defaultEnabled: true,
+      computeVolume: (i) => {
+        const Pd = n(i.Pdinding, 30);
+        const v = (2 * 0.15 + 0.11) * Pd; // 2 sisi + bawah (atas terbuka cor)
+        return {
+          volume: v,
+          formula: `(2×0,15+0,11)×${fmt(Pd, 2)} = ${fmt(v, 2)} m²`,
+        };
+      },
+    },
+    {
+      key: "sloofPraktisBeton",
+      label: "Sloof Praktis — Beton",
+      ahspKeyword: (i) => mutuBetonKeyword(n(i.mutuPraktis, 175)),
+      ahspUnit: "m3",
+      defaultEnabled: false,
+      showIf: (i) => n(i.aktifSloof) > 0,
+      computeVolume: (i) => {
+        const Pd = n(i.Pdinding, 30);
+        const v = 0.11 * 0.15 * Pd;
+        return { volume: v, formula: `0,11×0,15×${fmt(Pd, 2)} = ${fmt(v, 3)} m³` };
+      },
+    },
+    {
+      key: "sloofPraktisBesi",
+      label: "Sloof Praktis — Pembesian",
+      ahspKeyword: "penulangan kolom balok sloof",
+      ahspUnit: "kg",
+      defaultEnabled: false,
+      showIf: (i) => n(i.aktifSloof) > 0,
+      computeVolume: (i) => {
+        const Pd = n(i.Pdinding, 30);
+        const samb =
+          Pd > STOCK_BAR_LENGTH ? Math.floor(Pd / STOCK_BAR_LENGTH) : 0;
+        const lUtama = Pd * 4 + samb * lapSplice(10) * 4;
+        const kelBegel = stirrupPerimeter(0.11, 0.15, 0.02, 8);
+        const jmlBegel = Math.ceil(Pd / 0.15) + 1;
+        const total =
+          lUtama * rebarWeight(10) + kelBegel * jmlBegel * rebarWeight(8);
+        return {
+          volume: total,
+          formula: `utama 4D10 ${fmt(lUtama, 1)} m + begel D8 → ${fmt(total, 1)} kg`,
+        };
+      },
+    },
+    {
+      key: "sloofPraktisBekisting",
+      label: "Sloof Praktis — Bekisting",
+      ahspKeyword: "bekisting sloof",
+      ahspUnit: "m2",
+      defaultEnabled: false,
+      showIf: (i) => n(i.aktifSloof) > 0,
+      computeVolume: (i) => {
+        const Pd = n(i.Pdinding, 30);
+        const v = (2 * 0.15 + 0.11) * Pd;
+        return { volume: v, formula: `(2×0,15+0,11)×${fmt(Pd, 2)} = ${fmt(v, 2)} m²` };
+      },
+    },
+  ],
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Export all stages
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -2496,6 +2747,7 @@ export const STAGE_CALCULATORS: StageCalcDef[] = [
   stageBetonPlat,
   stageTangga,
   stagePasangan,
+  stagePraktis,
   stageAtap,
   stageFinishing,
   stageBukaan,
