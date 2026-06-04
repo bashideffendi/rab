@@ -26,6 +26,9 @@ export type CalcInputDef = {
   /** Pakai dropdown alih-alih number input. Untuk diameter besi, mutu
    *  beton, jenis bata, dll. */
   options?: { value: number; label: string }[];
+  /** Render textarea multi-segmen; value yang disubmit = JUMLAH semua angka
+   *  (mis. keliling denah dari beberapa sisi). */
+  multiInput?: boolean;
 };
 
 export type ComputeInfo = {
@@ -77,6 +80,17 @@ function num(v: unknown, fallback = 0): number {
     return Number.isFinite(n) ? n : fallback;
   }
   return fallback;
+}
+
+/** Parse daftar angka segmen → array angka positif. Pemisah = spasi / enter /
+ *  titik-koma. KOMA = desimal Indonesia (3,5 → 3.5), JANGAN dijadikan pemisah —
+ *  kalau koma dipakai pemisah, "3,5" salah jadi dua angka 3 & 5. parseFloat
+ *  berhenti di titik kedua, jadi gaya Inggris "3.5, 4" pun aman. */
+export function parseSegments(raw: string): number[] {
+  return raw
+    .split(/[\s;]+/)
+    .map((s) => parseFloat(s.replace(",", ".")))
+    .filter((x) => Number.isFinite(x) && x > 0);
 }
 
 /**
@@ -5663,6 +5677,79 @@ export const CALCULATORS: CalcDef[] = [
     Diagram: ({ values }) => (
       <LumsumDiagram n={num(values.n, 1)} />
     ),
+  },
+  // ── Bantu hitung geometri (dogfood B1: input panjang/luas non-trivial) ──
+  {
+    type: "keliling_segmen",
+    label: "Keliling / Panjang dari Segmen",
+    description:
+      "Jumlahkan panjang beberapa segmen (sisi denah, jalur pondasi, keliling ruang) jadi total m′. Ketik angka dipisah koma/spasi/enter — biar gak salah jumlah manual.",
+    outputUnit: "m′",
+    outputLabel: "Total Panjang / Keliling",
+    inputs: [
+      {
+        key: "segmen",
+        label: "Daftar Segmen",
+        unit: "m",
+        default: 0,
+        multiInput: true,
+        hint: "Contoh: 3,5  4  2,75  6 → dijumlah otomatis. Pisah pakai spasi atau enter (koma = desimal).",
+        group: "Segmen",
+      },
+    ],
+    compute: (i) => {
+      const total = num(i.segmen, 0);
+      return { value: total, formula: `Σ segmen = ${fmt(total, 2)} m′` };
+    },
+    Diagram: () => (
+      <LinearDiagram label="Σ segmen" caption="Panjang total dari segmen" />
+    ),
+  },
+  {
+    type: "luas_segitiga",
+    label: "Luas Bidang Segitiga (Ampig/Gable)",
+    description:
+      "Luas bidang segitiga — dinding ampig/gevel/pelana (sopi-sopi), atap perisai, atau bidang miring. Luas = ½ × alas × tinggi. Untuk 2 sisi gable, isi jumlah bidang.",
+    outputUnit: "m²",
+    outputLabel: "Luas Bidang",
+    inputs: [
+      { key: "alas", label: "Alas (lebar)", unit: "m", default: 6, min: 0, group: "Dimensi Segitiga" },
+      { key: "tinggi", label: "Tinggi Puncak", unit: "m", default: 1.5, min: 0, group: "Dimensi Segitiga" },
+      { key: "jumlah", label: "Jumlah Bidang", unit: "bh", default: 2, min: 0, hint: "Rumah pelana = 2 ampig (depan-belakang).", group: "Dimensi Segitiga" },
+    ],
+    compute: (i) => {
+      const alas = num(i.alas, 0);
+      const tinggi = num(i.tinggi, 0);
+      const jumlah = num(i.jumlah, 1);
+      const satu = 0.5 * alas * tinggi;
+      const total = satu * jumlah;
+      return {
+        value: total,
+        formula: `½ × ${fmt(alas, 2)} × ${fmt(tinggi, 2)} × ${fmt(jumlah, 0)} bidang = ${fmt(total, 2)} m²`,
+        info: [{ label: "Luas per bidang", value: `${fmt(satu, 2)} m²` }],
+      };
+    },
+    Diagram: ({ values }) => {
+      const a = num(values.alas, 6);
+      const t = num(values.tinggi, 1.5);
+      const ratio = a > 0 ? Math.min(t / a, 1.2) : 0.25;
+      const apexY = 60 - ratio * 40;
+      return (
+        <svg viewBox="0 0 200 80" className="h-24 w-full" role="img" aria-label="Bidang segitiga">
+          <polygon
+            points={`30,60 170,60 100,${apexY}`}
+            fill="#64748b"
+            fillOpacity="0.25"
+            stroke="#334155"
+            strokeWidth="1.5"
+          />
+          <line x1="30" y1="68" x2="170" y2="68" stroke="#0ea5e9" strokeWidth="1.5" />
+          <text x="86" y="78" fontSize="9" fill="#0369a1">alas</text>
+          <line x1="100" y1="60" x2="100" y2={apexY} stroke="#0ea5e9" strokeWidth="1" strokeDasharray="3 2" />
+          <text x="104" y={(60 + apexY) / 2} fontSize="9" fill="#0369a1">t</text>
+        </svg>
+      );
+    },
   },
 ];
 

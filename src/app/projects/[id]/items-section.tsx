@@ -136,6 +136,43 @@ function groupByWbs(items: ItemRow[]): Group[] {
   );
 }
 
+type MatAgg = {
+  ahspCode: string;
+  name: string;
+  unit: string;
+  vol: number;
+  total: number;
+  count: number;
+};
+
+/** Agregasi item per-kode-AHSP lintas WBS/stage — cross-check kuantitas kalau 1
+ *  AHSP dipakai di beberapa baris/divisi (mis. beton K-225 di sloof+kolom+balok,
+ *  atau pasang bata di banyak ruang). Read-only, tidak mengubah total RAB. */
+function aggregateByAhsp(items: ItemRow[]): MatAgg[] {
+  const map = new Map<string, MatAgg>();
+  for (const it of items) {
+    if (!it.ahspCode) continue; // custom item tanpa AHSP → skip
+    const v = Number(it.volume) || 0;
+    const total = calcTotal(it.volume, it.unitPrice);
+    const cur = map.get(it.ahspCode);
+    if (cur) {
+      cur.vol += v;
+      cur.total += total;
+      cur.count += 1;
+    } else {
+      map.set(it.ahspCode, {
+        ahspCode: it.ahspCode,
+        name: it.name,
+        unit: it.unit,
+        vol: v,
+        total,
+        count: 1,
+      });
+    }
+  }
+  return Array.from(map.values()).sort((a, b) => b.total - a.total);
+}
+
 export async function ItemsSection({
   projectId,
   ppnPercent,
@@ -317,6 +354,69 @@ export async function ItemsSection({
           </table>
         </div>
       )}
+
+      {/* Rekap material per-AHSP lintas-stage (B3) — hanya kalau ada AHSP dobel */}
+      {items.length > 0 &&
+        (() => {
+          const dup = aggregateByAhsp(items).filter((m) => m.count > 1);
+          if (dup.length === 0) return null;
+          return (
+            <details className="mb-6 rounded-md border border-border bg-card">
+              <summary className="cursor-pointer px-4 py-2.5 text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground">
+                Rekap Material per-AHSP (lintas-stage) — {dup.length} AHSP
+                dipakai di &gt;1 baris
+              </summary>
+              <div className="overflow-x-auto border-t border-border">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted text-left text-xs uppercase tracking-wider text-muted-foreground">
+                    <tr>
+                      <th className="px-3 py-2 font-semibold">Kode</th>
+                      <th className="px-3 py-2 font-semibold">Pekerjaan</th>
+                      <th className="px-3 py-2 text-center font-semibold">
+                        Baris
+                      </th>
+                      <th className="px-3 py-2 text-right font-semibold">
+                        Σ Volume
+                      </th>
+                      <th className="px-3 py-2 font-semibold">Sat</th>
+                      <th className="px-3 py-2 text-right font-semibold">
+                        Σ Total
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {dup.map((m) => (
+                      <tr key={m.ahspCode} className="border-t border-border">
+                        <td className="px-3 py-1.5 font-mono text-[11px] text-accent">
+                          {m.ahspCode}
+                        </td>
+                        <td className="px-3 py-1.5">{m.name}</td>
+                        <td className="px-3 py-1.5 text-center font-mono tabular-nums text-muted-foreground">
+                          {m.count}×
+                        </td>
+                        <td className="px-3 py-1.5 text-right font-mono tabular-nums">
+                          {m.vol.toLocaleString("id-ID", {
+                            maximumFractionDigits: 3,
+                          })}
+                        </td>
+                        <td className="px-3 py-1.5 text-muted-foreground">
+                          {m.unit}
+                        </td>
+                        <td className="px-3 py-1.5 text-right font-mono tabular-nums">
+                          {formatIDR(m.total)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p className="px-4 py-2 text-[10px] text-muted-foreground">
+                Informatif (cross-check kuantitas agregat) — tidak mengubah
+                tabel atau total di atas.
+              </p>
+            </details>
+          );
+        })()}
 
       {/* Stage Calculator + Single Item form */}
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">

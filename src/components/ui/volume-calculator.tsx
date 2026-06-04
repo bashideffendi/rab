@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { CALCULATORS, getCalculator } from "@/lib/volume-calculators";
+import {
+  CALCULATORS,
+  getCalculator,
+  parseSegments,
+} from "@/lib/volume-calculators";
 
 // Kelompokkan kalkulator single biar dropdown gak flat 20+ opsi (keluhan UX).
 const CALC_GROUPS: { label: string; types: string[] }[] = [
@@ -47,6 +51,7 @@ const CALC_GROUPS: { label: string; types: string[] }[] = [
     ],
   },
   { label: "Persiapan", types: ["bowplank"] },
+  { label: "Bantu Hitung", types: ["keliling_segmen", "luas_segitiga"] },
 ];
 
 /**
@@ -372,6 +377,9 @@ function CalcInputRow({
   value: number;
   onChange: (v: number) => void;
 }) {
+  if (inp.multiInput) {
+    return <SegmentInput inp={inp} onChange={onChange} />;
+  }
   const isDropdown = !!inp.options && inp.options.length > 0;
   return (
     <div>
@@ -419,6 +427,42 @@ function CalcInputRow({
           {inp.hint}
         </p>
       )}
+    </div>
+  );
+}
+
+/** Input multi-segmen (textarea) — user ketik daftar panjang, value yang
+ *  disubmit ke compute = jumlahnya. Mencegah salah jumlah manual. */
+function SegmentInput({
+  inp,
+  onChange,
+}: {
+  inp: import("@/lib/volume-calculators").CalcInputDef;
+  onChange: (v: number) => void;
+}) {
+  const [raw, setRaw] = useState("");
+  const segs = parseSegments(raw);
+  const total = segs.reduce((a, b) => a + b, 0);
+  return (
+    <div>
+      <label className="mb-1 block text-xs font-medium">{inp.label}</label>
+      <textarea
+        rows={3}
+        value={raw}
+        onChange={(e) => {
+          setRaw(e.target.value);
+          onChange(parseSegments(e.target.value).reduce((a, b) => a + b, 0));
+        }}
+        placeholder="3,5  4  2,75  6"
+        className="w-full rounded-md border border-border bg-background px-2.5 py-1.5 font-mono text-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+      />
+      <p className="mt-1 flex items-center justify-between gap-2 text-[10px] text-muted-foreground">
+        <span>{inp.hint}</span>
+        <span className="shrink-0 font-mono font-semibold text-accent">
+          {segs.length} segmen →{" "}
+          {total.toLocaleString("id-ID", { maximumFractionDigits: 2 })} m′
+        </span>
+      </p>
     </div>
   );
 }

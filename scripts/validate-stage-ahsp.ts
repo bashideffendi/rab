@@ -46,6 +46,7 @@ async function main() {
   let total = 0;
   let zero = 0;
   let mis = 0;
+  let inv = 0;
   for (const stage of STAGE_CALCULATORS) {
     const di: Record<string, number> = {};
     for (const inp of stage.inputs) di[inp.key] = inp.default ?? 0;
@@ -69,10 +70,31 @@ async function main() {
         ? `{${r.best.code}} [${r.best.unit}] ${r.best.name.slice(0, 46)}`
         : "NONE";
       console.log(`  ${it.key} "${kw}" [${it.ahspUnit}] -> ${got}${flag}`);
+
+      // Invariant anti-regresi: item ter-centang default WAJIB computable & >0
+      // pada nilai input default — kalau tidak, user lihat item kosong/ke-skip
+      // diam-diam. Item schedule di-skip (butuh baris tabel, null itu wajar).
+      if (it.defaultEnabled && !it.schedule) {
+        const visible = it.showIf ? it.showIf(di) : true;
+        const c = it.computeVolume(di);
+        if (!visible || c == null || !(c.volume > 0)) {
+          inv++;
+          console.error(
+            `  ✗ INVARIANT ${stage.type}.${it.key}: defaultEnabled:true tapi ` +
+              (!visible
+                ? "showIf(default)=false"
+                : c == null
+                  ? "computeVolume(default)=null"
+                  : "volume<=0") +
+              " — set defaultEnabled:false / default input non-zero / showIf.",
+          );
+          process.exitCode = 1;
+        }
+      }
     }
   }
   console.log(
-    `\n=== ${total} sub-item | ${zero} zero-hit | ${mis} unit-mismatch`,
+    `\n=== ${total} sub-item | ${zero} zero-hit | ${mis} unit-mismatch | ${inv} invariant-fail`,
   );
   await sql.end();
 }
