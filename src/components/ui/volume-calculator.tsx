@@ -13,10 +13,16 @@ const CALC_GROUPS: { label: string; types: string[] }[] = [
     label: "Beton — Pelengkap",
     types: ["bekisting_kolom", "bekisting_balok", "bekisting_plat", "pembesian"],
   },
-  { label: "Dinding", types: ["dinding_pasangan", "plesteran", "cat_dinding"] },
+  {
+    label: "Dinding",
+    types: ["dinding_pasangan", "plesteran", "acian", "cat_dinding"],
+  },
   { label: "Atap & Rangka", types: ["atap", "rangka_baja_ringan", "kuda_kuda"] },
   { label: "Bukaan & Kayu", types: ["kusen"] },
-  { label: "Lantai & Plafon", types: ["lantai_keramik", "plafon"] },
+  {
+    label: "Lantai & Plafon",
+    types: ["lantai_keramik", "plint", "plafon", "cat_plafon", "waterproofing"],
+  },
   { label: "Persiapan", types: ["bowplank"] },
 ];
 

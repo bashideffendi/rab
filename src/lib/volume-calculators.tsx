@@ -4482,6 +4482,164 @@ export const CALCULATORS: CalcDef[] = [
     ),
   },
 
+  // 6b. Acian Dinding (luas m², mirror plesteran)
+  {
+    type: "acian",
+    label: "Acian Dinding",
+    description: "Luas acian (penghalusan permukaan plesteran), 1 atau 2 sisi.",
+    outputUnit: "m²",
+    outputLabel: "Luas Acian",
+    inputs: [
+      { key: "P", label: "Panjang Dinding", unit: "m", default: 5, min: 0 },
+      { key: "T", label: "Tinggi Dinding", unit: "m", default: 3, min: 0 },
+      {
+        key: "sisi",
+        label: "Jumlah Sisi",
+        unit: "sisi",
+        default: 2,
+        min: 1,
+        hint: "1 atau 2 (depan-belakang)",
+      },
+      { key: "bukaan", label: "Total Luas Bukaan", unit: "m²", default: 0, min: 0 },
+    ],
+    compute: (i) => {
+      const P = num(i.P);
+      const T = num(i.T);
+      const s = num(i.sisi, 2);
+      const b = num(i.bukaan);
+      const v = Math.max(0, (P * T - b) * s);
+      const formula = `(${fmt(P, 2)} × ${fmt(T, 2)} − ${fmt(b, 2)}) × ${fmt(s, 0)} = ${fmt(v, 2)} m²`;
+      return { value: v, formula };
+    },
+    Diagram: ({ values }) => (
+      <PlasterWallDiagram
+        pLabel={`P = ${fmt(num(values.P), 2)} m`}
+        tLabel={`T = ${fmt(num(values.T), 2)} m`}
+        sisiText={`${fmt(num(values.sisi, 2), 0)} sisi (acian)`}
+      />
+    ),
+  },
+
+  // 6c. Waterproofing (luas m², lantai/dak + naik dinding)
+  {
+    type: "waterproofing",
+    label: "Waterproofing (Pelapis Kedap Air)",
+    description:
+      "Luas pelapisan kedap air: bidang datar (P×L) + naik dinding (keliling × tinggi). Untuk kamar mandi, dak beton, talang.",
+    outputUnit: "m²",
+    outputLabel: "Luas Waterproofing",
+    inputs: [
+      { key: "P", label: "Panjang Bidang", unit: "m", default: 2, min: 0 },
+      { key: "L", label: "Lebar Bidang", unit: "m", default: 1.5, min: 0 },
+      {
+        key: "naik",
+        label: "Tinggi Naik Dinding",
+        unit: "m",
+        default: 0.2,
+        min: 0,
+        hint: "Naik ke dinding (km mandi ~0,2 m). 0 = dak datar saja.",
+      },
+    ],
+    compute: (i) => {
+      const P = num(i.P);
+      const L = num(i.L);
+      const naik = num(i.naik, 0);
+      const datar = P * L;
+      const dinding = 2 * (P + L) * naik;
+      const v = datar + dinding;
+      const formula = `(${fmt(P, 2)}×${fmt(L, 2)}) + 2×(${fmt(P, 2)}+${fmt(L, 2)})×${fmt(naik, 2)} = ${fmt(v, 2)} m²`;
+      return { value: v, formula };
+    },
+    Diagram: ({ values }) => (
+      <FloorTileDiagram
+        pLabel={`P = ${fmt(num(values.P), 2)} m`}
+        lLabel={`L = ${fmt(num(values.L), 2)} m`}
+        bukaanText={
+          num(values.naik) > 0
+            ? `+ naik dinding ${fmt(num(values.naik), 2)} m`
+            : undefined
+        }
+      />
+    ),
+  },
+
+  // 6d. Plint / Skirting Lantai (panjang m')
+  {
+    type: "plint",
+    label: "Plint / Skirting Lantai",
+    description:
+      "Panjang plint tepi lantai (m') = keliling ruang − lebar bukaan pintu.",
+    outputUnit: "m'",
+    outputLabel: "Panjang Plint",
+    inputs: [
+      { key: "P", label: "Panjang Ruang", unit: "m", default: 4, min: 0 },
+      { key: "L", label: "Lebar Ruang", unit: "m", default: 3, min: 0 },
+      {
+        key: "bukaan",
+        label: "Total Lebar Pintu",
+        unit: "m",
+        default: 0.9,
+        min: 0,
+        hint: "Plint terputus di bukaan pintu",
+      },
+    ],
+    compute: (i) => {
+      const P = num(i.P);
+      const L = num(i.L);
+      const b = num(i.bukaan);
+      const v = Math.max(0, 2 * (P + L) - b);
+      const formula = `2×(${fmt(P, 2)}+${fmt(L, 2)}) − ${fmt(b, 2)} = ${fmt(v, 2)} m'`;
+      return { value: v, formula };
+    },
+    Diagram: ({ values }) => (
+      <FloorTileDiagram
+        pLabel={`P = ${fmt(num(values.P), 2)} m`}
+        lLabel={`L = ${fmt(num(values.L), 2)} m`}
+        bukaanText="plint = keliling lantai"
+      />
+    ),
+  },
+
+  // 6e. Cat Plafon (luas m²)
+  {
+    type: "cat_plafon",
+    label: "Cat Plafon",
+    description: "Luas pengecatan plafon = luas bidang plafon (P×L).",
+    outputUnit: "m²",
+    outputLabel: "Luas Cat Plafon",
+    inputs: [
+      { key: "P", label: "Panjang Plafon", unit: "m", default: 4, min: 0 },
+      { key: "L", label: "Lebar Plafon", unit: "m", default: 3, min: 0 },
+      {
+        key: "kurang",
+        label: "Luas Dikurangi",
+        unit: "m²",
+        default: 0,
+        min: 0,
+        hint: "Drop ceiling / void (opsional)",
+      },
+    ],
+    compute: (i) => {
+      const P = num(i.P);
+      const L = num(i.L);
+      const k = num(i.kurang);
+      const v = Math.max(0, P * L - k);
+      const formula = `(${fmt(P, 2)} × ${fmt(L, 2)}) − ${fmt(k, 2)} = ${fmt(v, 2)} m²`;
+      return { value: v, formula };
+    },
+    Diagram: ({ values }) => (
+      <FloorTileDiagram
+        pLabel={`P = ${fmt(num(values.P), 2)} m`}
+        lLabel={`L = ${fmt(num(values.L), 2)} m`}
+        bukaanText={
+          num(values.kurang) > 0
+            ? `Dikurangi: ${fmt(num(values.kurang), 2)} m²`
+            : undefined
+        }
+      />
+    ),
+  },
+
   // 7. Pondasi Batu Kali / Rollag (volume m³, trapezoid cross-section)
   {
     type: "pondasi_batu_kali",
