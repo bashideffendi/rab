@@ -96,6 +96,27 @@ export async function getIkkMultiplier(
  * Cuma 3 query buat N AHSP (komponen bulk + harga bulk + IKK), bukan N+1.
  * Return Map ahspId → { price (string 2 desimal), missing (nama material tanpa harga) }.
  */
+// Plafon harga per-satuan material 'bahan' curah. Di atas ini dianggap JANGGAL
+// (data scrape sumber korup ×1000) → di-skip dari subtotal HSP + di-flag ke
+// missing[] (UI sudah surface), biar gak diam-diam meledakkan harga satuan.
+const RAW_PRICE_CEIL: Record<string, number> = {
+  kg: 200_000,
+  liter: 200_000,
+  ltr: 200_000,
+  m: 2_000_000,
+  m1: 2_000_000,
+  "m'": 2_000_000,
+  "m′": 2_000_000,
+  m2: 2_000_000,
+  m3: 3_000_000,
+  btg: 5_000_000,
+  batang: 5_000_000,
+  sak: 1_000_000,
+  zak: 1_000_000,
+  lbr: 1_000_000,
+  lembar: 1_000_000,
+};
+
 export async function computeAhspPrices(
   ahspIds: string[],
   regionId?: string | null,
@@ -109,6 +130,8 @@ export async function computeAhspPrices(
       ahspItemId: schema.ahspComponents.ahspItemId,
       materialId: schema.ahspComponents.materialId,
       materialName: schema.materials.name,
+      materialType: schema.materials.type,
+      materialUnit: schema.materials.unit,
       coefficient: schema.ahspComponents.coefficient,
     })
     .from(schema.ahspComponents)
@@ -138,6 +161,16 @@ export async function computeAhspPrices(
       const coef = Number(c.coefficient);
       if (price == null) {
         missing.push(c.materialName);
+        continue;
+      }
+      // Sanity-gate harga material janggal (korup ×1000): skip + flag, jangan
+      // diam-diam masuk subtotal & meledakkan HSP.
+      const u = (c.materialUnit ?? "").toLowerCase().replace(/['`’]/g, "").trim();
+      const ceil = RAW_PRICE_CEIL[u];
+      if (c.materialType === "bahan" && ceil != null && price > ceil) {
+        missing.push(
+          `${c.materialName} (harga janggal Rp ${Math.round(price).toLocaleString("id-ID")})`,
+        );
         continue;
       }
       if (Number.isFinite(coef) && Number.isFinite(price)) base += coef * price;

@@ -40,6 +40,35 @@ function kwOf(it: StageItemDef, inputs: Record<string, number>): string {
     : it.ahspKeyword;
 }
 
+// Stage beton bertulang — buat sanity-check rasio besi/beton (kg/m³).
+const STAGE_BETON = new Set([
+  "stage_beton_sloof",
+  "stage_beton_kolom",
+  "stage_beton_balok",
+  "stage_beton_plat",
+  "stage_footplate",
+  "stage_tangga",
+  "stage_praktis",
+]);
+
+/** Total besi (kg) & beton (m³) dari item aktif (pakai ahspUnit, deterministik). */
+function rebarRatio(
+  items: { ahspUnit: string; key: string }[],
+  computed: Record<string, { volume: number; formula: string } | null>,
+  isActive: (key: string) => boolean,
+) {
+  let kg = 0;
+  let m3 = 0;
+  for (const it of items) {
+    if (!isActive(it.key)) continue;
+    const v = computed[it.key]?.volume ?? 0;
+    const u = it.ahspUnit.toLowerCase();
+    if (u === "kg") kg += v;
+    else if (u === "m3") m3 += v; // bekisting m2 otomatis ke-skip
+  }
+  return { kg, m3, ratio: m3 > 0 ? kg / m3 : 0 };
+}
+
 export function StageCalculatorModal({
   open,
   projectId,
@@ -537,6 +566,42 @@ export function StageCalculatorModal({
               })}
             </ul>
           </div>
+
+          {STAGE_BETON.has(stage.type) &&
+            (() => {
+              const isActive = (key: string) =>
+                activeItems.some((a) => a.key === key);
+              const { kg, m3, ratio } = rebarRatio(
+                stage.items,
+                computed,
+                isActive,
+              );
+              if (m3 <= 0 || kg <= 0) return null;
+              const ok = ratio >= 100 && ratio <= 200;
+              const cls = ok
+                ? "border-emerald-500/40 bg-emerald-500/5 text-emerald-600"
+                : "border-warning/40 bg-warning/5 text-warning";
+              return (
+                <div
+                  className={`mt-4 flex flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-2 text-xs ${cls}`}
+                >
+                  <span className="font-medium">
+                    Rasio Pembesian:{" "}
+                    <span className="font-mono font-bold">
+                      {formatNum(ratio, 0)} kg/m³
+                    </span>{" "}
+                    ({formatNum(kg, 1)} kg besi / {formatNum(m3, 3)} m³ beton)
+                  </span>
+                  <span className="font-mono">
+                    {ok
+                      ? "✓ wajar (100–200 kg/m³)"
+                      : ratio < 100
+                        ? "⚠ <100 — cek tulangan/centang item besi"
+                        : "⚠ >200 — cek dimensi/besi berlebih"}
+                  </span>
+                </div>
+              );
+            })()}
 
           {enabledUnmatched.length > 0 && (
             <div className="mt-4 rounded-md border border-warning/40 bg-warning/5 px-3 py-2 text-xs text-warning">

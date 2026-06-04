@@ -92,7 +92,15 @@ export async function GET(request: Request) {
     )
     .where(whereClause)
     .orderBy(
-      // Custom rank: exact code = 0, code prefix = 1, name match = 2
+      // (1) Bongkaran/demolisi turun (kecuali user memang cari 'bongkar')
+      sql`CASE WHEN (${schema.ahspItems.code} ILIKE 'AT.%'
+                 OR ${schema.ahspItems.name} ~* '(bongkar|pembongkaran)')
+               AND ${query} !~* 'bongkar' THEN 1 ELSE 0 END`,
+      // (2) Varian premium/khusus/industri turun (biar default = varian standar,
+      //     bukan termahal: keramik→bukan artistik, pipa→bukan header industri)
+      sql`CASE WHEN ${schema.ahspItems.name} ~* '(artistik|siklop|dekoratif|import|marmer|expose|ekspos|header|silent type|stainless)'
+               THEN 1 ELSE 0 END`,
+      // (3) Rank kode (exact > prefix > lainnya) — logika lama dipertahankan
       sql`CASE
         WHEN LOWER(${schema.ahspItems.code}) = LOWER(${query}) THEN 0
         WHEN LOWER(${schema.ahspItems.code}) LIKE LOWER(${query + "%"}) THEN 1
