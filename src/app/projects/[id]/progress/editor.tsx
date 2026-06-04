@@ -43,6 +43,7 @@ export function ProgressEditor({
   initialPlanned,
   totalWeeks,
   currentWeek,
+  rawCurrentPeriod,
   usingFallback,
   periodType = "weekly",
 }: {
@@ -53,9 +54,13 @@ export function ProgressEditor({
   initialPlanned: ProgressEntry[];
   totalWeeks: number;
   currentWeek: number;
+  /** Periode elapsed RIIL (un-clamped) — buat flag 'historical' biar SAMA dgn
+   *  server (server gak clamp ke totalWeeks). Default = currentWeek. */
+  rawCurrentPeriod?: number;
   usingFallback: boolean;
   periodType?: ProgressPeriod;
 }) {
+  const rawCurrent = rawCurrentPeriod ?? currentWeek;
   const periodConfig = getPeriodConfig(periodType);
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -101,18 +106,23 @@ export function ProgressEditor({
       const overrides = plannedOverrides.get(it.id);
       const hasOverride = overrides != null && overrides.size > 0;
 
-      // Per-minggu planned: override DB kalau ada, else flat
+      // Per-minggu planned: kalau item PUNYA override, minggu tanpa override = 0
+      // (bukan flat) biar Σ konsisten dgn yang disimpan; flat cuma utk item yang
+      // belum di-override sama sekali.
       function plannedAtWeek(w: number): number {
         if (w < start || w > end) return 0;
-        const v = overrides?.get(w);
-        return v != null ? v : flatPlanned;
+        if (hasOverride) return overrides!.get(w) ?? 0;
+        return flatPlanned;
       }
 
       const plannedCumByWeek = new Map<number, number>();
       let cum = 0;
       for (let w = 1; w <= totalWeeks; w++) {
         cum += plannedAtWeek(w);
-        plannedCumByWeek.set(w, Math.min(100, cum));
+        // Raw cum (TANPA clamp min(100)) — dulu clamp nyembunyiin distribusi
+        // bobot >100% yang rusak; sekarang save di-gate ke 100%, jadi raw jujur
+        // (data legacy yang gak nutup 100% jadi keliatan, bukan dipaksa 100).
+        plannedCumByWeek.set(w, cum);
       }
 
       const actualMap = actuals.get(it.id) ?? new Map();
@@ -341,7 +351,10 @@ export function ProgressEditor({
                     const inSchedule =
                       w >= m.startWeek && w <= m.endWeek;
                     const actualVal = m.actualMap.get(w);
-                    const isHistorical = w < currentWeek - HISTORY_THRESHOLD;
+                    // Pakai rawCurrent (un-clamped) biar boundary SAMA dgn
+                    // server lockedBefore — kalau project jalan > rentang
+                    // schedule, minggu yg server catat historical ikut ke-flag.
+                    const isHistorical = w < rawCurrent - HISTORY_THRESHOLD;
                     return (
                       <td
                         key={w}
@@ -444,13 +457,19 @@ function getCumActualUntilWeek(
   actualMap: Map<number, number>,
   week: number,
 ): number {
-  // Treat input value sebagai snapshot kumulatif di minggu tersebut.
-  // Ambil nilai max dari minggu 1 s.d. `week` (assume monotonic naik).
-  let maxVal = 0;
-  for (const [w, val] of actualMap.entries()) {
-    if (w <= week && val > maxVal) maxVal = val;
+  // Snapshot kumulatif per minggu → ambil nilai TERAKHIR yang dilaporkan ≤ week
+  // (carry-forward), BUKAN max. Penting buat tool audit: koreksi realisasi
+  // TURUN (rework/klaim ditolak, mis. Mg5=60 lalu Mg6 dikoreksi 55) harus
+  // tercermin di kurva-S & deviasi, bukan disembunyikan oleh max.
+  let bestWeek = -1;
+  let val = 0;
+  for (const [w, v] of actualMap.entries()) {
+    if (w <= week && w > bestWeek) {
+      bestWeek = w;
+      val = v;
+    }
   }
-  return maxVal;
+  return val;
 }
 
 function countEntries(actuals: Map<string, Map<number, number>>): number {

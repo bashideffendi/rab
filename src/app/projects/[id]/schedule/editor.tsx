@@ -169,7 +169,31 @@ export function ScheduleEditor({
   function handlePlannedSave() {
     setPlannedSaved(false);
     setPlannedError(null);
+
+    // Gate SCH-04: bobot di-build dari window [start, start+dur) IN-MEMORY, tapi
+    // start/dur baru ke-DB lewat tombol LAIN ("Simpan Schedule"). Kalau ada
+    // perubahan schedule yang belum di-commit, bobot bisa tersimpan ke minggu di
+    // luar durasi DB (diabaikan/orphan saat render). Paksa simpan schedule dulu.
+    const norm = (v: unknown) => {
+      const n = Number(v);
+      return Number.isFinite(n) && n > 0 ? n : 0;
+    };
+    const scheduleDirty = sortedItems.some((it) => {
+      const e = edits.get(it.id);
+      return (
+        norm(e?.startWeek) !== norm(it.startWeek) ||
+        norm(e?.durationWeeks) !== norm(it.durationWeeks)
+      );
+    });
+    if (scheduleDirty) {
+      setPlannedError(
+        "Ada perubahan jadwal (minggu mulai/durasi) yang belum disimpan. Klik 'Simpan Schedule' dulu — bobot rencana harus nyambung dengan durasi yang sudah ke-commit.",
+      );
+      return;
+    }
+
     const payload: PlannedEntry[] = [];
+    const sumByItem = new Map<string, number>();
     for (const it of sortedItems) {
       const e = edits.get(it.id);
       const start = Number(e?.startWeek);
@@ -178,13 +202,28 @@ export function ScheduleEditor({
         continue;
       }
       const inner = planned.get(it.id);
-      if (!inner) continue;
+      if (!inner || inner.size === 0) continue; // belum di-override → flat default
+      let sum = 0;
       for (let w = start; w < start + dur; w++) {
         const v = inner.get(w);
         if (v != null) {
           payload.push({ itemId: it.id, weekNum: w, percent: v });
+          sum += v;
         }
       }
+      sumByItem.set(it.id, sum);
+    }
+
+    // Gate: tiap item yang di-override WAJIB Σ bobot ≈ 100% (toleransi 0,5) —
+    // cegah simpan distribusi yang gak nutup 100% / kebablasan.
+    const bad = [...sumByItem.entries()].filter(
+      ([, s]) => Math.abs(s - 100) >= 0.5,
+    );
+    if (bad.length > 0) {
+      setPlannedError(
+        `${bad.length} item: total bobot rencana ≠ 100% (mis. ${bad[0][1].toLocaleString("id-ID", { maximumFractionDigits: 1 })}%). Lengkapi sampai 100% atau kosongkan semua cell item itu (pakai flat default).`,
+      );
+      return;
     }
 
     startPlannedTransition(async () => {
@@ -197,10 +236,12 @@ export function ScheduleEditor({
     });
   }
 
-  // Untuk item, ambil bobot per minggu (override DB kalau ada, else flat default).
+  // Bobot per minggu: kalau item PUNYA override (≥1 cell), minggu tanpa override
+  // = 0 (bukan flat) — biar Σ yang ditampilkan == Σ yang disimpan, gak ganda.
+  // Flat default cuma utk item yang BELUM disentuh sama sekali.
   function getPlannedFor(itemId: string, weekNum: number, dur: number): number {
-    const v = planned.get(itemId)?.get(weekNum);
-    if (v != null) return v;
+    const m = planned.get(itemId);
+    if (m && m.size > 0) return m.get(weekNum) ?? 0;
     return dur > 0 ? 100 / dur : 0;
   }
 

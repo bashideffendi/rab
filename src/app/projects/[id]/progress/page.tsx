@@ -204,6 +204,7 @@ export default async function ProgressPage({
             initialPlanned={planned}
             totalWeeks={Math.max(totalWeeks, 1)}
             currentWeek={currentWeek}
+            rawCurrentPeriod={rawCurrent}
             usingFallback={usingFallback}
             periodType={periodConfig.type}
           />
