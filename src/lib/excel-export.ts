@@ -89,7 +89,17 @@ function sortByCode(a: string | null, b: string | null): number {
 
 function toRoman(n: number): string {
   if (!Number.isFinite(n) || n <= 0) return "";
+  // Tabel greedy LENGKAP — dulu cuma s/d X → 40 jadi "XXXX" (gak valid). RAB
+  // gedung bisa >10 divisi; sekarang valid sampai ribuan (40→XL, 49→XLIX).
   const map: Array<[number, string]> = [
+    [1000, "M"],
+    [900, "CM"],
+    [500, "D"],
+    [400, "CD"],
+    [100, "C"],
+    [90, "XC"],
+    [50, "L"],
+    [40, "XL"],
     [10, "X"],
     [9, "IX"],
     [5, "V"],
@@ -109,7 +119,9 @@ function toRoman(n: number): string {
 
 function toLetter(n: number): string {
   if (!Number.isFinite(n) || n <= 0) return "";
-  return String.fromCharCode(64 + Math.floor(n)); // 1 → A
+  const x = Math.floor(n);
+  if (x > 26) return String(x); // >Z → fallback angka, jangan '[' (charCode 91)
+  return String.fromCharCode(64 + x); // 1 → A
 }
 
 /** Label WBS. useRoman: segmen-1 → Romawi (I/II/III), segmen-2 → huruf (A/B). */

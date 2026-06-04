@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { and, eq } from "drizzle-orm";
+import { and, eq, like } from "drizzle-orm";
 import { db, schema } from "@/db";
 import {
   requireUser,
@@ -162,6 +162,43 @@ export async function updateWbsItem(
   }
 
   const { level, parentCode } = parseWbsCode(code);
+
+  // Cegah orphan: app rekonstruksi hierarki dari STRING code (bukan parentId),
+  // dan rename code TIDAK cascade ke descendant. Kalau code berubah & item punya
+  // sub-item → tolak (descendant bakal jadi orphan + jebakan cascade-delete).
+  try {
+    const [self] = await db
+      .select({ code: schema.wbsItems.code })
+      .from(schema.wbsItems)
+      .where(
+        and(
+          eq(schema.wbsItems.id, id),
+          eq(schema.wbsItems.projectId, projectId),
+        ),
+      )
+      .limit(1);
+    if (self && self.code !== code) {
+      const child = await db
+        .select({ id: schema.wbsItems.id })
+        .from(schema.wbsItems)
+        .where(
+          and(
+            eq(schema.wbsItems.projectId, projectId),
+            like(schema.wbsItems.code, `${self.code}.%`),
+          ),
+        )
+        .limit(1);
+      if (child.length > 0) {
+        return {
+          fieldErrors: {
+            code: "Item ini punya sub-item. Ubah/pindahkan/hapus sub-item dulu sebelum rename kode (biar struktur gak orphan).",
+          },
+        };
+      }
+    }
+  } catch {
+    // best-effort guard; update di bawah punya error handling sendiri
+  }
 
   let parentId: string | null = null;
   try {
