@@ -31,7 +31,7 @@ export function ChangePasswordForm() {
   if (state.success) {
     return (
       <div className="rounded-md border border-success/40 bg-success/5 p-4 text-sm">
-        <p className="font-semibold text-success">
+        <p className="font-semibold text-success-text">
           ✓ Password berhasil diubah
         </p>
         <p className="mt-1 text-muted-foreground">

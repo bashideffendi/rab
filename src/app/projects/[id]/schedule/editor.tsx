@@ -329,7 +329,7 @@ export function ScheduleEditor({
         </div>
         <div className="flex items-center gap-3">
           {saved && (
-            <span className="text-xs text-success">✓ Tersimpan</span>
+            <span className="text-xs text-success-text">✓ Tersimpan</span>
           )}
           <Button
             type="button"
@@ -386,7 +386,7 @@ export function ScheduleEditor({
                 <span className="font-medium text-danger">{plannedError}</span>
               )}
               {plannedSaved && !plannedError && (
-                <span className="font-medium text-success">
+                <span className="font-medium text-success-text">
                   ✓ Bobot {periodConfig.pluralLower} tersimpan
                 </span>
               )}
@@ -534,10 +534,10 @@ function PlannedMatrix({
                 <td
                   className={`px-2 py-1 text-right font-mono text-[11px] tabular-nums ${
                     sumOk
-                      ? "text-success"
+                      ? "text-success-text"
                       : rowSum > 100
                         ? "text-danger"
-                        : "text-warning"
+                        : "text-warning-text"
                   }`}
                 >
                   {rowSum.toFixed(1)}%

@@ -429,7 +429,7 @@ export function ProgressEditor({
             <p className="text-xs font-medium text-danger">{error}</p>
           )}
           {savedNote && !error && (
-            <p className="text-xs font-medium text-success">{savedNote}</p>
+            <p className="text-xs font-medium text-success-text">{savedNote}</p>
           )}
           {!error && !savedNote && (
             <p className="text-xs text-muted-foreground">
@@ -497,7 +497,7 @@ function KpiCard({
       : tone === "danger"
         ? "text-danger"
         : tone === "success"
-          ? "text-success"
+          ? "text-success-text"
           : "text-foreground";
   return (
     <div className="rounded-lg border border-border bg-card p-4 shadow-sm">

@@ -242,7 +242,7 @@ export function AhspBreakdown({
 
       {/* Missing materials warning */}
       {data.missingMaterials.length > 0 && (
-        <div className="border-t border-warning/40 bg-warning/5 px-4 py-2.5 text-xs text-warning">
+        <div className="border-t border-warning/40 bg-warning/5 px-4 py-2.5 text-xs text-warning-text">
           <strong>⚠ {data.missingMaterials.length} material belum ada harga:</strong>{" "}
           {data.missingMaterials.slice(0, 5).join(", ")}
           {data.missingMaterials.length > 5 &&
@@ -287,7 +287,7 @@ function GroupRows({
               <span className="text-xs">{r.materialName}</span>
               {r.priceMissing && (
                 <span
-                  className="rounded border border-warning/40 bg-warning/10 px-1 py-0 text-[9px] font-semibold uppercase tracking-wider text-warning"
+                  className="rounded border border-warning/40 bg-warning/10 px-1 py-0 text-[9px] font-semibold uppercase tracking-wider text-warning-text"
                   title="Harga material belum tersedia di database"
                 >
                   no price

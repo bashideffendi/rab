@@ -248,7 +248,7 @@ export function ItemAddForm({
       </div>
 
       {state.warning && (
-        <div className="mt-3 rounded-md border border-warning/40 bg-warning/5 px-3 py-2 text-xs text-warning">
+        <div className="mt-3 rounded-md border border-warning/40 bg-warning/5 px-3 py-2 text-xs text-warning-text">
           {state.warning}
         </div>
       )}

@@ -45,8 +45,8 @@ type ItemState = {
 };
 
 const CONFIDENCE_LABELS = {
-  high: { label: "Tinggi", color: "text-success border-success/40 bg-success/5" },
-  medium: { label: "Sedang", color: "text-warning border-warning/40 bg-warning/5" },
+  high: { label: "Tinggi", color: "text-success-text border-success/40 bg-success/5" },
+  medium: { label: "Sedang", color: "text-warning-text border-warning/40 bg-warning/5" },
   low: { label: "Rendah", color: "text-danger border-danger/40 bg-danger/5" },
 };
 

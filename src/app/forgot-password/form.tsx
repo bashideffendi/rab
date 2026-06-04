@@ -21,7 +21,7 @@ export function ForgotPasswordForm() {
   if (state.success) {
     return (
       <div className="rounded-md border border-success/40 bg-success/5 p-4 text-sm">
-        <p className="font-semibold text-success">✓ Permintaan terkirim</p>
+        <p className="font-semibold text-success-text">✓ Permintaan terkirim</p>
         <p className="mt-1 text-muted-foreground">
           Kalau email{" "}
           <span className="font-mono font-medium text-foreground">

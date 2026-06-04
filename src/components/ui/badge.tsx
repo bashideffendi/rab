@@ -5,7 +5,7 @@ type Tone = "default" | "draft" | "active" | "archived" | "accent";
 const tones: Record<Tone, string> = {
   default: "border-border text-muted-foreground bg-muted",
   draft: "border-border text-muted-foreground bg-muted",
-  active: "border-success/30 text-success bg-success/5",
+  active: "border-success/30 text-success-text bg-success/5",
   archived: "border-border text-muted-foreground bg-muted",
   accent: "border-accent/30 text-accent bg-accent/5",
 };

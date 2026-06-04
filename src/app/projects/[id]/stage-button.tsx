@@ -48,7 +48,7 @@ export function StageButton({
 
       {/* Simple toast notification */}
       {toast && (
-        <div className="fixed bottom-4 right-4 z-50 rounded-lg border border-success/40 bg-background px-4 py-3 text-sm font-medium text-success shadow-lg">
+        <div className="fixed bottom-4 right-4 z-50 rounded-lg border border-success/40 bg-background px-4 py-3 text-sm font-medium text-success-text shadow-lg">
           {toast}
         </div>
       )}

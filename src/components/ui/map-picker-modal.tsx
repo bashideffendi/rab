@@ -149,13 +149,16 @@ export function MapPickerModal({
       onClick={onClose}
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="map-picker-title"
         className="flex h-full max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-lg bg-background shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <header className="flex items-center justify-between border-b border-border px-5 py-3.5">
           <div>
-            <h3 className="text-base font-bold tracking-tight">
+            <h3 id="map-picker-title" className="text-base font-bold tracking-tight">
               Pilih Lokasi di Peta
             </h3>
             <p className="text-xs text-muted-foreground">

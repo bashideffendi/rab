@@ -33,7 +33,7 @@ export default async function LoginPage({
 
           {reset === "success" && (
             <div className="mb-5 rounded-md border border-success/40 bg-success/5 px-3 py-2.5 text-sm">
-              <p className="font-semibold text-success">
+              <p className="font-semibold text-success-text">
                 ✓ Password berhasil direset
               </p>
               <p className="mt-0.5 text-xs text-muted-foreground">

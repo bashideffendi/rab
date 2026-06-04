@@ -366,6 +366,9 @@ export function StageCalculatorModal({
       onClick={onClose}
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Kalkulator tahap pekerjaan (multi-item)"
         className="flex h-full w-full max-w-5xl flex-col overflow-hidden rounded-lg bg-background shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
@@ -545,7 +548,7 @@ export function StageCalculatorModal({
                               {state.ahsp.name.slice(0, 60)}
                             </span>
                             {unitBeda && (
-                              <span className="rounded border border-warning/40 bg-warning/5 px-1.5 py-0.5 text-[10px] text-warning">
+                              <span className="rounded border border-warning/40 bg-warning/5 px-1.5 py-0.5 text-[10px] text-warning-text">
                                 ⚠ unit &quot;{state.ahsp.unit}&quot; ≠ {it.ahspUnit}
                                 {" — cek"}
                               </span>
@@ -576,7 +579,7 @@ export function StageCalculatorModal({
                                 [it.key]: { ...p[it.key], showSearch: true },
                               }))
                             }
-                            className="rounded border border-warning/40 bg-warning/5 px-1.5 py-0.5 text-[10px] font-medium text-warning hover:bg-warning/10"
+                            className="rounded border border-warning/40 bg-warning/5 px-1.5 py-0.5 text-[10px] font-medium text-warning-text hover:bg-warning/10"
                           >
                             ⚠ AHSP belum ada — pilih manual
                           </button>
@@ -624,7 +627,7 @@ export function StageCalculatorModal({
                                         r.unit.toLowerCase().replace("'", "") ===
                                         it.ahspUnit.toLowerCase()
                                           ? "bg-accent/10 text-accent"
-                                          : "bg-warning/10 text-warning"
+                                          : "bg-warning/10 text-warning-text"
                                       }`}
                                     >
                                       {r.unit}
@@ -669,7 +672,7 @@ export function StageCalculatorModal({
               const ok = ratio >= 100 && ratio <= 200;
               const cls = ok
                 ? "border-emerald-500/40 bg-emerald-500/5 text-emerald-600"
-                : "border-warning/40 bg-warning/5 text-warning";
+                : "border-warning/40 bg-warning/5 text-warning-text";
               return (
                 <div
                   className={`mt-4 flex flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-2 text-xs ${cls}`}
@@ -693,7 +696,7 @@ export function StageCalculatorModal({
             })()}
 
           {enabledUnmatched.length > 0 && (
-            <div className="mt-4 rounded-md border border-warning/40 bg-warning/5 px-3 py-2 text-xs text-warning">
+            <div className="mt-4 rounded-md border border-warning/40 bg-warning/5 px-3 py-2 text-xs text-warning-text">
               ⚠ {enabledUnmatched.length} pekerjaan dicentang tapi belum ada AHSP
               ({enabledUnmatched.map((i) => i.label).join(", ")}) — akan di-skip
               saat simpan. Pilih AHSP manual atau matikan centangnya.
