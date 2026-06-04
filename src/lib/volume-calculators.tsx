@@ -556,6 +556,75 @@ function FootingDiagram({
 // Diagram: Sloof / Balok Beton — horizontal beam with rebar visible
 // ─────────────────────────────────────────────────────────────────────────────
 
+function KusenFrameDiagram({
+  tinggiLabel,
+  lebarLabel,
+  profilLabel,
+}: {
+  tinggiLabel: string;
+  lebarLabel: string;
+  profilLabel: string;
+}) {
+  return (
+    <svg
+      viewBox="0 0 200 210"
+      className="h-44 w-full"
+      role="img"
+      aria-label="Diagram kusen (bingkai tepi bukaan)"
+    >
+      {/* Bingkai kusen kayu — rangka TEPI bukaan, bukan bidang massif */}
+      <rect
+        x="55"
+        y="18"
+        width="90"
+        height="160"
+        rx="2"
+        fill="#b45309"
+        stroke="#78350f"
+        strokeWidth="2"
+      />
+      {/* Bukaan dalam (daun/kaca) */}
+      <rect
+        x="68"
+        y="31"
+        width="64"
+        height="134"
+        fill="#bae6fd"
+        fillOpacity="0.45"
+        stroke="#78350f"
+        strokeWidth="1"
+      />
+      {/* tinggi (kiri) */}
+      <line x1="44" y1="18" x2="44" y2="178" stroke="#0ea5e9" strokeWidth="1.5" />
+      <text
+        x="20"
+        y="102"
+        fontSize="9"
+        fill="#0369a1"
+        transform="rotate(-90 20 102)"
+      >
+        {tinggiLabel}
+      </text>
+      {/* lebar (bawah) */}
+      <line
+        x1="55"
+        y1="190"
+        x2="145"
+        y2="190"
+        stroke="#0ea5e9"
+        strokeWidth="1.5"
+      />
+      <text x="60" y="203" fontSize="9" fill="#0369a1">
+        {lebarLabel}
+      </text>
+      {/* profil */}
+      <text x="58" y="13" fontSize="8" fill="#78350f">
+        {profilLabel}
+      </text>
+    </svg>
+  );
+}
+
 function BeamDiagram({
   pLabel,
   lLabel,
@@ -4657,10 +4726,10 @@ export const CALCULATORS: CalcDef[] = [
       };
     },
     Diagram: ({ values }) => (
-      <BeamDiagram
-        pLabel={`tinggi = ${fmt(num(values.tinggi, 2.1), 2)} m`}
-        lLabel={`lebar = ${fmt(num(values.lebar, 0.9), 2)} m`}
-        tLabel={`profil = ${fmt(num(values.tebalKayu, 0.12), 3)} m`}
+      <KusenFrameDiagram
+        tinggiLabel={`tinggi = ${fmt(num(values.tinggi, 2.1), 2)} m`}
+        lebarLabel={`lebar = ${fmt(num(values.lebar, 0.9), 2)} m`}
+        profilLabel={`profil = ${fmt(num(values.tebalKayu, 0.12), 3)} m`}
       />
     ),
   },

@@ -1373,7 +1373,14 @@ const stagePasangan: StageCalcDef = {
     {
       key: "pasangan",
       label: "Pasangan Dinding Bata",
-      ahspKeyword: "pemasangan dinding bata merah",
+      ahspKeyword: (i) => {
+        // jenisBata: 1=bata merah, 2=hebel 7,5cm, 3=hebel 10cm. Dulu keyword
+        // statis → hebel keliru diharga bata merah. Sekarang ikut pilihan.
+        const jb = n(i.jenisBata, 1);
+        if (jb === 2) return "pemasangan dinding bata ringan 7,5";
+        if (jb === 3) return "pemasangan dinding bata ringan 10";
+        return "pemasangan dinding bata merah";
+      },
       ahspUnit: "m2",
       defaultEnabled: true,
       computeVolume: (i) => {
@@ -1392,7 +1399,7 @@ const stagePasangan: StageCalcDef = {
     {
       key: "plester",
       label: "Plesteran (2 Sisi)",
-      ahspKeyword: "plesteran 1sp 1pp tebal 15",
+      ahspKeyword: "plesteran 1sp 4pp tebal 15",
       ahspUnit: "m2",
       defaultEnabled: true,
       computeVolume: (i) => {

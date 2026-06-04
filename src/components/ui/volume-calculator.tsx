@@ -3,6 +3,23 @@
 import { useEffect, useMemo, useState } from "react";
 import { CALCULATORS, getCalculator } from "@/lib/volume-calculators";
 
+// Kelompokkan kalkulator single biar dropdown gak flat 20+ opsi (keluhan UX).
+const CALC_GROUPS: { label: string; types: string[] }[] = [
+  {
+    label: "Tanah & Pondasi",
+    types: ["galian_tapak", "galian_saluran", "timbunan", "pondasi_batu_kali"],
+  },
+  {
+    label: "Beton — Pelengkap",
+    types: ["bekisting_kolom", "bekisting_balok", "bekisting_plat", "pembesian"],
+  },
+  { label: "Dinding", types: ["dinding_pasangan", "plesteran", "cat_dinding"] },
+  { label: "Atap & Rangka", types: ["atap", "rangka_baja_ringan", "kuda_kuda"] },
+  { label: "Bukaan & Kayu", types: ["kusen"] },
+  { label: "Lantai & Plafon", types: ["lantai_keramik", "plafon"] },
+  { label: "Persiapan", types: ["bowplank"] },
+];
+
 /**
  * VolumeCalculator — UI buat input dimensi → auto-hitung volume.
  *
@@ -126,11 +143,36 @@ export function VolumeCalculator({
           className="rounded-md border border-border bg-card px-3 py-2 text-sm shadow-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
         >
           <option value="manual">📝 Manual — input volume langsung</option>
-          {CALCULATORS.filter((c) => !c.hidden).map((c) => (
-            <option key={c.type} value={c.type}>
-              📐 {c.label}
-            </option>
-          ))}
+          {CALC_GROUPS.map((g) => {
+            const items = CALCULATORS.filter(
+              (c) => !c.hidden && g.types.includes(c.type),
+            );
+            if (items.length === 0) return null;
+            return (
+              <optgroup key={g.label} label={g.label}>
+                {items.map((c) => (
+                  <option key={c.type} value={c.type}>
+                    📐 {c.label}
+                  </option>
+                ))}
+              </optgroup>
+            );
+          })}
+          {(() => {
+            const known = new Set(CALC_GROUPS.flatMap((g) => g.types));
+            const rest = CALCULATORS.filter(
+              (c) => !c.hidden && !known.has(c.type),
+            );
+            return rest.length > 0 ? (
+              <optgroup label="Lainnya">
+                {rest.map((c) => (
+                  <option key={c.type} value={c.type}>
+                    📐 {c.label}
+                  </option>
+                ))}
+              </optgroup>
+            ) : null;
+          })()}
         </select>
         {calc && (
           <p className="text-[11px] leading-snug text-muted-foreground">
