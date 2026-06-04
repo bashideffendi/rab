@@ -15,17 +15,36 @@ const CALC_GROUPS: { label: string; types: string[] }[] = [
   },
   {
     label: "Dinding",
-    types: ["dinding_pasangan", "plesteran", "acian", "cat_dinding"],
+    types: [
+      "dinding_pasangan",
+      "plesteran",
+      "acian",
+      "keramik_dinding",
+      "cat_dinding",
+    ],
   },
   { label: "Atap & Rangka", types: ["atap", "rangka_baja_ringan", "kuda_kuda"] },
   { label: "Bukaan & Kayu", types: ["kusen"] },
   {
     label: "Lantai & Plafon",
-    types: ["lantai_keramik", "plint", "plafon", "cat_plafon", "waterproofing"],
+    types: [
+      "lantai_keramik",
+      "plint",
+      "rabat_beton",
+      "plafon",
+      "cat_plafon",
+      "waterproofing",
+    ],
   },
   {
     label: "Eksterior & Lain",
-    types: ["floor_hardener", "paving_block", "kanstin", "railing"],
+    types: [
+      "floor_hardener",
+      "paving_block",
+      "kanstin",
+      "railing",
+      "cat_besi_kayu",
+    ],
   },
   { label: "Persiapan", types: ["bowplank"] },
 ];

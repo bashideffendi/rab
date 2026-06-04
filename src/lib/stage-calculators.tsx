@@ -2290,6 +2290,162 @@ const stageFootplate: StageCalcDef = {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Stage: TANGGA BETON — beton (plat miring + anak) + pembesian + bekisting.
+// Model standar: waist slab + step prisms. Geometri pasti (bukan heuristik).
+// ─────────────────────────────────────────────────────────────────────────────
+
+const stageTangga: StageCalcDef = {
+  type: "stage_tangga",
+  label: "Tangga Beton",
+  description:
+    "Tangga beton bertulang: beton (plat miring + anak tangga) + pembesian + bekisting. Isi dimensi sekali, 3 item AHSP keluar.",
+  inputs: [
+    {
+      key: "tinggiTotal",
+      label: "Tinggi Total (lantai ke lantai)",
+      unit: "m",
+      default: 3.2,
+      group: "Dimensi Tangga",
+    },
+    {
+      key: "lebarTangga",
+      label: "Lebar Tangga",
+      unit: "m",
+      default: 1.0,
+      group: "Dimensi Tangga",
+    },
+    {
+      key: "optrede",
+      label: "Optrede (tinggi anak)",
+      unit: "m",
+      default: 0.18,
+      group: "Dimensi Tangga",
+    },
+    {
+      key: "antrede",
+      label: "Antrede (lebar pijakan)",
+      unit: "m",
+      default: 0.28,
+      group: "Dimensi Tangga",
+    },
+    {
+      key: "tebalPlat",
+      label: "Tebal Plat Tangga",
+      unit: "m",
+      default: 0.15,
+      group: "Dimensi Tangga",
+    },
+    {
+      key: "mutuBeton",
+      label: "Mutu Beton",
+      unit: "K",
+      default: 225,
+      group: "Spesifikasi Beton",
+      options: [
+        { value: 175, label: "K-175 (fc 14.5)" },
+        { value: 225, label: "K-225 (fc 19.3)" },
+        { value: 275, label: "K-275 (fc 22.5)" },
+      ],
+    },
+    {
+      key: "diaTul",
+      label: "Ø Tulangan",
+      unit: "mm",
+      default: 13,
+      group: "Pembesian",
+      options: [
+        { value: 10, label: "Ø10 mm" },
+        { value: 13, label: "Ø13 mm" },
+        { value: 16, label: "Ø16 mm" },
+      ],
+    },
+    {
+      key: "jarakTul",
+      label: "Jarak Tulangan",
+      unit: "m",
+      default: 0.15,
+      group: "Pembesian",
+    },
+  ],
+  items: [
+    {
+      key: "betonTangga",
+      label: "Beton Tangga (plat + anak)",
+      ahspKeyword: (i) => mutuBetonKeyword(n(i.mutuBeton, 225)),
+      ahspUnit: "m3",
+      defaultEnabled: true,
+      computeVolume: (i) => {
+        const H = n(i.tinggiTotal, 3.2);
+        const W = n(i.lebarTangga, 1);
+        const opt = n(i.optrede, 0.18);
+        const ant = n(i.antrede, 0.28);
+        const tebal = n(i.tebalPlat, 0.15);
+        const jmlAnak = Math.max(1, Math.round(H / opt));
+        const run = jmlAnak * ant;
+        const Lmiring = Math.sqrt(run * run + H * H);
+        const vWaist = W * tebal * Lmiring;
+        const vAnak = 0.5 * ant * opt * W * jmlAnak;
+        const v = vWaist + vAnak;
+        return {
+          volume: v,
+          formula: `Plat miring ${fmt(W, 2)}×${fmt(tebal, 2)}×${fmt(Lmiring, 2)} + ${jmlAnak} anak (½×${fmt(ant, 2)}×${fmt(opt, 2)}×${fmt(W, 2)}) = ${fmt(v, 3)} m³`,
+        };
+      },
+    },
+    {
+      key: "penulanganTangga",
+      label: "Penulangan Tangga",
+      ahspKeyword: "penulangan kolom balok sloof",
+      ahspUnit: "kg",
+      defaultEnabled: true,
+      computeVolume: (i) => {
+        const H = n(i.tinggiTotal, 3.2);
+        const W = n(i.lebarTangga, 1);
+        const opt = n(i.optrede, 0.18);
+        const ant = n(i.antrede, 0.28);
+        const dia = n(i.diaTul, 13);
+        const jarak = n(i.jarakTul, 0.15);
+        const jmlAnak = Math.max(1, Math.round(H / opt));
+        const run = jmlAnak * ant;
+        const Lmiring = Math.sqrt(run * run + H * H);
+        // 1 lapis bawah: tulangan utama sepanjang miring + tulangan bagi melintang
+        const nUtama = Math.floor(W / jarak) + 1;
+        const nBagi = Math.floor(Lmiring / jarak) + 1;
+        const panjang = nUtama * Lmiring + nBagi * W;
+        const total = panjang * rebarWeight(dia);
+        return {
+          volume: total,
+          formula: `Utama ${nUtama}×${fmt(Lmiring, 2)}m + bagi ${nBagi}×${fmt(W, 2)}m → ${fmt(total, 2)} kg`,
+        };
+      },
+    },
+    {
+      key: "bekistingTangga",
+      label: "Bekisting Tangga",
+      ahspKeyword: "bekisting tangga",
+      ahspUnit: "m2",
+      defaultEnabled: true,
+      computeVolume: (i) => {
+        const H = n(i.tinggiTotal, 3.2);
+        const W = n(i.lebarTangga, 1);
+        const opt = n(i.optrede, 0.18);
+        const ant = n(i.antrede, 0.28);
+        const jmlAnak = Math.max(1, Math.round(H / opt));
+        const run = jmlAnak * ant;
+        const Lmiring = Math.sqrt(run * run + H * H);
+        const alas = W * Lmiring; // bekisting bawah plat miring
+        const anak = opt * W * jmlAnak; // bekisting tegak tiap anak tangga
+        const v = alas + anak;
+        return {
+          volume: v,
+          formula: `Alas ${fmt(W, 2)}×${fmt(Lmiring, 2)} + ${jmlAnak} anak×${fmt(opt, 2)}×${fmt(W, 2)} = ${fmt(v, 2)} m²`,
+        };
+      },
+    },
+  ],
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Export all stages
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -2301,6 +2457,7 @@ export const STAGE_CALCULATORS: StageCalcDef[] = [
   stageBetonKolom,
   stageBetonBalok,
   stageBetonPlat,
+  stageTangga,
   stagePasangan,
   stageAtap,
   stageFinishing,

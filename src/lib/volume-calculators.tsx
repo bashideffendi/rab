@@ -4790,6 +4790,116 @@ export const CALCULATORS: CalcDef[] = [
     ),
   },
 
+  // 6j. Cat Besi / Kayu (luas m²)
+  {
+    type: "cat_besi_kayu",
+    label: "Cat Besi / Kayu",
+    description:
+      "Luas pengecatan besi (railing/pagar/kusen besi) atau kayu (kusen/daun) × jumlah sisi.",
+    outputUnit: "m²",
+    outputLabel: "Luas Cat",
+    inputs: [
+      { key: "luas", label: "Luas Bidang (1 sisi)", unit: "m²", default: 5, min: 0 },
+      {
+        key: "sisi",
+        label: "Jumlah Sisi",
+        unit: "sisi",
+        default: 2,
+        min: 1,
+        hint: "Daun/railing biasanya 2 sisi",
+      },
+    ],
+    compute: (i) => {
+      const a = num(i.luas);
+      const s = num(i.sisi, 2);
+      const v = Math.max(0, a * s);
+      return { value: v, formula: `${fmt(a, 2)} × ${fmt(s, 0)} sisi = ${fmt(v, 2)} m²` };
+    },
+    Diagram: ({ values }) => (
+      <LinearDiagram
+        label={`${fmt(num(values.luas), 2)} m² × ${fmt(num(values.sisi, 2), 0)}`}
+        caption="Cat besi / kayu"
+      />
+    ),
+  },
+
+  // 6k. Keramik Dinding (luas m²)
+  {
+    type: "keramik_dinding",
+    label: "Keramik Dinding",
+    description:
+      "Luas keramik dinding (km mandi/dapur) = keliling dinding × tinggi pasang − bukaan.",
+    outputUnit: "m²",
+    outputLabel: "Luas Keramik Dinding",
+    inputs: [
+      {
+        key: "keliling",
+        label: "Keliling Dinding",
+        unit: "m",
+        default: 8,
+        min: 0,
+        hint: "Total panjang dinding yang dikeramik",
+      },
+      { key: "tinggi", label: "Tinggi Pasang", unit: "m", default: 1.5, min: 0 },
+      { key: "bukaan", label: "Total Luas Bukaan", unit: "m²", default: 0, min: 0 },
+    ],
+    compute: (i) => {
+      const k = num(i.keliling);
+      const t = num(i.tinggi);
+      const b = num(i.bukaan);
+      const v = Math.max(0, k * t - b);
+      return {
+        value: v,
+        formula: `(${fmt(k, 2)} × ${fmt(t, 2)}) − ${fmt(b, 2)} = ${fmt(v, 2)} m²`,
+      };
+    },
+    Diagram: ({ values }) => (
+      <PlasterWallDiagram
+        pLabel={`keliling = ${fmt(num(values.keliling), 2)} m`}
+        tLabel={`T = ${fmt(num(values.tinggi), 2)} m`}
+        sisiText="keramik dinding"
+      />
+    ),
+  },
+
+  // 6l. Rabat Beton / Screed (volume m³)
+  {
+    type: "rabat_beton",
+    label: "Rabat Beton / Screed",
+    description: "Volume rabat / lantai kerja / screed = P × L × tebal (m³).",
+    outputUnit: "m³",
+    outputLabel: "Volume Rabat",
+    inputs: [
+      { key: "P", label: "Panjang", unit: "m", default: 4, min: 0 },
+      { key: "L", label: "Lebar", unit: "m", default: 3, min: 0 },
+      {
+        key: "tebal",
+        label: "Tebal",
+        unit: "m",
+        default: 0.05,
+        min: 0,
+        hint: "Rabat ~5 cm, lantai kerja ~5-7 cm",
+      },
+    ],
+    compute: (i) => {
+      const P = num(i.P);
+      const L = num(i.L);
+      const t = num(i.tebal, 0.05);
+      const v = P * L * t;
+      return {
+        value: v,
+        formula: `${fmt(P, 2)} × ${fmt(L, 2)} × ${fmt(t, 3)} = ${fmt(v, 3)} m³`,
+      };
+    },
+    Diagram: ({ values }) => (
+      <FloorTileDiagram
+        pLabel={`P = ${fmt(num(values.P), 2)} m`}
+        lLabel={`L = ${fmt(num(values.L), 2)} m`}
+        bukaanText={`tebal ${fmt(num(values.tebal, 0.05), 3)} m`}
+      />
+    ),
+  },
+
   // 7. Pondasi Batu Kali / Rollag (volume m³, trapezoid cross-section)
   {
     type: "pondasi_batu_kali",
