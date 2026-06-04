@@ -64,8 +64,28 @@ export function isProgressPeriod(v: unknown): v is ProgressPeriod {
   return v === "weekly" || v === "daily";
 }
 
+/** Tanggal kalender WIB (Asia/Jakarta) sbg string 'YYYY-MM-DD'. Penting: server
+ *  Vercel jalan di UTC; tanpa ini, batas periode geser ke 07:00 WIB (off-by-one
+ *  tiap pagi utk daily). en-CA format = ISO YYYY-MM-DD. */
+function jakartaDateStr(d: Date): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Jakarta",
+  }).format(d);
+}
+
+/** Selisih hari kalender murni antara 2 tanggal 'YYYY-MM-DD' (anti-skew TZ). */
+function calendarDaysBetween(startStr: string, endStr: string): number {
+  const [sy, sm, sd] = startStr.split("-").map(Number);
+  const [ey, em, ed] = endStr.split("-").map(Number);
+  return Math.floor(
+    (Date.UTC(ey, em - 1, ed) - Date.UTC(sy, sm - 1, sd)) / 86_400_000,
+  );
+}
+
 /**
- * Hitung nomor periode berjalan project (1-based) berdasarkan tanggal mulai.
+ * Hitung nomor periode berjalan project (1-based) dari tanggal mulai, pakai
+ * TANGGAL KALENDER WIB (bukan instant server) supaya pergantian periode jatuh
+ * di tengah malam WIB, bukan 07:00 WIB.
  *
  * - Weekly: hari 0-6 → periode 1, hari 7-13 → periode 2, dst.
  * - Daily:  hari 0   → periode 1, hari 1   → periode 2, dst.
@@ -75,18 +95,19 @@ export function computeCurrentPeriod(
   createdAt: Date,
   period: PeriodConfig,
 ): number {
-  const start = startedAt ? new Date(`${startedAt}T00:00:00`) : createdAt;
-  const now = new Date();
-  const diffMs = now.getTime() - start.getTime();
-  if (diffMs < 0) return 1;
-  const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const startStr = startedAt ?? jakartaDateStr(createdAt);
+  const todayStr = jakartaDateStr(new Date());
+  const days = calendarDaysBetween(startStr, todayStr);
+  if (days < 0) return 1;
   return Math.max(1, Math.floor(days / period.daysPerPeriod) + 1);
 }
 
 /**
  * Tanggal kalender awal periode ke-N (1-based) dari tanggal mulai project.
  * Periode 1 = startedAt; periode N = startedAt + (N-1)×daysPerPeriod hari.
- * Null kalau startedAt belum diisi.
+ * Dibangun via Date.UTC (UTC-midnight) supaya komponen tanggalnya stabil lintas
+ * timezone server — consumer format pakai timeZone "Asia/Jakarta". Null kalau
+ * startedAt belum diisi.
  */
 export function dateForPeriod(
   startedAt: string | null,
@@ -94,7 +115,6 @@ export function dateForPeriod(
   period: PeriodConfig,
 ): Date | null {
   if (!startedAt) return null;
-  const d = new Date(`${startedAt}T00:00:00`);
-  d.setDate(d.getDate() + (n - 1) * period.daysPerPeriod);
-  return d;
+  const [y, m, d] = startedAt.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d + (n - 1) * period.daysPerPeriod));
 }
