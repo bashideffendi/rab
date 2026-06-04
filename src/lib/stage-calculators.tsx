@@ -86,6 +86,35 @@ function rebarWeight(dia: number): number {
   return REBAR_WEIGHT[dia] ?? 0.006165 * dia * dia;
 }
 
+// ── BBS (Bar Bending Schedule) helpers — SNI 2847:2019 ──────────────────────
+// PENTING: kait & lewatan = panjang baja RIIL geometris (BUKAN waste). Koef
+// AHSP pembesian (basis 10 kg) cuma memuat bendrat ~1,5% + susut potong, jadi
+// menambah kait/lewatan ke panjang teoritis BUKAN double-count dengan AHSP.
+
+/** Panjang ekor kait seismik 135° per ujung (m). Tabel 25.3.1: max(6db, 75mm). */
+function hookTail135(diaMm: number): number {
+  return Math.max(6 * diaMm, 75) / 1000;
+}
+
+/** Keliling potong 1 sengkang tertutup + 2 kait 135° (m) — pengganti konstanta
+ *  "+0,1" lama. b,h,k dalam meter (k = selimut ke as sengkang). */
+function stirrupPerimeter(
+  b: number,
+  h: number,
+  k: number,
+  diaMm: number,
+): number {
+  return 2 * (b - 2 * k + (h - 2 * k)) + 2 * hookTail135(diaMm);
+}
+
+/** Panjang besi stok pabrik (m) — di atas ini batang utama disambung lewatan. */
+const STOCK_BAR_LENGTH = 12;
+
+/** Panjang 1 sambungan lewatan tarik 40·db (m). SNI 2847:2019. */
+function lapSplice(diaMm: number): number {
+  return (40 * diaMm) / 1000;
+}
+
 /** Mutu beton (K-X) → keyword search AHSP. Pakai notasi "K{x}" supaya
  *  expandQuery di /api/ahsp/search nge-map ke f'c yang benar & cocok ke beton
  *  STRUKTURAL (token K/225/19,3 dst), bukan lean "f'c 10 MPa, agregat maks 19
@@ -683,10 +712,14 @@ const stageBetonSloof: StageCalcDef = {
         const R = n(i.R, 0.15);
 
         // Besi utama
-        const lUtama = P * n1;
+        // Lewatan 40·db utk batang menerus > 12 m (panjang stok pabrik).
+        const sambungan =
+          P > STOCK_BAR_LENGTH ? Math.floor(P / STOCK_BAR_LENGTH) : 0;
+        const lLewatan = sambungan * lapSplice(D1) * n1;
+        const lUtama = P * n1 + lLewatan;
         const wUtama = lUtama * rebarWeight(D1);
         // Ring/begel
-        const kelRing = 2 * (L - 2 * k + (T - 2 * k)) + 0.1;
+        const kelRing = stirrupPerimeter(L, T, k, D3);
         const jmlRing = Math.ceil(P / R) + 1;
         const lRing = kelRing * jmlRing;
         const wRing = lRing * rebarWeight(D3);
@@ -695,7 +728,7 @@ const stageBetonSloof: StageCalcDef = {
         const wBesi = wUtama + wRing;
 
         const formula = [
-          `Utama (Ø${D1} × ${n1} btg × ${fmt(P, 2)} m): ${fmt(lUtama, 2)} m → ${fmt(wUtama, 2)} kg`,
+          `Utama Ø${D1} ${n1} btg×${fmt(P, 2)}m${lLewatan > 0 ? ` +lewatan ${fmt(lLewatan, 2)}m` : ""}: ${fmt(lUtama, 2)} m → ${fmt(wUtama, 2)} kg`,
           `Ring/Begel (Ø${D3} jarak ${fmt(R * 100, 0)} cm, ${jmlRing} buah): ${fmt(lRing, 2)} m → ${fmt(wRing, 2)} kg`,
           `TOTAL besi: ${fmt(wBesi, 2)} kg (kawat ikat sudah termasuk AHSP pembesian)`,
         ].join(" | ");
@@ -923,8 +956,8 @@ const stageBetonKolom: StageCalcDef = {
         const wSupport = lSupport * rebarWeight(D2);
 
         // Panjang besi ring (m):
-        //   Keliling 1 ring = 2((Lx-2k) + (Ly-2k)) + overlap (2 × 0.05 = 0.1)
-        const kelRing = 2 * (Lx - 2 * k + (Ly - 2 * k)) + 0.1;
+        //   Keliling 1 ring = inti + 2 kait 135° (SNI 2847:2019), bukan +0,1.
+        const kelRing = stirrupPerimeter(Lx, Ly, k, D3);
         const jmlRingPerKolom = Math.ceil(T / R) + 1;
         const lRing = kelRing * jmlRingPerKolom * nk;
         const wRing = lRing * rebarWeight(D3);
@@ -1115,11 +1148,15 @@ const stageBetonBalok: StageCalcDef = {
         const D3 = n(i.D3, 8);
         const R = n(i.R, 0.15);
 
-        const lUtama = P * n1;
+        // Lewatan 40·db utk batang menerus > 12 m (panjang stok pabrik).
+        const sambungan =
+          P > STOCK_BAR_LENGTH ? Math.floor(P / STOCK_BAR_LENGTH) : 0;
+        const lLewatan = sambungan * lapSplice(D1) * n1;
+        const lUtama = P * n1 + lLewatan;
         const wUtama = lUtama * rebarWeight(D1);
-        const lSupport = P * n2;
+        const lSupport = P * n2 + sambungan * lapSplice(D2) * n2;
         const wSupport = lSupport * rebarWeight(D2);
-        const kelRing = 2 * (L - 2 * k + (T - 2 * k)) + 0.1;
+        const kelRing = stirrupPerimeter(L, T, k, D3);
         const jmlRing = Math.ceil(P / R) + 1;
         const lRing = kelRing * jmlRing;
         const wRing = lRing * rebarWeight(D3);
@@ -1127,7 +1164,7 @@ const stageBetonBalok: StageCalcDef = {
         // Kawat ikat sudah termasuk AHSP pembesian → tidak ditambah (anti double-count).
 
         const formula = [
-          `Utama (Ø${D1} × ${n1} btg × ${fmt(P, 2)} m): ${fmt(lUtama, 2)} m → ${fmt(wUtama, 2)} kg`,
+          `Utama Ø${D1} ${n1} btg×${fmt(P, 2)}m${lLewatan > 0 ? ` +lewatan ${fmt(lLewatan, 2)}m` : ""}: ${fmt(lUtama, 2)} m → ${fmt(wUtama, 2)} kg`,
           n2 > 0
             ? `Support (Ø${D2} × ${n2} btg × ${fmt(P, 2)}): ${fmt(lSupport, 2)} m → ${fmt(wSupport, 2)} kg`
             : "",
