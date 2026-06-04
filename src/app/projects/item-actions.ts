@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { and, eq, isNull, lte, or, gte, desc } from "drizzle-orm";
 import { db, schema } from "@/db";
-import { requireUser, verifyProjectOwnership } from "@/lib/auth";
+import { requireUser, verifyProjectOwnership, assertNotLocked } from "@/lib/auth";
 import { normalizeUnit } from "@/lib/units";
 
 const NUM_RE = /^\d+(\.\d+)?$/;
@@ -204,6 +204,7 @@ export async function createProjectItem(
   const user = await requireUser();
   try {
     await verifyProjectOwnership(projectId, user.id);
+    await assertNotLocked(projectId);
   } catch (e) {
     return {
       error:
@@ -388,6 +389,7 @@ export async function updateProjectItem(
   const user = await requireUser();
   try {
     await verifyProjectOwnership(projectId, user.id);
+    await assertNotLocked(projectId);
   } catch (e) {
     return {
       error:
@@ -436,6 +438,7 @@ export async function deleteProjectItem(formData: FormData) {
   }
   const user = await requireUser();
   await verifyProjectOwnership(projectId, user.id);
+  await assertNotLocked(projectId);
   await db
     .delete(schema.projectItems)
     .where(
@@ -466,6 +469,7 @@ export async function updateItemInline(
   const user = await requireUser();
   try {
     await verifyProjectOwnership(projectId, user.id);
+    await assertNotLocked(projectId);
   } catch (e) {
     return {
       error: e instanceof Error ? e.message : "Gak punya akses ke project ini.",

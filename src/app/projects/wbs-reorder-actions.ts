@@ -3,7 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { and, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
-import { requireUser, verifyProjectOwnership } from "@/lib/auth";
+import {
+  requireUser,
+  verifyProjectOwnership,
+  assertNotLocked,
+} from "@/lib/auth";
 
 /**
  * Bulk renumber sortOrder untuk wbs_items sesuai urutan `orderedIds`.
@@ -29,6 +33,7 @@ export async function reorderWbsItems(
   const user = await requireUser();
   try {
     await verifyProjectOwnership(projectId, user.id);
+    await assertNotLocked(projectId);
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Akses ditolak." };
   }

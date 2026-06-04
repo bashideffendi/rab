@@ -4,6 +4,7 @@ import { useTransition } from "react";
 import {
   duplicateProject,
   toggleArchiveProject,
+  toggleLockProject,
 } from "@/app/projects/actions";
 import { Button } from "@/components/ui/button";
 import { Tooltip } from "@/components/ui/tooltip";
@@ -123,4 +124,40 @@ export function ArchiveButton({
     return <Tooltip content={tooltipText}>{form}</Tooltip>;
   }
   return form;
+}
+
+export function LockButton({
+  id,
+  isLocked,
+}: {
+  id: string;
+  isLocked: boolean;
+}) {
+  const [pending, start] = useTransition();
+  const label = isLocked ? "Buka Kunci" : "Kunci RAB";
+  return (
+    <form
+      action={(fd) => {
+        const msg = isLocked
+          ? "Buka kunci RAB? Setelah ini nilai & struktur bisa diedit lagi."
+          : "Kunci RAB? Total kontrak di-snapshot ke audit log dan semua item, WBS, harga, serta urutan dikunci dari perubahan. Buka kunci untuk edit lagi.";
+        if (!window.confirm(msg)) return;
+        start(() => {
+          toggleLockProject(fd);
+        });
+      }}
+    >
+      <input type="hidden" name="id" value={id} />
+      <input type="hidden" name="lock" value={isLocked ? "false" : "true"} />
+      <Button
+        type="submit"
+        variant="secondary"
+        size="sm"
+        disabled={pending}
+        aria-label={label}
+      >
+        {pending ? "…" : isLocked ? "🔓 Buka Kunci" : "🔒 Kunci RAB"}
+      </Button>
+    </form>
+  );
 }

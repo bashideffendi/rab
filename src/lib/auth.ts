@@ -51,3 +51,20 @@ export async function verifyProjectOwnership(
     throw new Error("Project gak ditemukan atau bukan milikmu.");
   }
 }
+
+/**
+ * Guard: lempar error kalau project terkunci (lockedAt != null). Dipanggil di
+ * SEMUA server action yang mengubah item RAB — lock = freeze nilai kontrak,
+ * dan EditableCell/form memanggil server action langsung jadi UI-disable saja
+ * tidak cukup.
+ */
+export async function assertNotLocked(projectId: string): Promise<void> {
+  const rows = await db
+    .select({ lockedAt: schema.projects.lockedAt })
+    .from(schema.projects)
+    .where(eq(schema.projects.id, projectId))
+    .limit(1);
+  if (rows[0]?.lockedAt) {
+    throw new Error("RAB terkunci — buka kunci dulu untuk mengubah.");
+  }
+}

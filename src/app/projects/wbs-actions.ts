@@ -3,7 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { and, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
-import { requireUser, verifyProjectOwnership } from "@/lib/auth";
+import {
+  requireUser,
+  verifyProjectOwnership,
+  assertNotLocked,
+} from "@/lib/auth";
 
 const CODE_RE = /^\d+(\.\d+)*$/;
 
@@ -52,6 +56,7 @@ export async function createWbsItem(
   const user = await requireUser();
   try {
     await verifyProjectOwnership(projectId, user.id);
+    await assertNotLocked(projectId);
   } catch (e) {
     return {
       error:
@@ -148,6 +153,7 @@ export async function updateWbsItem(
   const user = await requireUser();
   try {
     await verifyProjectOwnership(projectId, user.id);
+    await assertNotLocked(projectId);
   } catch (e) {
     return {
       error:
@@ -215,6 +221,7 @@ export async function deleteWbsItem(formData: FormData) {
   }
   const user = await requireUser();
   await verifyProjectOwnership(projectId, user.id);
+  await assertNotLocked(projectId);
   await db
     .delete(schema.wbsItems)
     .where(

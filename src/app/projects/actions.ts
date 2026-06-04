@@ -4,9 +4,10 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { and, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
-import { requireUser } from "@/lib/auth";
+import { requireUser, assertNotLocked } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
 import { isProgressPeriod, type ProgressPeriod } from "@/lib/period";
+import { computeRekap } from "@/lib/rekap";
 
 const PROJECT_STATUSES = ["draft", "active", "archived"] as const;
 type ProjectStatus = (typeof PROJECT_STATUSES)[number];
@@ -320,6 +321,19 @@ export async function updateProject(
 
   const user = await requireUser();
 
+  // RAB terkunci → tolak perubahan config (ppn/overhead/smkk/dibulatkanKe
+  // mempengaruhi total kontrak yang sudah di-snapshot). Buka kunci dulu.
+  try {
+    await assertNotLocked(id);
+  } catch (e) {
+    return {
+      error:
+        e instanceof Error
+          ? e.message
+          : "RAB terkunci — buka kunci dulu untuk mengubah.",
+    };
+  }
+
   try {
     await db
       .update(schema.projects)
@@ -495,12 +509,85 @@ export async function toggleArchiveProject(formData: FormData) {
   redirect(`/projects/${id}`);
 }
 
+async function computeLockSnapshot(projectId: string, userId: string) {
+  const [proj] = await db
+    .select({
+      ppnPercent: schema.projects.ppnPercent,
+      overheadPercent: schema.projects.overheadPercent,
+      smkkPercent: schema.projects.smkkPercent,
+      dibulatkanKe: schema.projects.dibulatkanKe,
+    })
+    .from(schema.projects)
+    .where(
+      and(eq(schema.projects.id, projectId), eq(schema.projects.userId, userId)),
+    )
+    .limit(1);
+  if (!proj) return undefined;
+  const items = await db
+    .select({
+      volume: schema.projectItems.volume,
+      customUnitPrice: schema.projectItems.customUnitPrice,
+    })
+    .from(schema.projectItems)
+    .where(eq(schema.projectItems.projectId, projectId));
+  const subtotal = items.reduce((s, i) => {
+    const v = Number(i.volume);
+    const p = Number(i.customUnitPrice ?? 0);
+    return s + (Number.isFinite(v) && Number.isFinite(p) ? v * p : 0);
+  }, 0);
+  const r = computeRekap(subtotal, proj);
+  return {
+    subtotal: r.subtotal,
+    overhead: r.overhead,
+    smkk: r.smkk,
+    ppn: r.ppn,
+    total: r.total,
+    dibulatkan: r.dibulatkan,
+    itemCount: items.length,
+  };
+}
+
+/**
+ * Lock/unlock RAB — freeze nilai kontrak. Saat lock, snapshot total disimpan
+ * ke audit log; semua server action mutasi item nolak via assertNotLocked.
+ */
+export async function toggleLockProject(formData: FormData) {
+  const id = (formData.get("id") ?? "").toString();
+  const lock = (formData.get("lock") ?? "true").toString() === "true";
+  if (!id) throw new Error("Project ID hilang.");
+  const user = await requireUser();
+
+  const snapshot = lock ? await computeLockSnapshot(id, user.id) : undefined;
+
+  await db
+    .update(schema.projects)
+    .set({ lockedAt: lock ? new Date() : null, updatedAt: new Date() })
+    .where(
+      and(eq(schema.projects.id, id), eq(schema.projects.userId, user.id)),
+    );
+
+  await logAudit({
+    projectId: id,
+    userId: user.id,
+    action: lock ? "lock" : "unlock",
+    summary: lock
+      ? `RAB dikunci — total Rp ${(snapshot?.dibulatkan ?? 0).toLocaleString("id-ID")} (freeze kontrak)`
+      : "RAB dibuka kembali",
+    details: snapshot,
+  });
+
+  revalidatePath(`/projects/${id}`);
+  redirect(`/projects/${id}`);
+}
+
 export async function deleteProject(formData: FormData) {
   const id = (formData.get("id") ?? "").toString();
   if (!id) {
     throw new Error("Project ID hilang.");
   }
   const user = await requireUser();
+  // Freeze kontrak: RAB terkunci gak bisa dihapus — buka kunci dulu.
+  await assertNotLocked(id);
   await db
     .delete(schema.projects)
     .where(

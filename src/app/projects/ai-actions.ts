@@ -4,7 +4,11 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { eq, inArray } from "drizzle-orm";
 import { db, schema } from "@/db";
-import { requireUser, verifyProjectOwnership } from "@/lib/auth";
+import {
+  requireUser,
+  verifyProjectOwnership,
+  assertNotLocked,
+} from "@/lib/auth";
 import { computeAhspPrices } from "@/lib/pricing";
 
 /**
@@ -59,6 +63,7 @@ export async function applyAiExtraction(formData: FormData) {
 
   const user = await requireUser();
   await verifyProjectOwnership(projectId, user.id);
+  await assertNotLocked(projectId);
 
   const [projRow] = await db
     .select({ regionId: schema.projects.regionId })

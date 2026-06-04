@@ -3,7 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { and, desc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
-import { requireUser, verifyProjectOwnership } from "@/lib/auth";
+import {
+  requireUser,
+  verifyProjectOwnership,
+  assertNotLocked,
+} from "@/lib/auth";
 import { normalizeUnit } from "@/lib/units";
 import { logAudit } from "@/lib/audit";
 
@@ -27,6 +31,7 @@ export async function applyExcelImport(
   const user = await requireUser();
   try {
     await verifyProjectOwnership(projectId, user.id);
+    await assertNotLocked(projectId);
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Gak punya akses ke project ini." };
   }

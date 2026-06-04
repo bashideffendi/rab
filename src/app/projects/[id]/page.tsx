@@ -10,6 +10,7 @@ import { DeleteProjectButton } from "@/components/delete-project-button";
 import {
   DuplicateButton,
   ArchiveButton,
+  LockButton,
 } from "@/components/duplicate-archive-buttons";
 import { CoverUpload } from "@/components/cover-upload";
 import { formatDate } from "@/lib/utils";
@@ -128,6 +129,11 @@ export default async function ProjectDetailPage({
                 {project.tahun && (
                   <Badge tone="default">Tahun {project.tahun}</Badge>
                 )}
+                {project.lockedAt && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/40 bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-600">
+                    🔒 RAB Terkunci
+                  </span>
+                )}
               </div>
               <h1 className="text-3xl font-bold leading-tight tracking-tight md:text-4xl">
                 {project.name}
@@ -201,6 +207,7 @@ export default async function ProjectDetailPage({
               id={project.id}
               isArchived={project.isArchived}
             />
+            <LockButton id={project.id} isLocked={!!project.lockedAt} />
             <span className="ml-auto font-mono text-[11px] text-muted-foreground">
               ID {project.id.slice(0, 8)}
             </span>

@@ -134,6 +134,9 @@ export const projects = pgTable(
     templateCategory: text("template_category"), // "rumah", "renovasi", "komersial", dll
     templateDescription: text("template_description"),
     templateSlug: text("template_slug"), // unique slug for stable URL
+    // Lock RAB: freeze nilai kontrak. NULL = belum dikunci. Saat terisi,
+    // semua mutasi item ditolak server-side (assertNotLocked).
+    lockedAt: timestamp("locked_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
