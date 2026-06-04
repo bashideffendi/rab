@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { and, asc, desc, eq, inArray, isNull, lte, or, gte } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { requireUser } from "@/lib/auth";
+import { loadBreakdownRows } from "@/lib/breakdown";
 import { formatIDR } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -36,107 +37,10 @@ async function loadBreakdown(
   projectId: string,
   regionId: string | null,
 ): Promise<BreakdownRow[]> {
-  // Step 1: Get all (material, total kebutuhan) by joining items × ahsp_components × materials
-  const aggRows = await db
-    .select({
-      materialId: schema.materials.id,
-      name: schema.materials.name,
-      type: schema.materials.type,
-      unit: schema.materials.unit,
-      coefficient: schema.ahspComponents.coefficient,
-      itemVolume: schema.projectItems.volume,
-    })
-    .from(schema.projectItems)
-    .innerJoin(
-      schema.ahspComponents,
-      eq(
-        schema.ahspComponents.ahspItemId,
-        schema.projectItems.ahspItemId,
-      ),
-    )
-    .innerJoin(
-      schema.materials,
-      eq(schema.materials.id, schema.ahspComponents.materialId),
-    )
-    .where(eq(schema.projectItems.projectId, projectId));
-
-  // Aggregate per material
-  const map = new Map<string, BreakdownRow>();
-  for (const r of aggRows) {
-    const koef = Number(r.coefficient);
-    const vol = Number(r.itemVolume);
-    if (!Number.isFinite(koef) || !Number.isFinite(vol)) continue;
-    const kebutuhan = koef * vol;
-    let m = map.get(r.materialId);
-    if (!m) {
-      m = {
-        materialId: r.materialId,
-        name: r.name,
-        type: r.type,
-        unit: r.unit,
-        totalKebutuhan: 0,
-        hargaSatuan: 0,
-        totalBiaya: 0,
-      };
-      map.set(r.materialId, m);
-    }
-    m.totalKebutuhan += kebutuhan;
-  }
-
-  // Step 2: Get latest material price per material
-  // Prefer regionId match, fallback to nasional
-  if (map.size === 0) return [];
-  const matIds = Array.from(map.keys());
-  const today = new Date().toISOString().slice(0, 10);
-
-  const prices = await db
-    .select({
-      materialId: schema.materialPrices.materialId,
-      price: schema.materialPrices.price,
-      regionId: schema.materialPrices.regionId,
-      validFrom: schema.materialPrices.validFrom,
-    })
-    .from(schema.materialPrices)
-    .where(
-      and(
-        inArray(schema.materialPrices.materialId, matIds),
-        lte(schema.materialPrices.validFrom, today),
-        or(
-          isNull(schema.materialPrices.validTo),
-          gte(schema.materialPrices.validTo, today),
-        ),
-      ),
-    )
-    .orderBy(desc(schema.materialPrices.validFrom));
-
-  // Pick latest price per material; prefer regionId match if any
-  const priceByMat = new Map<string, number>();
-  for (const p of prices) {
-    if (priceByMat.has(p.materialId)) continue;
-    // prefer regionId match
-    if (regionId && p.regionId !== regionId && p.regionId !== null) continue;
-    priceByMat.set(p.materialId, Number(p.price));
-  }
-  // Fallback to any price for materials still missing
-  for (const p of prices) {
-    if (!priceByMat.has(p.materialId)) {
-      priceByMat.set(p.materialId, Number(p.price));
-    }
-  }
-
-  // Compute totals
-  for (const m of map.values()) {
-    m.hargaSatuan = priceByMat.get(m.materialId) ?? 0;
-    m.totalBiaya = m.hargaSatuan * m.totalKebutuhan;
-  }
-
-  return Array.from(map.values()).sort((a, b) => {
-    if (a.type !== b.type) {
-      const order = { tenaga: 0, bahan: 1, alat: 2 } as const;
-      return order[a.type] - order[b.type];
-    }
-    return a.name.localeCompare(b.name);
-  });
+  // Delegasi ke helper bersama (region-aware IKK + sanity-gate) — angka sama
+  // persis dgn sheet export & halaman /print, dan rekonsiliasi ke subtotal RAB.
+  // Dulu fungsi ini hitung harga sendiri TANPA IKK & TANPA gate → angka beda.
+  return loadBreakdownRows(projectId, regionId);
 }
 
 const TYPE_LABEL = {

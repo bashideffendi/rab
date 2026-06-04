@@ -135,6 +135,22 @@ const PRICE_CEIL: Record<string, Record<string, number>> = {
   },
 };
 
+/**
+ * Gerbang harga janggal — SATU sumber kebenaran dipakai SEMUA jalur harga
+ * (computeAhspPrices saat snapshot item + export AHS/breakdown sheet), biar HSP
+ * di export rekonsiliasi persis dgn customUnitPrice di RAB. price = harga
+ * material pre-IKK. true → komponen di-skip dari subtotal & di-flag.
+ */
+export function isCorruptPrice(
+  materialType: string | null,
+  materialUnit: string | null,
+  price: number,
+): boolean {
+  const u = (materialUnit ?? "").toLowerCase().replace(/['`’′]/g, "").trim();
+  const ceil = PRICE_CEIL[materialType ?? ""]?.[u];
+  return ceil != null && price > ceil;
+}
+
 export async function computeAhspPrices(
   ahspIds: string[],
   regionId?: string | null,
@@ -183,12 +199,7 @@ export async function computeAhspPrices(
       }
       // Sanity-gate harga komponen janggal (korup ×1000): skip + flag, jangan
       // diam-diam masuk subtotal & meledakkan HSP. Berlaku tenaga/bahan/alat.
-      const u = (c.materialUnit ?? "")
-        .toLowerCase()
-        .replace(/['`’′]/g, "")
-        .trim();
-      const ceil = PRICE_CEIL[c.materialType ?? ""]?.[u];
-      if (ceil != null && price > ceil) {
+      if (isCorruptPrice(c.materialType, c.materialUnit, price)) {
         missing.push(
           `${c.materialName} (harga janggal Rp ${Math.round(price).toLocaleString("id-ID")})`,
         );

@@ -1,15 +1,6 @@
 import { notFound } from "next/navigation";
-import {
-  and,
-  asc,
-  desc,
-  eq,
-  gte,
-  inArray,
-  isNull,
-  lte,
-  or,
-} from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
+import { loadBreakdownRows } from "@/lib/breakdown";
 import { db, schema } from "@/db";
 import { requireUser } from "@/lib/auth";
 import { formatIDR, formatDate } from "@/lib/utils";
@@ -93,85 +84,10 @@ async function loadBreakdown(
   projectId: string,
   regionId: string | null,
 ): Promise<BreakdownRow[]> {
-  const aggRows = await db
-    .select({
-      materialId: schema.materials.id,
-      name: schema.materials.name,
-      type: schema.materials.type,
-      unit: schema.materials.unit,
-      coefficient: schema.ahspComponents.coefficient,
-      itemVolume: schema.projectItems.volume,
-    })
-    .from(schema.projectItems)
-    .innerJoin(
-      schema.ahspComponents,
-      eq(schema.ahspComponents.ahspItemId, schema.projectItems.ahspItemId),
-    )
-    .innerJoin(
-      schema.materials,
-      eq(schema.materials.id, schema.ahspComponents.materialId),
-    )
-    .where(eq(schema.projectItems.projectId, projectId));
-
-  const map = new Map<string, BreakdownRow & { materialId: string }>();
-  for (const r of aggRows) {
-    const koef = Number(r.coefficient);
-    const vol = Number(r.itemVolume);
-    if (!Number.isFinite(koef) || !Number.isFinite(vol)) continue;
-    let m = map.get(r.materialId);
-    if (!m) {
-      m = {
-        materialId: r.materialId,
-        type: r.type,
-        name: r.name,
-        unit: r.unit,
-        totalKebutuhan: 0,
-        hargaSatuan: 0,
-        totalBiaya: 0,
-      };
-      map.set(r.materialId, m);
-    }
-    m.totalKebutuhan += koef * vol;
-  }
-  if (map.size === 0) return [];
-
-  const matIds = Array.from(map.keys());
-  const today = new Date().toISOString().slice(0, 10);
-  const prices = await db
-    .select({
-      materialId: schema.materialPrices.materialId,
-      price: schema.materialPrices.price,
-      regionId: schema.materialPrices.regionId,
-    })
-    .from(schema.materialPrices)
-    .where(
-      and(
-        inArray(schema.materialPrices.materialId, matIds),
-        lte(schema.materialPrices.validFrom, today),
-        or(
-          isNull(schema.materialPrices.validTo),
-          gte(schema.materialPrices.validTo, today),
-        ),
-      ),
-    )
-    .orderBy(desc(schema.materialPrices.validFrom));
-
-  const priceByMat = new Map<string, number>();
-  for (const p of prices) {
-    if (priceByMat.has(p.materialId)) continue;
-    if (regionId && p.regionId !== regionId && p.regionId !== null) continue;
-    priceByMat.set(p.materialId, Number(p.price));
-  }
-  for (const p of prices) {
-    if (!priceByMat.has(p.materialId)) {
-      priceByMat.set(p.materialId, Number(p.price));
-    }
-  }
-  for (const m of map.values()) {
-    m.hargaSatuan = priceByMat.get(m.materialId) ?? 0;
-    m.totalBiaya = m.hargaSatuan * m.totalKebutuhan;
-  }
-  return Array.from(map.values()).map(({ materialId: _id, ...r }) => r);
+  // Delegasi ke helper bersama (region-aware IKK + sanity-gate) — angka sama
+  // persis dgn sheet export & halaman /breakdown, rekonsiliasi ke subtotal RAB.
+  const rows = await loadBreakdownRows(projectId, regionId);
+  return rows.map(({ materialId: _id, ...r }) => r);
 }
 
 function calcItemTotal(item: ItemRow): number {

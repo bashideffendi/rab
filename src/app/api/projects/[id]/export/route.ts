@@ -9,7 +9,12 @@ import {
   type ExportProject,
 } from "@/lib/excel-export";
 import { getCurrentUser, verifyProjectOwnership } from "@/lib/auth";
-import { getLatestMaterialPrices, getIkkMultiplier } from "@/lib/pricing";
+import {
+  getLatestMaterialPrices,
+  getIkkMultiplier,
+  isCorruptPrice,
+} from "@/lib/pricing";
+import { loadBreakdownRows } from "@/lib/breakdown";
 
 export const dynamic = "force-dynamic";
 
@@ -42,59 +47,10 @@ async function loadBreakdown(
   projectId: string,
   regionId: string | null,
 ): Promise<ExportBreakdownRow[]> {
-  const aggRows = await db
-    .select({
-      materialId: schema.materials.id,
-      name: schema.materials.name,
-      type: schema.materials.type,
-      unit: schema.materials.unit,
-      coefficient: schema.ahspComponents.coefficient,
-      itemVolume: schema.projectItems.volume,
-    })
-    .from(schema.projectItems)
-    .innerJoin(
-      schema.ahspComponents,
-      eq(schema.ahspComponents.ahspItemId, schema.projectItems.ahspItemId),
-    )
-    .innerJoin(
-      schema.materials,
-      eq(schema.materials.id, schema.ahspComponents.materialId),
-    )
-    .where(eq(schema.projectItems.projectId, projectId));
-
-  const map = new Map<string, ExportBreakdownRow & { materialId: string }>();
-  for (const r of aggRows) {
-    const koef = Number(r.coefficient);
-    const vol = Number(r.itemVolume);
-    if (!Number.isFinite(koef) || !Number.isFinite(vol)) continue;
-    const kebutuhan = koef * vol;
-    let m = map.get(r.materialId);
-    if (!m) {
-      m = {
-        materialId: r.materialId,
-        type: r.type,
-        name: r.name,
-        unit: r.unit,
-        totalKebutuhan: 0,
-        hargaSatuan: 0,
-        totalBiaya: 0,
-      };
-      map.set(r.materialId, m);
-    }
-    m.totalKebutuhan += kebutuhan;
-  }
-
-  if (map.size === 0) return [];
-  const matIds = Array.from(map.keys());
-  const priceMap = await getLatestMaterialPrices(matIds, regionId);
-  const ikk = await getIkkMultiplier(regionId);
-  for (const m of map.values()) {
-    const base = priceMap.get(m.materialId)?.price ?? 0;
-    m.hargaSatuan = base * ikk; // IKK applied — konsisten dgn breakdown UI
-    m.totalBiaya = m.hargaSatuan * m.totalKebutuhan;
-  }
-
-  return Array.from(map.values()).map(({ materialId: _id, ...rest }) => rest);
+  // Delegasi ke helper bersama (region-aware IKK + sanity-gate) — angka sama
+  // persis dgn halaman /breakdown & /print + rekonsiliasi ke subtotal RAB.
+  const rows = await loadBreakdownRows(projectId, regionId);
+  return rows.map(({ materialId: _id, ...rest }) => rest);
 }
 
 async function loadItems(projectId: string): Promise<ExportItem[]> {
@@ -203,7 +159,13 @@ async function loadAhs(
       order.push(r.itemId);
     }
     if (r.materialId && r.materialType && r.coefficient != null) {
-      const base = priceMap.get(r.materialId)?.price ?? 0;
+      const base = priceMap.get(r.materialId)?.price;
+      // Gate identik computeAhspPrices: skip komponen tanpa harga / harga
+      // janggal → Σ komponen AHS sheet == customUnitPrice di RAB sheet (gak
+      // ada lagi 1 file XLSX yang kontradiksi RAB vs AHS).
+      if (base == null || isCorruptPrice(r.materialType, r.materialUnit, base)) {
+        continue;
+      }
       const hargaSatuan = base * ikk;
       const coef = Number(r.coefficient) || 0;
       it.components.push({
