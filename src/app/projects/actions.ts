@@ -452,22 +452,34 @@ export async function duplicateProject(formData: FormData) {
     wbsIdMap.set(w.id, nw.id);
   }
 
-  // Clone items (preserve snapshot, gak recalc — copy as-is)
+  // Clone items (preserve snapshot, gak recalc — copy as-is, SEMUA kolom).
+  // Dulu cuma 8 kolom → jejak rumus volume (📐), catatan, jadwal Gantt
+  // (startWeek/durationWeeks), region override SEMUA hilang di duplikat tanpa
+  // peringatan. Sekalian batch insert (dulu N+1 await per item).
   const items = await db
     .select()
     .from(schema.projectItems)
     .where(eq(schema.projectItems.projectId, source.id));
-  for (const it of items) {
-    await db.insert(schema.projectItems).values({
-      projectId: newProj.id,
-      wbsItemId: it.wbsItemId ? wbsIdMap.get(it.wbsItemId) ?? null : null,
-      ahspItemId: it.ahspItemId,
-      customName: it.customName,
-      customUnit: it.customUnit,
-      customUnitPrice: it.customUnitPrice,
-      volume: it.volume,
-      sortOrder: it.sortOrder,
-    });
+  if (items.length > 0) {
+    await db.insert(schema.projectItems).values(
+      items.map((it) => ({
+        projectId: newProj.id,
+        wbsItemId: it.wbsItemId ? wbsIdMap.get(it.wbsItemId) ?? null : null,
+        ahspItemId: it.ahspItemId,
+        customName: it.customName,
+        customUnit: it.customUnit,
+        customUnitPrice: it.customUnitPrice,
+        volume: it.volume,
+        calculatorType: it.calculatorType,
+        calculatorInputs: it.calculatorInputs,
+        volumeFormula: it.volumeFormula,
+        notes: it.notes,
+        startWeek: it.startWeek,
+        durationWeeks: it.durationWeeks,
+        regionOverrideId: it.regionOverrideId,
+        sortOrder: it.sortOrder,
+      })),
+    );
   }
 
   await logAudit({

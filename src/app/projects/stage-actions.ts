@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, inArray } from "drizzle-orm";
 import { db, schema } from "@/db";
 import {
   requireUser,
@@ -86,23 +86,31 @@ export async function createBulkProjectItems(
 
   // Bulk price semua AHSP sekaligus (region-aware two-pass + IKK, satu sumber
   // kebenaran — sama dengan item/template/AI). Hindari N+1 query per item.
-  const priceMap = await computeAhspPrices(
-    payload.filter((it) => it.ahspItemId).map((it) => it.ahspItemId),
-    regionId,
-  );
+  const ahspIdList = payload
+    .filter((it) => it.ahspItemId)
+    .map((it) => it.ahspItemId);
+  const priceMap = await computeAhspPrices(ahspIdList, regionId);
+
+  // Fetch nama+unit semua AHSP sekali via inArray (dulu N+1: 1 query/item di
+  // loop — kontradiksi komentar "Hindari N+1"). computeAhspPrices cuma balikin
+  // price/missing, jadi name/unit perlu fetch terpisah — tapi cukup 1 query.
+  const masters = ahspIdList.length
+    ? await db
+        .select({
+          id: schema.ahspItems.id,
+          name: schema.ahspItems.name,
+          unit: schema.ahspItems.unit,
+        })
+        .from(schema.ahspItems)
+        .where(inArray(schema.ahspItems.id, ahspIdList))
+    : [];
+  const masterMap = new Map(masters.map((m) => [m.id, m]));
 
   for (const item of payload) {
     if (!item.ahspItemId) continue;
 
-    const ahsp = await db
-      .select({
-        name: schema.ahspItems.name,
-        unit: schema.ahspItems.unit,
-      })
-      .from(schema.ahspItems)
-      .where(eq(schema.ahspItems.id, item.ahspItemId))
-      .limit(1);
-    if (!ahsp[0]) {
+    const master = masterMap.get(item.ahspItemId);
+    if (!master) {
       warnings.push(`AHSP tidak ditemukan: ${item.ahspItemId.slice(0, 8)}`);
       continue;
     }
@@ -112,7 +120,7 @@ export async function createBulkProjectItems(
     const missing = priced?.missing ?? [];
     if (missing.length > 0) {
       warnings.push(
-        `${ahsp[0].name.slice(0, 30)}: ${missing.length} material belum ada harga`,
+        `${master.name.slice(0, 30)}: ${missing.length} material belum ada harga`,
       );
     }
 
@@ -120,8 +128,8 @@ export async function createBulkProjectItems(
       projectId,
       wbsItemId: item.wbsItemId ?? null,
       ahspItemId: item.ahspItemId,
-      customName: item.customName ?? ahsp[0].name,
-      customUnit: ahsp[0].unit,
+      customName: item.customName ?? master.name,
+      customUnit: master.unit,
       customUnitPrice: price,
       volume: item.volume.toFixed(4),
       calculatorType: item.calculatorType ?? null,

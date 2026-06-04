@@ -7,28 +7,13 @@ import { requireUser, verifyProjectOwnership, assertNotLocked } from "@/lib/auth
 import { normalizeUnit } from "@/lib/units";
 import { computeAhspPrices } from "@/lib/pricing";
 import { logAudit } from "@/lib/audit";
+import { parseNumStr } from "@/lib/num";
 
-// Parse angka harga/volume — terima format id-ID (koma=desimal, titik=ribuan)
-// SEKALIGUS format polos (titik=desimal), konsisten dgn EditableCell/Excel import/
-// settings yang sudah normalisasi koma. Dulu strict dot-only → "1250,50" / "1.250.000"
-// (input Indonesia wajar) ditolak. Return string canonical dot-decimal, atau null.
+// Parse angka harga/volume via helper bersama lib/num (id-ID aware) — sama
+// persis dgn yang dipakai inline-edit EditableCell, jadi dua jalur konsisten.
 function parseNum(value: FormDataEntryValue | null): string | null {
   if (value == null) return null;
-  let s = value.toString().trim();
-  if (!s) return null;
-  s = s.replace(/[^\d.,]/g, ""); // harga/volume ≥ 0 → buang selain digit/titik/koma
-  if (!s) return null;
-  if (s.includes(",")) {
-    // Ada koma → koma = desimal id-ID, titik = ribuan ("1.250.000,50" → 1250000.50)
-    s = s.replace(/\./g, "").replace(",", ".");
-  } else if (/^\d{1,3}(\.\d{3})+$/.test(s)) {
-    // Titik berkelompok 3 tanpa koma → ribuan murni ("1.250.000" → 1250000)
-    s = s.replace(/\./g, "");
-  }
-  // else: titik tunggal tetap desimal ("3.2" → 3.2)
-  const n = Number(s);
-  if (!Number.isFinite(n) || n < 0) return null;
-  return s;
+  return parseNumStr(value.toString());
 }
 
 // ─── CREATE ──────────────────────────────────────────────────────────────────

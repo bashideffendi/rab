@@ -1,7 +1,8 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
+import { parseNumStr } from "@/lib/num";
 import {
   DndContext,
   DragEndEvent,
@@ -85,11 +86,15 @@ function SortableGroup({
   const [, startTransition] = useTransition();
   const [reorderError, setReorderError] = useState<string | null>(null);
 
-  // Sync state kalau parent props berubah (mis. after revalidate)
-  // Pakai dependency on group.items reference. State akan reset.
-  // (React 19: useState lazy init dengan default function gak re-run on
-  //  parent re-render. Cara simpel: useEffect comparing items vs group.items.)
-  // Untuk MVP, kita relying ke revalidatePath yang re-mount component.
+  // Re-sync local state saat props berubah (mis. setelah inline-edit →
+  // revalidatePath). Key SortableGroup = wbsCode (stabil), jadi React PRESERVE
+  // state instance — useState init gak re-run → tanpa ini sel volume/harga
+  // tampil basi (kontradiksi sama subtotal yang fresh) sampai full reload.
+  // Reorder tetap aman: effect cuma fire pas group.items reference benar2 ganti
+  // (payload revalidated landing), bukan saat optimistic setItems.
+  useEffect(() => {
+    setItems(group.items);
+  }, [group.items]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -192,21 +197,30 @@ function EditableCell({
 
   function commit() {
     if (saving.current) return;
-    const trimmed = val.trim().replace(",", ".");
-    if (trimmed === "" || trimmed === raw) {
+    if (val.trim() === "") {
       setVal(raw);
       setErr(null);
       setEditing(false);
       return;
     }
-    if (!/^\d+(\.\d+)?$/.test(trimmed)) {
+    // Pakai parseNumStr (id-ID aware) — SAMA dgn jalur form, biar "1.250.000"
+    // / "1250,5" gak ditolak inline padahal form terima.
+    const canon = parseNumStr(val);
+    if (canon === null) {
       setErr("angka?");
+      return;
+    }
+    if (Number(canon) === Number(raw)) {
+      // Nilai gak berubah → gak usah simpan.
+      setVal(raw);
+      setErr(null);
+      setEditing(false);
       return;
     }
     setErr(null);
     saving.current = true;
     startTransition(async () => {
-      const res = await onSave(trimmed);
+      const res = await onSave(canon);
       saving.current = false;
       if (res?.error) setErr(res.error);
       else setEditing(false);
