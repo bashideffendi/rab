@@ -419,15 +419,18 @@ const stagePersiapan: StageCalcDef = {
       key: "papanNama",
       label: "Papan Nama Proyek",
       ahspKeyword: "papan nama",
-      ahspUnit: "buah",
+      // AHSP papan nama {1.1.2.2} dihargai per-m² (papan std 0,6×0,8 = 0,48 m²),
+      // bukan per-buah. Output m² = jml × 0,48 biar gak over-charge ~2×.
+      ahspUnit: "m2",
       defaultEnabled: false,
       showIf: (i) => n(i.papanNama) > 0,
       computeVolume: (i) => {
         const v = n(i.papanNama);
         if (v <= 0) return null;
+        const luas = v * 0.48;
         return {
-          volume: v,
-          formula: `${fmt(v, 0)} buah (input langsung)`,
+          volume: luas,
+          formula: `${fmt(v, 0)} papan × (0,6×0,8) = ${fmt(luas, 3)} m²`,
         };
       },
     },
