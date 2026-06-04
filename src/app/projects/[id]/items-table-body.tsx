@@ -305,7 +305,7 @@ function SortableItemRow({
     <tr
       ref={setNodeRef}
       style={style}
-      className="border-t border-border hover:bg-muted/20"
+      className="group border-t border-border transition-colors hover:bg-accent/[0.03]"
     >
       <td className="px-3 py-2">
         <div className="flex items-start gap-2">
@@ -334,7 +334,7 @@ function SortableItemRow({
           </button>
           <div className="flex-1">
             <div className="flex items-start gap-1.5">
-              <span>{item.name}</span>
+              <span className="font-medium text-foreground">{item.name}</span>
               {item.notes && (
                 <span
                   className="mt-0.5 cursor-help text-xs leading-none text-accent-text"
@@ -393,7 +393,7 @@ function SortableItemRow({
           onSave={(v) => updateItemInline(item.id, projectId, "unitPrice", v)}
         />
       </td>
-      <td className="px-3 py-2 text-right font-mono font-medium tabular-nums">
+      <td className="px-3 py-2 text-right font-mono font-semibold tabular-nums text-foreground">
         {formatIDR(total)}
       </td>
       <td className="w-20 px-3 py-2">
