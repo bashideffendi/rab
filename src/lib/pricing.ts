@@ -96,25 +96,43 @@ export async function getIkkMultiplier(
  * Cuma 3 query buat N AHSP (komponen bulk + harga bulk + IKK), bukan N+1.
  * Return Map ahspId → { price (string 2 desimal), missing (nama material tanpa harga) }.
  */
-// Plafon harga per-satuan material 'bahan' curah. Di atas ini dianggap JANGGAL
-// (data scrape sumber korup ×1000) → di-skip dari subtotal HSP + di-flag ke
-// missing[] (UI sudah surface), biar gak diam-diam meledakkan harga satuan.
-const RAW_PRICE_CEIL: Record<string, number> = {
-  kg: 200_000,
-  liter: 200_000,
-  ltr: 200_000,
-  m: 2_000_000,
-  m1: 2_000_000,
-  "m'": 2_000_000,
-  "m′": 2_000_000,
-  m2: 2_000_000,
-  m3: 3_000_000,
-  btg: 5_000_000,
-  batang: 5_000_000,
-  sak: 1_000_000,
-  zak: 1_000_000,
-  lbr: 1_000_000,
-  lembar: 1_000_000,
+// Plafon harga per-satuan, di-bucket per TIPE komponen. Di atas plafon dianggap
+// JANGGAL (data scrape sumber korup ×1000) → di-skip dari subtotal HSP + di-flag
+// ke missing[] (UI sudah surface), biar gak diam-diam meledakkan harga satuan.
+// HSP = Σ(tenaga)+Σ(bahan)+Σ(alat) → ketiganya dijaga, bukan cuma 'bahan'
+// (dulu upah/alat korup ×1000 lolos). Plafon longgar: cukup di atas harga legit
+// tertinggi tapi jauh di bawah korup×1000 (mis. kayu m³ legit ~4,5jt; dulu m³=3jt
+// keliru nge-flag kayu sah → dinaikkan ke 25jt; ×1000 tetap ketangkep).
+const PRICE_CEIL: Record<string, Record<string, number>> = {
+  bahan: {
+    kg: 200_000,
+    liter: 200_000,
+    ltr: 200_000,
+    m: 2_000_000,
+    m1: 2_000_000,
+    "m'": 2_000_000,
+    "m′": 2_000_000,
+    m2: 2_000_000,
+    m3: 25_000_000, // kayu kelas I/ulin bisa ~15-20jt/m³ → sah
+    btg: 5_000_000,
+    batang: 5_000_000,
+    sak: 1_000_000,
+    zak: 1_000_000,
+    lbr: 1_000_000,
+    lembar: 1_000_000,
+  },
+  alat: {
+    // Alat berat legit bisa mahal (AMP ~12,5jt/jam) → plafon longgar. Korup
+    // ×1000 alat termurah (~80jt/jam) tetap jauh di atas ini, jadi aman.
+    jam: 30_000_000,
+    hari: 50_000_000,
+    hr: 50_000_000,
+  },
+  tenaga: {
+    oh: 2_000_000, // upah harian (orang-hari) realistis <~2jt
+    hari: 2_000_000,
+    hr: 2_000_000,
+  },
 };
 
 export async function computeAhspPrices(
@@ -163,11 +181,14 @@ export async function computeAhspPrices(
         missing.push(c.materialName);
         continue;
       }
-      // Sanity-gate harga material janggal (korup ×1000): skip + flag, jangan
-      // diam-diam masuk subtotal & meledakkan HSP.
-      const u = (c.materialUnit ?? "").toLowerCase().replace(/['`’]/g, "").trim();
-      const ceil = RAW_PRICE_CEIL[u];
-      if (c.materialType === "bahan" && ceil != null && price > ceil) {
+      // Sanity-gate harga komponen janggal (korup ×1000): skip + flag, jangan
+      // diam-diam masuk subtotal & meledakkan HSP. Berlaku tenaga/bahan/alat.
+      const u = (c.materialUnit ?? "")
+        .toLowerCase()
+        .replace(/['`’′]/g, "")
+        .trim();
+      const ceil = PRICE_CEIL[c.materialType ?? ""]?.[u];
+      if (ceil != null && price > ceil) {
         missing.push(
           `${c.materialName} (harga janggal Rp ${Math.round(price).toLocaleString("id-ID")})`,
         );
