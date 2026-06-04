@@ -1,6 +1,7 @@
-import { eq } from "drizzle-orm";
+import { and, eq, gte, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { getCurrentUser, verifyProjectOwnership } from "@/lib/auth";
+import { logAudit } from "@/lib/audit";
 import {
   extractRabFromPdf,
   matchAhspCandidates,
@@ -10,6 +11,11 @@ import {
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300; // 5 menit — Claude vision PDF bisa lambat
+
+// Ekstraksi AI = 1 panggilan Claude vision per request (mahal). Batasi per-user
+// per-jam biar satu akun gak bisa nguras credit API (cost abuse). Counter pakai
+// project_audit_log action 'ai_extract' (gak butuh tabel baru).
+const AI_EXTRACT_LIMIT_PER_HOUR = 20;
 
 type EnrichedItem = {
   name: string;
@@ -52,6 +58,40 @@ export async function POST(
       { status: 404 },
     );
   }
+
+  // Rate-limit per-user (cost abuse Claude API): tolak kalau sudah ≥ N ekstraksi
+  // dalam 1 jam terakhir. Hitung dari audit log, lalu catat panggilan ini.
+  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+  try {
+    const [usage] = await db
+      .select({ n: sql<number>`count(*)::int` })
+      .from(schema.projectAuditLog)
+      .where(
+        and(
+          eq(schema.projectAuditLog.userId, user.id),
+          eq(schema.projectAuditLog.action, "ai_extract"),
+          gte(schema.projectAuditLog.createdAt, oneHourAgo),
+        ),
+      );
+    if ((usage?.n ?? 0) >= AI_EXTRACT_LIMIT_PER_HOUR) {
+      return Response.json(
+        {
+          error: `Batas ${AI_EXTRACT_LIMIT_PER_HOUR} ekstraksi AI per jam tercapai. Coba lagi nanti.`,
+        },
+        { status: 429 },
+      );
+    }
+  } catch (e) {
+    // Counter gagal → fail-open (jangan blokir user gara-gara error counter).
+    console.error("[ai-extract] rate-limit check gagal:", e);
+  }
+  // Catat panggilan ini (jadi counter + provenance "AI baca dokumen").
+  await logAudit({
+    projectId: id,
+    userId: user.id,
+    action: "ai_extract",
+    summary: "Ekstraksi AI dari dokumen PDF",
+  });
 
   // Parse multipart upload
   const formData = await request.formData();
