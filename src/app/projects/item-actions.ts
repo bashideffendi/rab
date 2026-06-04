@@ -1,10 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { and, eq, isNull, lte, or, gte, desc } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { requireUser, verifyProjectOwnership, assertNotLocked } from "@/lib/auth";
 import { normalizeUnit } from "@/lib/units";
+import { computeAhspPrices } from "@/lib/pricing";
 
 const NUM_RE = /^\d+(\.\d+)?$/;
 
@@ -14,109 +15,6 @@ function parseNum(value: FormDataEntryValue | null): string | null {
   if (!s) return null;
   if (!NUM_RE.test(s)) return null;
   return s;
-}
-
-const NATIONAL_REGION_CODE = "ID";
-
-/**
- * Hitung unit price dari AHSP item:
- *  base = sum atas komponen: koefisien × harga_terbaru_material
- *  final = base × (region.ikk / 100) kalau projectRegionId dan region.ikk ada,
- *          else fallback × 1 (= nasional).
- *
- * Returns: { price: string, missingMaterials: string[], multiplier: number }
- */
-async function calculateAhspUnitPrice(
-  ahspItemId: string,
-  projectRegionId: string | null,
-): Promise<{
-  price: string;
-  missingMaterials: string[];
-  multiplier: number;
-}> {
-  const components = await db
-    .select({
-      coefficient: schema.ahspComponents.coefficient,
-      materialId: schema.materials.id,
-      materialName: schema.materials.name,
-    })
-    .from(schema.ahspComponents)
-    .innerJoin(
-      schema.materials,
-      eq(schema.materials.id, schema.ahspComponents.materialId),
-    )
-    .where(eq(schema.ahspComponents.ahspItemId, ahspItemId));
-
-  if (components.length === 0) {
-    return { price: "0", missingMaterials: [], multiplier: 1 };
-  }
-
-  // Ambil region nasional (fallback)
-  const nationalRegion = await db
-    .select({ id: schema.regions.id })
-    .from(schema.regions)
-    .where(eq(schema.regions.code, NATIONAL_REGION_CODE))
-    .limit(1);
-  const nationalId = nationalRegion[0]?.id ?? null;
-
-  let total = 0;
-  const missing: string[] = [];
-  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-
-  for (const comp of components) {
-    // Try region nasional first; if none, try region NULL (default)
-    const priceRow = await db
-      .select({ price: schema.materialPrices.price })
-      .from(schema.materialPrices)
-      .where(
-        and(
-          eq(schema.materialPrices.materialId, comp.materialId),
-          nationalId
-            ? or(
-                eq(schema.materialPrices.regionId, nationalId),
-                isNull(schema.materialPrices.regionId),
-              )
-            : isNull(schema.materialPrices.regionId),
-          lte(schema.materialPrices.validFrom, today),
-          or(
-            isNull(schema.materialPrices.validTo),
-            gte(schema.materialPrices.validTo, today),
-          ),
-        ),
-      )
-      .orderBy(desc(schema.materialPrices.validFrom))
-      .limit(1);
-
-    if (!priceRow[0]) {
-      missing.push(comp.materialName);
-      continue;
-    }
-
-    const coef = Number(comp.coefficient);
-    const price = Number(priceRow[0].price);
-    if (Number.isFinite(coef) && Number.isFinite(price)) {
-      total += coef * price;
-    }
-  }
-
-  // Apply IKK multiplier kalau project punya region yang udah ada IKK-nya.
-  let multiplier = 1;
-  if (projectRegionId) {
-    const region = await db
-      .select({ ikk: schema.regions.ikk })
-      .from(schema.regions)
-      .where(eq(schema.regions.id, projectRegionId))
-      .limit(1);
-    if (region[0]?.ikk) {
-      const ikkNum = Number(region[0].ikk);
-      if (Number.isFinite(ikkNum) && ikkNum > 0) {
-        multiplier = ikkNum / 100;
-      }
-    }
-  }
-
-  total = total * multiplier;
-  return { price: total.toFixed(2), missingMaterials: missing, multiplier };
 }
 
 // ─── CREATE ──────────────────────────────────────────────────────────────────
@@ -249,10 +147,15 @@ export async function createProjectItem(
       .where(eq(schema.projects.id, projectId))
       .limit(1);
 
-    const { price, missingMaterials } = await calculateAhspUnitPrice(
-      ahspItemId,
+    // Harga via lib/pricing (region-aware two-pass + IKK, satu sumber kebenaran
+    // — sama dengan template & AI extract). Snapshot ke custom_unit_price.
+    const priceMap = await computeAhspPrices(
+      [ahspItemId],
       projectRow[0]?.regionId ?? null,
     );
+    const priced = priceMap.get(ahspItemId);
+    const price = priced?.price ?? "0";
+    const missingMaterials = priced?.missing ?? [];
 
     try {
       await db.insert(schema.projectItems).values({

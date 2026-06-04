@@ -1,108 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import {
-  and,
-  desc,
-  eq,
-  gte,
-  isNull,
-  lte,
-  or,
-} from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import {
   requireUser,
   verifyProjectOwnership,
   assertNotLocked,
 } from "@/lib/auth";
-
-const NATIONAL_REGION_CODE = "ID";
-
-/**
- * Hitung unit price AHSP untuk a project's region.
- * Sederhanakan: copy dari calculateAhspUnitPrice di item-actions.
- */
-async function calcAhspPrice(
-  ahspItemId: string,
-  projectRegionId: string | null,
-): Promise<{ price: string; missing: string[] }> {
-  const components = await db
-    .select({
-      coefficient: schema.ahspComponents.coefficient,
-      materialId: schema.materials.id,
-      materialName: schema.materials.name,
-    })
-    .from(schema.ahspComponents)
-    .innerJoin(
-      schema.materials,
-      eq(schema.materials.id, schema.ahspComponents.materialId),
-    )
-    .where(eq(schema.ahspComponents.ahspItemId, ahspItemId));
-
-  if (components.length === 0) return { price: "0", missing: [] };
-
-  const nationalRegion = await db
-    .select({ id: schema.regions.id })
-    .from(schema.regions)
-    .where(eq(schema.regions.code, NATIONAL_REGION_CODE))
-    .limit(1);
-  const nationalId = nationalRegion[0]?.id ?? null;
-
-  let total = 0;
-  const missing: string[] = [];
-  const today = new Date().toISOString().slice(0, 10);
-
-  for (const c of components) {
-    const priceRow = await db
-      .select({ price: schema.materialPrices.price })
-      .from(schema.materialPrices)
-      .where(
-        and(
-          eq(schema.materialPrices.materialId, c.materialId),
-          nationalId
-            ? or(
-                eq(schema.materialPrices.regionId, nationalId),
-                isNull(schema.materialPrices.regionId),
-              )
-            : isNull(schema.materialPrices.regionId),
-          lte(schema.materialPrices.validFrom, today),
-          or(
-            isNull(schema.materialPrices.validTo),
-            gte(schema.materialPrices.validTo, today),
-          ),
-        ),
-      )
-      .orderBy(desc(schema.materialPrices.validFrom))
-      .limit(1);
-
-    if (!priceRow[0]) {
-      missing.push(c.materialName);
-      continue;
-    }
-    const koef = Number(c.coefficient);
-    const price = Number(priceRow[0].price);
-    if (Number.isFinite(koef) && Number.isFinite(price)) {
-      total += koef * price;
-    }
-  }
-
-  // IKK multiplier
-  let multiplier = 1;
-  if (projectRegionId) {
-    const region = await db
-      .select({ ikk: schema.regions.ikk })
-      .from(schema.regions)
-      .where(eq(schema.regions.id, projectRegionId))
-      .limit(1);
-    if (region[0]?.ikk) {
-      const ikk = Number(region[0].ikk);
-      if (Number.isFinite(ikk) && ikk > 0) multiplier = ikk / 100;
-    }
-  }
-  total = total * multiplier;
-  return { price: total.toFixed(2), missing };
-}
+import { computeAhspPrices } from "@/lib/pricing";
 
 // ─── Bulk create ─────────────────────────────────────────────────────────────
 
@@ -177,6 +83,13 @@ export async function createBulkProjectItems(
   const warnings: string[] = [];
   const valuesToInsert: (typeof schema.projectItems.$inferInsert)[] = [];
 
+  // Bulk price semua AHSP sekaligus (region-aware two-pass + IKK, satu sumber
+  // kebenaran — sama dengan item/template/AI). Hindari N+1 query per item.
+  const priceMap = await computeAhspPrices(
+    payload.filter((it) => it.ahspItemId).map((it) => it.ahspItemId),
+    regionId,
+  );
+
   for (const item of payload) {
     if (!item.ahspItemId) continue;
 
@@ -193,7 +106,9 @@ export async function createBulkProjectItems(
       continue;
     }
 
-    const { price, missing } = await calcAhspPrice(item.ahspItemId, regionId);
+    const priced = priceMap.get(item.ahspItemId);
+    const price = priced?.price ?? "0";
+    const missing = priced?.missing ?? [];
     if (missing.length > 0) {
       warnings.push(
         `${ahsp[0].name.slice(0, 30)}: ${missing.length} material belum ada harga`,
