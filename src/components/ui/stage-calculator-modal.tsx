@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useId, useMemo, useState, useTransition } from "react";
 import { Button } from "./button";
 import {
   STAGE_CALCULATORS,
@@ -375,6 +375,7 @@ export function StageCalculatorModal({
             <select
               value={stageType}
               onChange={(e) => setStageType(e.target.value)}
+              aria-label="Pilih tahap pekerjaan"
               className="rounded-md border border-border bg-card px-3 py-1.5 text-sm font-bold focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
             >
               {STAGE_CALCULATORS.map((s) => (
@@ -407,6 +408,7 @@ export function StageCalculatorModal({
             <select
               value={wbsItemId}
               onChange={(e) => setWbsItemId(e.target.value)}
+              aria-label="WBS (opsional)"
               className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm shadow-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent md:w-2/3"
             >
               <option value="">— pilih WBS —</option>
@@ -765,11 +767,15 @@ function InputField({
   value: number;
   onChange: (v: number) => void;
 }) {
+  const id = useId();
   return (
     <div>
-      <label className="mb-1 block text-xs font-medium">{def.label}</label>
+      <label htmlFor={id} className="mb-1 block text-xs font-medium">
+        {def.label}
+      </label>
       <div className="flex items-center gap-2">
         <input
+          id={id}
           type="number"
           inputMode="decimal"
           step="0.001"
@@ -844,44 +850,55 @@ function ScheduleTable({
         <tbody>
           {rows.map((row, idx) => (
             <tr key={idx} className="border-b border-border/60 last:border-0">
-              {def.columns.map((c) => (
-                <td key={c.key} className="px-1.5 py-1">
-                  {c.kind === "text" ? (
-                    <input
-                      type="text"
-                      value={String(row[c.key] ?? "")}
-                      onChange={(e) => setCell(idx, c.key, e.target.value)}
-                      className={`${c.width ?? "w-20"} rounded border border-border bg-background px-1.5 py-1 text-xs focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent`}
-                    />
-                  ) : c.kind === "select" && c.options ? (
-                    <select
-                      value={n(row[c.key], Number(c.default ?? 0))}
-                      onChange={(e) =>
-                        setCell(idx, c.key, parseFloat(e.target.value))
-                      }
-                      className={`${c.width ?? "w-20"} rounded border border-border bg-background px-1 py-1 text-xs focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent`}
-                    >
-                      {c.options.map((o) => (
-                        <option key={o.value} value={o.value}>
-                          {o.label}
-                        </option>
-                      ))}
-                    </select>
-                  ) : (
-                    <input
-                      type="number"
-                      inputMode="decimal"
-                      step="0.001"
-                      value={n(row[c.key], 0)}
-                      onChange={(e) => {
-                        const v = parseFloat(e.target.value);
-                        setCell(idx, c.key, Number.isFinite(v) ? v : 0);
-                      }}
-                      className={`${c.width ?? "w-16"} rounded border border-border bg-background px-1.5 py-1 text-right font-mono text-xs focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent`}
-                    />
-                  )}
-                </td>
-              ))}
+              {def.columns.map((c) => {
+                // Nama programatik per-sel: identitas baris (tipe K1/…) + kolom.
+                const rowTag =
+                  typeof row.tipe === "string" && row.tipe
+                    ? row.tipe
+                    : `baris ${idx + 1}`;
+                const cellLabel = `${rowTag} ${c.label}`;
+                return (
+                  <td key={c.key} className="px-1.5 py-1">
+                    {c.kind === "text" ? (
+                      <input
+                        type="text"
+                        aria-label={cellLabel}
+                        value={String(row[c.key] ?? "")}
+                        onChange={(e) => setCell(idx, c.key, e.target.value)}
+                        className={`${c.width ?? "w-20"} rounded border border-border bg-background px-1.5 py-1 text-xs focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent`}
+                      />
+                    ) : c.kind === "select" && c.options ? (
+                      <select
+                        aria-label={cellLabel}
+                        value={n(row[c.key], Number(c.default ?? 0))}
+                        onChange={(e) =>
+                          setCell(idx, c.key, parseFloat(e.target.value))
+                        }
+                        className={`${c.width ?? "w-20"} rounded border border-border bg-background px-1 py-1 text-xs focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent`}
+                      >
+                        {c.options.map((o) => (
+                          <option key={o.value} value={o.value}>
+                            {o.label}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        type="number"
+                        inputMode="decimal"
+                        step="0.001"
+                        aria-label={cellLabel}
+                        value={n(row[c.key], 0)}
+                        onChange={(e) => {
+                          const v = parseFloat(e.target.value);
+                          setCell(idx, c.key, Number.isFinite(v) ? v : 0);
+                        }}
+                        className={`${c.width ?? "w-16"} rounded border border-border bg-background px-1.5 py-1 text-right font-mono text-xs focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent`}
+                      />
+                    )}
+                  </td>
+                );
+              })}
               <td className="px-1 py-1 text-center">
                 <button
                   type="button"

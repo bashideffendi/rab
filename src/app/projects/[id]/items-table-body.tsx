@@ -183,10 +183,12 @@ function SortableGroup({
 function EditableCell({
   raw,
   display,
+  label,
   onSave,
 }: {
   raw: string;
   display: string;
+  label: string;
   onSave: (v: string) => Promise<{ error?: string }>;
 }) {
   const [editing, setEditing] = useState(false);
@@ -228,18 +230,22 @@ function EditableCell({
   }
 
   if (!editing) {
+    // Tombol (bukan span) → keyboard-reachable (Tab+Enter) & touch (1 tap),
+    // gak cuma double-click mouse. aria-label sebut field + nilai sekarang.
     return (
-      <span
-        onDoubleClick={() => {
+      <button
+        type="button"
+        onClick={() => {
           setVal(raw);
           setErr(null);
           setEditing(true);
         }}
-        title="Klik 2× untuk edit"
-        className="cursor-pointer rounded px-1 hover:bg-accent/10"
+        aria-label={`Edit ${label}, saat ini ${display}`}
+        title="Klik untuk edit"
+        className="cursor-pointer rounded px-1 hover:bg-accent/10 focus:outline-none focus-visible:ring-1 focus-visible:ring-accent"
       >
         {display}
-      </span>
+      </button>
     );
   }
   return (
@@ -248,6 +254,7 @@ function EditableCell({
         autoFocus
         type="text"
         inputMode="decimal"
+        aria-label={`Edit ${label}`}
         value={val}
         disabled={pending}
         onChange={(e) => setVal(e.target.value)}
@@ -262,7 +269,7 @@ function EditableCell({
             setEditing(false);
           }
         }}
-        className="w-24 rounded border border-accent bg-card px-1 py-0.5 text-right font-mono text-sm focus:outline-none"
+        className="w-24 rounded border border-accent bg-card px-1 py-0.5 text-right font-mono text-base focus:outline-none md:text-sm"
       />
       {err && <span className="text-[9px] text-danger">{err}</span>}
     </span>
@@ -306,7 +313,7 @@ function SortableItemRow({
           <button
             type="button"
             aria-label={`Drag ${item.name}`}
-            className="mt-0.5 cursor-grab touch-none rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground active:cursor-grabbing"
+            className="-m-1.5 mt-0 cursor-grab touch-none rounded p-2 text-muted-foreground hover:bg-muted hover:text-foreground active:cursor-grabbing"
             {...attributes}
             {...listeners}
           >
@@ -364,6 +371,7 @@ function SortableItemRow({
           <EditableCell
             raw={item.volume}
             display={Number(item.volume).toLocaleString("id-ID")}
+            label="volume"
             onSave={(v) => updateItemInline(item.id, projectId, "volume", v)}
           />
           {item.volumeFormula && (
@@ -381,6 +389,7 @@ function SortableItemRow({
         <EditableCell
           raw={item.unitPrice}
           display={formatIDR(item.unitPrice)}
+          label="harga satuan"
           onSave={(v) => updateItemInline(item.id, projectId, "unitPrice", v)}
         />
       </td>

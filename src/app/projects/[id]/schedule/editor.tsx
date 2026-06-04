@@ -594,7 +594,9 @@ function GanttChart({
             gridTemplateColumns: `300px repeat(${totalWeeks}, minmax(28px, 1fr))`,
           }}
         >
-          <div className="px-2 font-semibold">Pekerjaan</div>
+          <div className="sticky left-0 z-10 bg-card px-2 font-semibold">
+            Pekerjaan
+          </div>
           {weekLabels.map((w) => (
             <div
               key={w}
@@ -618,7 +620,7 @@ function GanttChart({
                 gridTemplateColumns: `300px repeat(${totalWeeks}, minmax(28px, 1fr))`,
               }}
             >
-              <div className="truncate px-2 pr-3">
+              <div className="sticky left-0 z-10 truncate bg-card px-2 pr-3">
                 <span className="font-mono text-[10px] text-muted-foreground">
                   {it.wbsCode}
                 </span>{" "}
