@@ -11,6 +11,32 @@
 
 import type { CalcInputDef } from "./volume-calculators";
 
+// ── Schedule (tabel multi-baris) ────────────────────────────────────────────
+// Sebagian stage (mis. kolom) realistis punya BANYAK tipe (K1, K2, Kp …) dengan
+// dimensi/penulangan beda. Schedule = tabel; tiap baris 1 tipe. Beberapa output
+// (beton/besi/bekisting) berbagi SATU tabel via `group` yang sama.
+export type ScheduleColumnDef = {
+  key: string;
+  label: string;
+  unit?: string;
+  kind?: "text" | "number" | "select";
+  default?: string | number;
+  width?: string;
+  options?: { value: number; label: string }[];
+};
+
+export type ScheduleDef = {
+  /** Item dgn group sama berbagi 1 tabel rows. Mis. semua output kolom. */
+  group: string;
+  /** Label tabel (mis. "Skedul Kolom"). */
+  title: string;
+  hint?: string;
+  columns: ScheduleColumnDef[];
+};
+
+/** 1 baris tabel. Nilai number disimpan number, tipe/nama disimpan string. */
+export type ScheduleRow = Record<string, number | string>;
+
 export type StageItemDef = {
   /** Unique key dalam stage (untuk React key + checkbox state) */
   key: string;
@@ -29,10 +55,20 @@ export type StageItemDef = {
    */
   showIf?: (inputs: Record<string, number>) => boolean;
   /**
+   * OPSIONAL. Kalau ada → item ini diisi via tabel multi-baris (schedule),
+   * bukan input global. Item lain ber-`schedule.group` sama berbagi 1 tabel.
+   */
+  schedule?: ScheduleDef;
+  /**
    * Compute volume + formula breakdown dari shared inputs.
+   * `rows` = baris schedule kalau item pakai schedule (undefined utk item biasa;
+   * 15 stage lama abaikan arg ke-2 ini).
    * Return null kalau gak applicable (akan di-skip).
    */
-  computeVolume: (inputs: Record<string, number>) => {
+  computeVolume: (
+    inputs: Record<string, number>,
+    rows?: ScheduleRow[],
+  ) => {
     volume: number;
     formula: string;
   } | null;
@@ -121,6 +157,94 @@ function lapSplice(diaMm: number): number {
  *  mm" — notasi "f'c 19" lama malah nyangkut ke "19 mm" agregat lean. */
 function mutuBetonKeyword(k: number): string {
   return "beton K" + k;
+}
+
+// ── Schedule helpers (agregasi tabel multi-baris) ───────────────────────────
+function rn(row: ScheduleRow, key: string, fallback = 0): number {
+  return n(row[key], fallback);
+}
+function rs(row: ScheduleRow, key: string, fallback = ""): string {
+  const v = row[key];
+  return typeof v === "string" && v.trim() ? v : fallback;
+}
+
+/** Hitung 1 baris kolom → beton (m3) + label breakdown. */
+function kolomRowBeton(row: ScheduleRow): { v: number; line: string } {
+  const tag = rs(row, "tipe", "K?");
+  const b1 = rn(row, "b1", 0.15);
+  const b2 = rn(row, "b2", 0.15);
+  const T = rn(row, "T", 4);
+  const jml = rn(row, "jml", 1);
+  const v = b1 * b2 * T * jml;
+  return {
+    v,
+    line: `${tag} ${fmt(b1, 2)}×${fmt(b2, 2)}×${fmt(T, 2)}×${jml} = ${fmt(v, 3)} m³`,
+  };
+}
+
+/** Hitung 1 baris kolom → pembesian (kg) + label. selimut & mutu dari global. */
+function kolomRowBesi(
+  row: ScheduleRow,
+  selimut: number,
+): { v: number; line: string } {
+  const tag = rs(row, "tipe", "K?");
+  const b1 = rn(row, "b1", 0.15);
+  const b2 = rn(row, "b2", 0.15);
+  const T = rn(row, "T", 4);
+  const jml = rn(row, "jml", 1);
+  const D1 = rn(row, "D1", 12);
+  const n1 = rn(row, "n1", 4);
+  const D3 = rn(row, "D3", 8);
+  const R = rn(row, "R", 0.15);
+  // Tulangan utama menerus + lewatan kalau tinggi > stok 12 m (jarang utk kolom).
+  const samb = T > STOCK_BAR_LENGTH ? Math.floor(T / STOCK_BAR_LENGTH) : 0;
+  const lUtama = (T * n1 + samb * lapSplice(D1) * n1) * jml;
+  const wUtama = lUtama * rebarWeight(D1);
+  const kelRing = stirrupPerimeter(b1, b2, selimut, D3);
+  const jmlRing = (Math.ceil(T / R) + 1) * jml;
+  const wRing = kelRing * jmlRing * rebarWeight(D3);
+  const v = wUtama + wRing;
+  return {
+    v,
+    line: `${tag}(×${jml}): utama ${n1}Ø${D1} ${fmt(wUtama, 1)}kg + begel Ø${D3}@${fmt(R * 100, 0)} ${fmt(wRing, 1)}kg = ${fmt(v, 1)} kg`,
+  };
+}
+
+/** Hitung 1 baris kolom → bekisting (m2) + label. */
+function kolomRowBekisting(row: ScheduleRow): { v: number; line: string } {
+  const tag = rs(row, "tipe", "K?");
+  const b1 = rn(row, "b1", 0.15);
+  const b2 = rn(row, "b2", 0.15);
+  const T = rn(row, "T", 4);
+  const jml = rn(row, "jml", 1);
+  const v = 2 * (b1 + b2) * T * jml;
+  return {
+    v,
+    line: `${tag} 2×(${fmt(b1, 2)}+${fmt(b2, 2)})×${fmt(T, 2)}×${jml} = ${fmt(v, 2)} m²`,
+  };
+}
+
+/** Generik: agregasi semua baris pakai fn per-baris → {volume, formula}. */
+function aggRows(
+  rows: ScheduleRow[] | undefined,
+  fn: (r: ScheduleRow) => { v: number; line: string },
+  unit: string,
+): { volume: number; formula: string } | null {
+  if (!rows || rows.length === 0) return null;
+  let total = 0;
+  const lines: string[] = [];
+  for (const r of rows) {
+    const { v, line } = fn(r);
+    if (v > 0) {
+      total += v;
+      lines.push(line);
+    }
+  }
+  if (total <= 0) return null;
+  return {
+    volume: total,
+    formula: `${lines.join(" | ")} → Σ ${fmt(total, unit === "kg" ? 1 : 3)} ${unit}`,
+  };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2734,6 +2858,92 @@ const stagePraktis: StageCalcDef = {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Stage: KOLOM SCHEDULE (multi-tipe) — 1 tabel, banyak tipe kolom (K1, K2, Kp…)
+// ─────────────────────────────────────────────────────────────────────────────
+const KOLOM_SCHEDULE: ScheduleDef = {
+  group: "kolom",
+  title: "Skedul Kolom (tambah baris per tipe: K1, K2, Kp, …)",
+  hint: "Tiap baris = 1 tipe kolom. Beton + Pembesian + Bekisting dihitung dari tabel ini sekaligus.",
+  columns: [
+    { key: "tipe", label: "Tipe", kind: "text", default: "K1", width: "w-16" },
+    { key: "b1", label: "b1", unit: "m", kind: "number", default: 0.15, width: "w-16" },
+    { key: "b2", label: "b2", unit: "m", kind: "number", default: 0.3, width: "w-16" },
+    { key: "T", label: "Tinggi", unit: "m", kind: "number", default: 4, width: "w-16" },
+    { key: "jml", label: "Jml", unit: "bh", kind: "number", default: 1, width: "w-14" },
+    {
+      key: "D1", label: "Ø Utama", unit: "mm", kind: "select", default: 12, width: "w-20",
+      options: [
+        { value: 10, label: "Ø10" }, { value: 12, label: "Ø12" },
+        { value: 13, label: "Ø13" }, { value: 16, label: "Ø16" },
+        { value: 19, label: "Ø19" },
+      ],
+    },
+    { key: "n1", label: "n Utama", unit: "btg", kind: "number", default: 4, width: "w-16" },
+    {
+      key: "D3", label: "Ø Begel", unit: "mm", kind: "select", default: 8, width: "w-20",
+      options: [
+        { value: 6, label: "Ø6" }, { value: 8, label: "Ø8" }, { value: 10, label: "Ø10" },
+      ],
+    },
+    { key: "R", label: "Jarak Begel", unit: "m", kind: "number", default: 0.15, width: "w-20" },
+  ],
+};
+
+const stageKolomSchedule: StageCalcDef = {
+  type: "stage_kolom_schedule",
+  label: "Kolom (Schedule / Multi-Tipe)",
+  description:
+    "Banyak tipe kolom (K1, K2, Kp …) dalam satu tabel. Isi tiap baris sekali → Beton + Pembesian + Bekisting teragregasi otomatis. Cocok rumah riil dgn 3-6 tipe kolom.",
+  inputs: [
+    {
+      key: "mutuBeton", label: "Mutu Beton", unit: "K", default: 225,
+      group: "Spesifikasi Beton (berlaku semua tipe)",
+      options: [
+        { value: 175, label: "K-175 (fc 14.5)" },
+        { value: 225, label: "K-225 (fc 19.3)" },
+        { value: 275, label: "K-275 (fc 22.5)" },
+        { value: 300, label: "K-300 (fc 24.9)" },
+      ],
+    },
+    {
+      key: "selimut", label: "Selimut Beton (k)", unit: "m", default: 0.02,
+      hint: "Berlaku semua tipe. Default 2 cm.",
+      group: "Spesifikasi Beton (berlaku semua tipe)",
+    },
+  ],
+  items: [
+    {
+      key: "betonKolomSch",
+      label: "Beton Kolom (semua tipe)",
+      ahspKeyword: (i) => mutuBetonKeyword(n(i.mutuBeton, 225)),
+      ahspUnit: "m3",
+      defaultEnabled: true,
+      schedule: KOLOM_SCHEDULE,
+      computeVolume: (_i, rows) => aggRows(rows, kolomRowBeton, "m3"),
+    },
+    {
+      key: "penulanganKolomSch",
+      label: "Penulangan Kolom (semua tipe)",
+      ahspKeyword: "penulangan kolom balok sloof",
+      ahspUnit: "kg",
+      defaultEnabled: true,
+      schedule: KOLOM_SCHEDULE,
+      computeVolume: (i, rows) =>
+        aggRows(rows, (r) => kolomRowBesi(r, n(i.selimut, 0.02)), "kg"),
+    },
+    {
+      key: "bekistingKolomSch",
+      label: "Bekisting Kolom (semua tipe)",
+      ahspKeyword: "bekisting untuk kolom",
+      ahspUnit: "m2",
+      defaultEnabled: true,
+      schedule: KOLOM_SCHEDULE,
+      computeVolume: (_i, rows) => aggRows(rows, kolomRowBekisting, "m2"),
+    },
+  ],
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Export all stages
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -2743,6 +2953,7 @@ export const STAGE_CALCULATORS: StageCalcDef[] = [
   stageFootplate,
   stageBetonSloof,
   stageBetonKolom,
+  stageKolomSchedule,
   stageBetonBalok,
   stageBetonPlat,
   stageTangga,

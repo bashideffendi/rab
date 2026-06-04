@@ -6,6 +6,8 @@ import {
   STAGE_CALCULATORS,
   getStage,
   type StageItemDef,
+  type ScheduleDef,
+  type ScheduleRow,
 } from "@/lib/stage-calculators";
 import type { CalcInputDef } from "@/lib/volume-calculators";
 import { createBulkProjectItems } from "@/app/projects/stage-actions";
@@ -31,6 +33,25 @@ type WbsOption = { id: string; code: string; name: string };
 
 const formatNum = (n: number, d = 2) =>
   n.toLocaleString("id-ID", { maximumFractionDigits: d });
+
+/** Parse number dari cell schedule (string/number) — mirror n() di lib. */
+function n(v: unknown, f = 0): number {
+  if (typeof v === "number" && Number.isFinite(v)) return v;
+  if (typeof v === "string") {
+    const x = parseFloat(v.replace(",", "."));
+    return Number.isFinite(x) ? x : f;
+  }
+  return f;
+}
+
+/** Baris default dari definisi schedule. */
+function makeDefaultRow(def: ScheduleDef): ScheduleRow {
+  const row: ScheduleRow = {};
+  for (const c of def.columns) {
+    row[c.key] = c.default ?? (c.kind === "text" ? "" : 0);
+  }
+  return row;
+}
 
 /** Resolve ahspKeyword — boleh string statis atau fungsi dari inputs (mis.
  *  mutu beton dinamis K→f'c). */
@@ -88,10 +109,24 @@ export function StageCalculatorModal({
   const [inputs, setInputs] = useState<Record<string, number>>({});
   const [wbsItemId, setWbsItemId] = useState<string>("");
   const [subItems, setSubItems] = useState<Record<string, SubItemState>>({});
+  const [schedules, setSchedules] = useState<Record<string, ScheduleRow[]>>({});
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
   const stage = useMemo(() => getStage(stageType), [stageType]);
+
+  // Kumpulkan schedule unik per-group (1 tabel utk N item se-group).
+  const scheduleGroups = useMemo(() => {
+    if (!stage) return [] as { def: ScheduleDef; itemKeys: string[] }[];
+    const map = new Map<string, { def: ScheduleDef; itemKeys: string[] }>();
+    for (const it of stage.items) {
+      if (!it.schedule) continue;
+      const g = it.schedule.group;
+      if (!map.has(g)) map.set(g, { def: it.schedule, itemKeys: [] });
+      map.get(g)!.itemKeys.push(it.key);
+    }
+    return Array.from(map.values());
+  }, [stage]);
 
   // Reset saat stage berubah atau modal dibuka
   useEffect(() => {
@@ -115,6 +150,13 @@ export function StageCalculatorModal({
       };
     }
     setSubItems(initSubs);
+    // Init 1 baris default per schedule-group (di-key "sch:<group>").
+    const initSched: Record<string, ScheduleRow[]> = {};
+    for (const it of stage.items) {
+      if (it.schedule)
+        initSched["sch:" + it.schedule.group] = [makeDefaultRow(it.schedule)];
+    }
+    setSchedules(initSched);
     setError(null);
   }, [open, stageType, stage]);
 
@@ -168,10 +210,13 @@ export function StageCalculatorModal({
     if (!stage) return {} as Record<string, ReturnType<StageItemDef["computeVolume"]>>;
     const out: Record<string, ReturnType<StageItemDef["computeVolume"]>> = {};
     for (const it of stage.items) {
-      out[it.key] = it.computeVolume(inputs);
+      const rows = it.schedule
+        ? schedules["sch:" + it.schedule.group]
+        : undefined;
+      out[it.key] = it.computeVolume(inputs, rows);
     }
     return out;
-  }, [stage, inputs]);
+  }, [stage, inputs, schedules]);
 
   // ESC to close
   useEffect(() => {
@@ -270,12 +315,18 @@ export function StageCalculatorModal({
     const payload = activeItems.map((it) => {
       const state = subItems[it.key];
       const c = computed[it.key];
+      const rows = it.schedule
+        ? schedules["sch:" + it.schedule.group]
+        : undefined;
+      const calcInputs: Record<string, number> = { ...inputs };
+      // Jejak audit: jumlah baris schedule (tetap number; detail tipe ada di formula).
+      if (rows) calcInputs.__scheduleRows = rows.length;
       return {
         ahspItemId: state.ahsp!.id,
         wbsItemId: wbsItemId || null,
         volume: c!.volume,
         calculatorType: stageRef.type,
-        calculatorInputs: inputs,
+        calculatorInputs: calcInputs,
         volumeFormula: c!.formula,
         customName: it.label,
       };
@@ -378,6 +429,30 @@ export function StageCalculatorModal({
               </div>
             ))}
           </div>
+
+          {/* Schedule tables (stage multi-tipe, mis. kolom K1/K2/Kp) */}
+          {scheduleGroups.map((g) => (
+            <div key={g.def.group} className="mb-5">
+              <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-accent">
+                {g.def.title}
+              </p>
+              {g.def.hint && (
+                <p className="mb-2 text-[11px] text-muted-foreground">
+                  {g.def.hint}
+                </p>
+              )}
+              <ScheduleTable
+                def={g.def}
+                rows={schedules["sch:" + g.def.group] ?? []}
+                onChange={(rows) =>
+                  setSchedules((prev) => ({
+                    ...prev,
+                    ["sch:" + g.def.group]: rows,
+                  }))
+                }
+              />
+            </div>
+          ))}
 
           {/* Sub-items */}
           <div>
@@ -703,6 +778,122 @@ function InputField({
           {def.hint}
         </p>
       )}
+    </div>
+  );
+}
+
+/** Tabel schedule multi-baris (mis. tipe kolom K1/K2/Kp). Tiap output stage
+ *  ber-group sama membaca rows yang sama. */
+function ScheduleTable({
+  def,
+  rows,
+  onChange,
+}: {
+  def: ScheduleDef;
+  rows: ScheduleRow[];
+  onChange: (rows: ScheduleRow[]) => void;
+}) {
+  const setCell = (idx: number, key: string, val: number | string) => {
+    onChange(rows.map((r, i) => (i === idx ? { ...r, [key]: val } : r)));
+  };
+  const addRow = () => {
+    const base = rows[rows.length - 1] ?? {};
+    const row: ScheduleRow = {};
+    for (const c of def.columns)
+      row[c.key] = base[c.key] ?? c.default ?? (c.kind === "text" ? "" : 0);
+    if (def.columns.some((c) => c.key === "tipe")) {
+      row.tipe = "K" + (rows.length + 1);
+    }
+    onChange([...rows, row]);
+  };
+  const delRow = (idx: number) => onChange(rows.filter((_, i) => i !== idx));
+
+  return (
+    <div className="overflow-x-auto rounded-lg border border-border bg-card shadow-sm">
+      <table className="w-full text-xs">
+        <thead>
+          <tr className="border-b border-border bg-muted/40 text-left">
+            {def.columns.map((c) => (
+              <th
+                key={c.key}
+                className="whitespace-nowrap px-2 py-1.5 font-semibold"
+              >
+                {c.label}
+                {c.unit && (
+                  <span className="ml-0.5 font-mono text-[9px] text-muted-foreground">
+                    {c.unit}
+                  </span>
+                )}
+              </th>
+            ))}
+            <th className="w-8 px-1 py-1.5" />
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, idx) => (
+            <tr key={idx} className="border-b border-border/60 last:border-0">
+              {def.columns.map((c) => (
+                <td key={c.key} className="px-1.5 py-1">
+                  {c.kind === "text" ? (
+                    <input
+                      type="text"
+                      value={String(row[c.key] ?? "")}
+                      onChange={(e) => setCell(idx, c.key, e.target.value)}
+                      className={`${c.width ?? "w-20"} rounded border border-border bg-background px-1.5 py-1 text-xs focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent`}
+                    />
+                  ) : c.kind === "select" && c.options ? (
+                    <select
+                      value={n(row[c.key], Number(c.default ?? 0))}
+                      onChange={(e) =>
+                        setCell(idx, c.key, parseFloat(e.target.value))
+                      }
+                      className={`${c.width ?? "w-20"} rounded border border-border bg-background px-1 py-1 text-xs focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent`}
+                    >
+                      {c.options.map((o) => (
+                        <option key={o.value} value={o.value}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      step="0.001"
+                      value={n(row[c.key], 0)}
+                      onChange={(e) => {
+                        const v = parseFloat(e.target.value);
+                        setCell(idx, c.key, Number.isFinite(v) ? v : 0);
+                      }}
+                      className={`${c.width ?? "w-16"} rounded border border-border bg-background px-1.5 py-1 text-right font-mono text-xs focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent`}
+                    />
+                  )}
+                </td>
+              ))}
+              <td className="px-1 py-1 text-center">
+                <button
+                  type="button"
+                  onClick={() => delRow(idx)}
+                  disabled={rows.length <= 1}
+                  className="rounded px-1 text-sm text-muted-foreground hover:text-danger disabled:opacity-30"
+                  aria-label="Hapus baris"
+                >
+                  ✕
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <div className="border-t border-border px-2 py-1.5">
+        <button
+          type="button"
+          onClick={addRow}
+          className="rounded border border-accent/40 bg-accent/5 px-2 py-1 text-[11px] font-medium text-accent hover:bg-accent/10"
+        >
+          + Tambah Tipe
+        </button>
+      </div>
     </div>
   );
 }
