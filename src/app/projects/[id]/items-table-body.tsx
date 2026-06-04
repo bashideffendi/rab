@@ -134,8 +134,8 @@ function SortableGroup({
     <>
       <tr className="border-t-2 border-accent/30 bg-accent/10">
         <td colSpan={6} className="px-3 py-2.5">
-          <span className="text-sm font-bold text-accent">{headerLabel}</span>
-          <span className="ml-3 rounded-full bg-accent/20 px-2 py-0.5 text-xs font-medium text-accent">
+          <span className="text-sm font-bold text-accent-text">{headerLabel}</span>
+          <span className="ml-3 rounded-full bg-accent/20 px-2 py-0.5 text-xs font-medium text-accent-text">
             {items.length} item
           </span>
           {reorderError && (
@@ -337,7 +337,7 @@ function SortableItemRow({
               <span>{item.name}</span>
               {item.notes && (
                 <span
-                  className="mt-0.5 cursor-help text-xs leading-none text-accent"
+                  className="mt-0.5 cursor-help text-xs leading-none text-accent-text"
                   title={item.notes}
                   aria-label={`Catatan: ${item.notes}`}
                 >
@@ -347,7 +347,7 @@ function SortableItemRow({
             </div>
             {item.ahspCode && (
               <div className="mt-0.5 flex items-center gap-2 font-mono text-[10px] text-muted-foreground">
-                <span className="rounded border border-accent/40 bg-accent/5 px-1.5 py-0.5 text-accent">
+                <span className="rounded border border-accent/40 bg-accent/5 px-1.5 py-0.5 text-accent-text">
                   AHSP
                 </span>
                 <span>{item.ahspCode}</span>
@@ -400,7 +400,7 @@ function SortableItemRow({
         <div className="flex items-center justify-end gap-1">
           <Link
             href={`/projects/${projectId}/items/${item.id}/edit`}
-            className="rounded border border-transparent px-1.5 py-1 text-xs text-muted-foreground transition-colors hover:border-accent/40 hover:text-accent"
+            className="rounded border border-transparent px-1.5 py-1 text-xs text-muted-foreground transition-colors hover:border-accent/40 hover:text-accent-text"
             aria-label={`Edit ${item.name}`}
           >
             edit

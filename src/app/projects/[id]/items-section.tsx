@@ -213,20 +213,25 @@ export async function ItemsSection({
 
   return (
     <section className="mt-12">
-      <header className="mb-4 flex items-baseline justify-between gap-4">
+      <header className="mb-4 flex flex-wrap items-end justify-between gap-4 border-b border-border pb-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-accent">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-accent-text">
             Item RAB
           </p>
-          <h2 className="mt-1 text-lg font-bold tracking-tight">
+          <h2 className="mt-1 flex items-center gap-2.5 text-lg font-bold tracking-tight">
             Daftar Pekerjaan
+            {items.length > 0 && (
+              <span className="rounded-full bg-muted px-2 py-0.5 font-mono text-[11px] font-medium tabular-nums text-muted-foreground">
+                {items.length} item
+              </span>
+            )}
           </h2>
         </div>
         <div className="text-right">
-          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-            Total Dibulatkan
+          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+            Nilai RAB (dibulatkan)
           </p>
-          <p className="font-mono text-lg font-bold tabular-nums text-foreground">
+          <p className="mt-0.5 font-mono text-2xl font-bold tabular-nums text-foreground">
             {formatIDR(items.length > 0 ? dibulatkan : 0)}
           </p>
         </div>
@@ -244,108 +249,131 @@ export async function ItemsSection({
       ) : (
         <div className="mb-4 overflow-x-auto rounded-md border border-border bg-card shadow-sm">
           <table className="w-full text-sm">
-            <thead className="bg-muted text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <thead className="border-b-2 border-border bg-muted/70 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               <tr>
-                <th className="px-3 py-3 font-semibold">Pekerjaan</th>
-                <th className="px-3 py-3 text-right font-semibold">Volume</th>
-                <th className="px-3 py-3 font-semibold">Sat</th>
-                <th className="px-3 py-3 text-right font-semibold">Harga Sat</th>
-                <th className="px-3 py-3 text-right font-semibold">Total</th>
-                <th className="w-20 px-3 py-3 font-semibold">Aksi</th>
+                <th scope="col" className="px-3 py-2.5 font-semibold">
+                  Uraian Pekerjaan
+                </th>
+                <th scope="col" className="px-3 py-2.5 text-right font-semibold">
+                  Volume
+                </th>
+                <th scope="col" className="px-3 py-2.5 font-semibold">
+                  Sat
+                </th>
+                <th scope="col" className="px-3 py-2.5 text-right font-semibold">
+                  Harga Satuan
+                </th>
+                <th scope="col" className="px-3 py-2.5 text-right font-semibold">
+                  Jumlah
+                </th>
+                <th
+                  scope="col"
+                  className="w-16 px-3 py-2.5 text-center font-semibold"
+                >
+                  Aksi
+                </th>
               </tr>
             </thead>
             <tbody>
               <ItemsTableBody projectId={projectId} groups={groups} />
             </tbody>
-            <tfoot className="bg-muted/40 text-sm">
-              <tr>
+            <tfoot className="text-sm">
+              {/* Subtotal — jumlah semua pekerjaan (dasar perhitungan) */}
+              <tr className="border-t-2 border-border bg-muted/40">
                 <td
                   colSpan={4}
-                  className="px-3 py-2 text-right text-muted-foreground"
+                  className="px-3 py-2.5 text-right font-medium text-foreground"
                 >
-                  Subtotal
+                  Subtotal Pekerjaan
                 </td>
-                <td className="px-3 py-2 text-right font-mono tabular-nums">
+                <td className="px-3 py-2.5 text-right font-mono font-semibold tabular-nums text-foreground">
                   {formatIDR(subtotal)}
                 </td>
                 <td></td>
               </tr>
+              {/* Tambahan: overhead / SMKK / PPN — muted, prefix "+" */}
               {overheadPct > 0 && (
-                <tr>
-                  <td
-                    colSpan={4}
-                    className="px-3 py-2 text-right text-muted-foreground"
-                  >
-                    Overhead ({overheadPct}%)
+                <tr className="bg-muted/15 text-muted-foreground">
+                  <td colSpan={4} className="px-3 py-1.5 text-right">
+                    Overhead
+                    <span className="ml-1.5 rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] tabular-nums">
+                      {overheadPct}%
+                    </span>
                   </td>
-                  <td className="px-3 py-2 text-right font-mono tabular-nums">
-                    {formatIDR(overhead)}
+                  <td className="px-3 py-1.5 text-right font-mono tabular-nums">
+                    + {formatIDR(overhead)}
                   </td>
                   <td></td>
                 </tr>
               )}
               {smkkPct > 0 && (
-                <tr>
-                  <td
-                    colSpan={4}
-                    className="px-3 py-2 text-right text-muted-foreground"
-                  >
-                    SMKK ({smkkPct}%)
+                <tr className="bg-muted/15 text-muted-foreground">
+                  <td colSpan={4} className="px-3 py-1.5 text-right">
+                    SMKK
+                    <span className="ml-1.5 rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] tabular-nums">
+                      {smkkPct}%
+                    </span>
                   </td>
-                  <td className="px-3 py-2 text-right font-mono tabular-nums">
-                    {formatIDR(smkk)}
+                  <td className="px-3 py-1.5 text-right font-mono tabular-nums">
+                    + {formatIDR(smkk)}
                   </td>
                   <td></td>
                 </tr>
               )}
-              <tr>
-                <td
-                  colSpan={4}
-                  className="px-3 py-2 text-right text-muted-foreground"
-                >
-                  PPN ({ppnPct}%)
+              <tr className="bg-muted/15 text-muted-foreground">
+                <td colSpan={4} className="px-3 py-1.5 text-right">
+                  PPN
+                  <span className="ml-1.5 rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] tabular-nums">
+                    {ppnPct}%
+                  </span>
                 </td>
-                <td className="px-3 py-2 text-right font-mono tabular-nums">
-                  {formatIDR(ppn)}
+                <td className="px-3 py-1.5 text-right font-mono tabular-nums">
+                  + {formatIDR(ppn)}
                 </td>
                 <td></td>
               </tr>
-              <tr className="border-t border-border">
-                <td
-                  colSpan={4}
-                  className="px-3 py-2 text-right text-sm text-muted-foreground"
-                >
-                  Total
+              {/* Total sebelum pembulatan — transparansi, di-de-emphasize */}
+              <tr className="border-t border-border/60 text-muted-foreground">
+                <td colSpan={4} className="px-3 py-1.5 text-right text-xs">
+                  Total sebelum pembulatan
                 </td>
-                <td className="px-3 py-2 text-right font-mono tabular-nums">
+                <td className="px-3 py-1.5 text-right font-mono text-xs tabular-nums">
                   {formatIDR(total)}
                 </td>
                 <td></td>
               </tr>
-              <tr className="border-t border-border bg-accent/5">
-                <td
-                  colSpan={4}
-                  className="px-3 py-3 text-right font-semibold text-foreground"
-                >
-                  Total dibulatkan
+              {/* GRAND TOTAL — nilai kontrak (hero) */}
+              <tr className="border-t-2 border-accent/30 bg-accent/[0.07]">
+                <td colSpan={4} className="px-3 py-3.5 text-right">
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                    Nilai RAB
+                  </span>
+                  <span className="ml-2 font-bold text-foreground">
+                    Total Dibulatkan
+                  </span>
                 </td>
-                <td className="px-3 py-3 text-right font-mono text-base font-semibold tabular-nums text-accent">
+                <td className="px-3 py-3.5 text-right font-mono text-lg font-bold tabular-nums text-accent-text">
                   {formatIDR(dibulatkan)}
                 </td>
-                <td></td>
+                <td className="bg-accent/[0.07]"></td>
               </tr>
-              <tr>
+              {/* Terbilang */}
+              <tr className="bg-accent/[0.03]">
                 <td
                   colSpan={6}
-                  className="px-3 py-2 text-right text-xs italic text-muted-foreground"
+                  className="border-t border-accent/10 px-3 pb-3 pt-1.5 text-right text-xs italic text-muted-foreground"
                 >
-                  Terbilang: <span className="not-italic">{terbilang}</span>
+                  <span className="font-semibold not-italic text-foreground/70">
+                    Terbilang:
+                  </span>{" "}
+                  {terbilang}
                 </td>
               </tr>
+              {/* Dasar regulasi */}
               <tr>
                 <td
                   colSpan={6}
-                  className="px-3 pb-2 text-right text-[10px] text-muted-foreground"
+                  className="px-3 pb-2.5 pt-2 text-right text-[10px] text-muted-foreground"
                 >
                   {BASIS_REGULASI}
                 </td>
