@@ -556,6 +556,41 @@ function FootingDiagram({
 // Diagram: Sloof / Balok Beton — horizontal beam with rebar visible
 // ─────────────────────────────────────────────────────────────────────────────
 
+function LinearDiagram({
+  label,
+  caption,
+}: {
+  label: string;
+  caption: string;
+}) {
+  return (
+    <svg
+      viewBox="0 0 200 90"
+      className="h-24 w-full"
+      role="img"
+      aria-label={caption}
+    >
+      <rect
+        x="20"
+        y="40"
+        width="160"
+        height="14"
+        rx="2"
+        fill="#64748b"
+        stroke="#334155"
+        strokeWidth="1.5"
+      />
+      <line x1="20" y1="66" x2="180" y2="66" stroke="#0ea5e9" strokeWidth="1.5" />
+      <text x="74" y="80" fontSize="10" fill="#0369a1">
+        {label}
+      </text>
+      <text x="66" y="30" fontSize="9" fill="#334155">
+        {caption}
+      </text>
+    </svg>
+  );
+}
+
 function KusenFrameDiagram({
   tinggiLabel,
   lebarLabel,
@@ -4636,6 +4671,121 @@ export const CALCULATORS: CalcDef[] = [
             ? `Dikurangi: ${fmt(num(values.kurang), 2)} m²`
             : undefined
         }
+      />
+    ),
+  },
+
+  // 6f. Floor Hardener (luas m²)
+  {
+    type: "floor_hardener",
+    label: "Floor Hardener / Trowel",
+    description: "Luas pengerasan permukaan lantai beton (m²).",
+    outputUnit: "m²",
+    outputLabel: "Luas Floor Hardener",
+    inputs: [
+      { key: "P", label: "Panjang", unit: "m", default: 5, min: 0 },
+      { key: "L", label: "Lebar", unit: "m", default: 4, min: 0 },
+      { key: "kurang", label: "Luas Dikurangi", unit: "m²", default: 0, min: 0 },
+    ],
+    compute: (i) => {
+      const P = num(i.P);
+      const L = num(i.L);
+      const k = num(i.kurang);
+      const v = Math.max(0, P * L - k);
+      return {
+        value: v,
+        formula: `(${fmt(P, 2)} × ${fmt(L, 2)}) − ${fmt(k, 2)} = ${fmt(v, 2)} m²`,
+      };
+    },
+    Diagram: ({ values }) => (
+      <FloorTileDiagram
+        pLabel={`P = ${fmt(num(values.P), 2)} m`}
+        lLabel={`L = ${fmt(num(values.L), 2)} m`}
+        bukaanText={
+          num(values.kurang) > 0
+            ? `Dikurangi: ${fmt(num(values.kurang), 2)} m²`
+            : undefined
+        }
+      />
+    ),
+  },
+
+  // 6g. Paving Block (luas m²)
+  {
+    type: "paving_block",
+    label: "Paving Block",
+    description:
+      "Luas pemasangan paving block (blok beton) — halaman/jalan lingkungan.",
+    outputUnit: "m²",
+    outputLabel: "Luas Paving",
+    inputs: [
+      { key: "P", label: "Panjang Area", unit: "m", default: 10, min: 0 },
+      { key: "L", label: "Lebar Area", unit: "m", default: 5, min: 0 },
+      { key: "kurang", label: "Luas Dikurangi", unit: "m²", default: 0, min: 0 },
+    ],
+    compute: (i) => {
+      const P = num(i.P);
+      const L = num(i.L);
+      const k = num(i.kurang);
+      const v = Math.max(0, P * L - k);
+      return {
+        value: v,
+        formula: `(${fmt(P, 2)} × ${fmt(L, 2)}) − ${fmt(k, 2)} = ${fmt(v, 2)} m²`,
+      };
+    },
+    Diagram: ({ values }) => (
+      <FloorTileDiagram
+        pLabel={`P = ${fmt(num(values.P), 2)} m`}
+        lLabel={`L = ${fmt(num(values.L), 2)} m`}
+        bukaanText={
+          num(values.kurang) > 0
+            ? `Dikurangi: ${fmt(num(values.kurang), 2)} m²`
+            : undefined
+        }
+      />
+    ),
+  },
+
+  // 6h. Kanstin / Kerb (panjang m')
+  {
+    type: "kanstin",
+    label: "Kanstin / Kerb",
+    description: "Panjang kanstin (kerb tepi jalan/paving) — m'.",
+    outputUnit: "m'",
+    outputLabel: "Panjang Kanstin",
+    inputs: [
+      { key: "panjang", label: "Panjang Total", unit: "m", default: 20, min: 0 },
+    ],
+    compute: (i) => {
+      const v = num(i.panjang);
+      return { value: v, formula: `${fmt(v, 2)} m (input langsung)` };
+    },
+    Diagram: ({ values }) => (
+      <LinearDiagram
+        label={`${fmt(num(values.panjang), 2)} m`}
+        caption="Kanstin / kerb"
+      />
+    ),
+  },
+
+  // 6i. Railing / Reling (panjang m')
+  {
+    type: "railing",
+    label: "Railing / Reling",
+    description: "Panjang railing tangga/balkon/pengaman — m'.",
+    outputUnit: "m'",
+    outputLabel: "Panjang Railing",
+    inputs: [
+      { key: "panjang", label: "Panjang Total", unit: "m", default: 6, min: 0 },
+    ],
+    compute: (i) => {
+      const v = num(i.panjang);
+      return { value: v, formula: `${fmt(v, 2)} m (input langsung)` };
+    },
+    Diagram: ({ values }) => (
+      <LinearDiagram
+        label={`${fmt(num(values.panjang), 2)} m`}
+        caption="Railing / reling"
       />
     ),
   },

@@ -23,6 +23,10 @@ const CALC_GROUPS: { label: string; types: string[] }[] = [
     label: "Lantai & Plafon",
     types: ["lantai_keramik", "plint", "plafon", "cat_plafon", "waterproofing"],
   },
+  {
+    label: "Eksterior & Lain",
+    types: ["floor_hardener", "paving_block", "kanstin", "railing"],
+  },
   { label: "Persiapan", types: ["bowplank"] },
 ];
 
