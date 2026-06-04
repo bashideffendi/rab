@@ -43,6 +43,20 @@ const SYNONYMS: Record<string, string[]> = {
   bobok: ["bongkar"],
   bowplank: ["bouwplank"],
   bouwplank: ["bowplank"],
+  // Besi tulangan: AHSP nyimpen sbg "Penulangan ..." (mis. "Penulangan kolom,
+  // balok, ring balk, sloof untuk BjTP"). Praktisi ngetik "pembesian" / "besi
+  // beton" / "tulangan" → tanpa alias gak ketemu sama sekali.
+  pembesian: ["penulangan"],
+  penulangan: ["pembesian"],
+  tulangan: ["penulangan", "pembesian"],
+  // Varian ejaan umum yg beda sama nama katalog.
+  saklar: ["sakelar"],
+  sakelar: ["saklar"],
+  closet: ["kloset"],
+  kloset: ["closet"],
+  wc: ["kloset", "closet"],
+  plafon: ["plafond", "langit-langit"],
+  plafond: ["plafon"],
 };
 
 /** Normalisasi K-grade jadi satu token "Kxxx" ("K-225", "K 225" → "K225"). */
@@ -50,12 +64,27 @@ function normalizeGrades(query: string): string {
   return query.replace(/\bK[-\s]?(\d{2,3})\b/gi, (_m, d) => `K${d}`);
 }
 
+// Frasa multi-kata → satu token, dijalanin SEBELUM tokenisasi. Perlu buat istilah
+// yang kalau dipecah jadi token generik gak nyambung (mis. "besi beton" → token
+// "besi"+"beton" gak ada yg ngarah ke "Penulangan").
+const PHRASE_SYNONYMS: [RegExp, string][] = [
+  [/\bbesi\s+beton\b/gi, "pembesian"],
+  [/\bbaja\s+tulangan\b/gi, "pembesian"],
+  [/\bbatu\s+bata\b/gi, "bata merah"],
+];
+
+function normalizePhrases(query: string): string {
+  let q = query;
+  for (const [re, rep] of PHRASE_SYNONYMS) q = q.replace(re, rep);
+  return q;
+}
+
 /**
  * Pecah query jadi token; tiap token → daftar pola alias (string mentah, tanpa %).
  * Caller bikin pattern `%pola%` dan AND antar-token, OR antar-pola.
  */
 export function expandQuery(query: string): string[][] {
-  const normalized = normalizeGrades(query.trim());
+  const normalized = normalizeGrades(normalizePhrases(query.trim()));
   const rawTokens = normalized.split(/\s+/).filter(Boolean);
 
   return rawTokens.map((tok) => {
