@@ -6,6 +6,7 @@ import { db, schema } from "@/db";
 import { requireUser, verifyProjectOwnership, assertNotLocked } from "@/lib/auth";
 import { normalizeUnit } from "@/lib/units";
 import { computeAhspPrices } from "@/lib/pricing";
+import { logAudit } from "@/lib/audit";
 
 const NUM_RE = /^\d+(\.\d+)?$/;
 
@@ -180,6 +181,13 @@ export async function createProjectItem(
       };
     }
 
+    await logAudit({
+      projectId,
+      userId: user.id,
+      action: "item_create",
+      summary: `Item "${ahsp[0].name}" ditambah (AHSP)`,
+      details: { mode: "ahsp", ahspItemId, customUnitPrice: price, volume },
+    });
     revalidatePath(`/projects/${projectId}`);
     if (missingMaterials.length > 0) {
       return {
@@ -228,6 +236,13 @@ export async function createProjectItem(
     };
   }
 
+  await logAudit({
+    projectId,
+    userId: user.id,
+    action: "item_create",
+    summary: `Item "${customName}" ditambah`,
+    details: { mode: "custom", customUnitPrice: customUnitPrice!, volume },
+  });
   revalidatePath(`/projects/${projectId}`);
   return {};
 }
@@ -327,6 +342,13 @@ export async function updateProjectItem(
     };
   }
 
+  await logAudit({
+    projectId,
+    userId: user.id,
+    action: "item_update",
+    summary: `Item "${customName}" diperbarui`,
+    details: { itemId, customUnitPrice: customUnitPrice!, volume: volume! },
+  });
   revalidatePath(`/projects/${projectId}`);
   return {};
 }
@@ -342,6 +364,21 @@ export async function deleteProjectItem(formData: FormData) {
   const user = await requireUser();
   await verifyProjectOwnership(projectId, user.id);
   await assertNotLocked(projectId);
+  // Snapshot nilai sebelum hapus → jejak audit (apa yang dihapus, berapa).
+  const [old] = await db
+    .select({
+      name: schema.projectItems.customName,
+      price: schema.projectItems.customUnitPrice,
+      volume: schema.projectItems.volume,
+    })
+    .from(schema.projectItems)
+    .where(
+      and(
+        eq(schema.projectItems.id, id),
+        eq(schema.projectItems.projectId, projectId),
+      ),
+    )
+    .limit(1);
   await db
     .delete(schema.projectItems)
     .where(
@@ -350,6 +387,18 @@ export async function deleteProjectItem(formData: FormData) {
         eq(schema.projectItems.projectId, projectId),
       ),
     );
+  await logAudit({
+    projectId,
+    userId: user.id,
+    action: "item_delete",
+    summary: `Item "${old?.name ?? "(item)"}" dihapus`,
+    details: {
+      itemId: id,
+      name: old?.name,
+      customUnitPrice: old?.price,
+      volume: old?.volume,
+    },
+  });
   revalidatePath(`/projects/${projectId}`);
 }
 
@@ -384,6 +433,16 @@ export async function updateItemInline(
     eq(schema.projectItems.id, itemId),
     eq(schema.projectItems.projectId, projectId),
   );
+  // Snapshot nilai lama → jejak audit old→new (inline edit harga/volume =
+  // jalur paling rawan manipulasi, justru yang paling perlu ke-log).
+  const [old] = await db
+    .select({
+      volume: schema.projectItems.volume,
+      price: schema.projectItems.customUnitPrice,
+    })
+    .from(schema.projectItems)
+    .where(where)
+    .limit(1);
   try {
     if (field === "volume") {
       await db
@@ -408,6 +467,21 @@ export async function updateItemInline(
     };
   }
 
+  await logAudit({
+    projectId,
+    userId: user.id,
+    action: "item_inline_edit",
+    summary:
+      field === "unitPrice"
+        ? "Harga satuan item diubah (inline)"
+        : "Volume item diubah (inline)",
+    details: {
+      itemId,
+      field,
+      oldValue: field === "volume" ? old?.volume : old?.price,
+      newValue: v,
+    },
+  });
   revalidatePath(`/projects/${projectId}`);
   return {};
 }

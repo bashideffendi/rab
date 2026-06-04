@@ -11,6 +11,7 @@ import {
 } from "@/lib/auth";
 import { computeAhspPrices } from "@/lib/pricing";
 import { normalizeUnit } from "@/lib/units";
+import { logAudit } from "@/lib/audit";
 
 // Validasi volume server-side (payload AI bisa di-POST mentah, bypass UI).
 // numeric(18,4) → cap < 1e12 biar gak overflow Postgres / inflate total.
@@ -231,6 +232,19 @@ export async function applyAiExtraction(formData: FormData) {
     }
   }
 
+  // Jejak audit (parity dgn import_excel) — newWbs = WBS yang BARU dibuat
+  // (existing code di-reuse, jadi bukan payload.wbs.length).
+  await logAudit({
+    projectId,
+    userId: user.id,
+    action: "ai_import",
+    summary: `AI extract: +${itemRows.length} item, +${wbsSortOrder - existingWbs.length} WBS`,
+    details: {
+      itemCount: itemRows.length,
+      withAhsp: itemRows.filter((r) => r.ahspItemId != null).length,
+      newWbs: wbsSortOrder - existingWbs.length,
+    },
+  });
   revalidatePath(`/projects/${projectId}`);
   redirect(`/projects/${projectId}`);
 }

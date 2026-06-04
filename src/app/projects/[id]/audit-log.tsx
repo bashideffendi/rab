@@ -8,6 +8,17 @@ const ACTION_LABELS: Record<string, { label: string; icon: string }> = {
   archive: { label: "Diarsipkan", icon: "📦" },
   unarchive: { label: "Diaktifkan kembali", icon: "↩️" },
   duplicate: { label: "Diduplikasi", icon: "📋" },
+  // Mutasi nilai item (ditambah round-3 — dulu gak ke-log sama sekali)
+  item_create: { label: "Item ditambah", icon: "➕" },
+  item_update: { label: "Item diperbarui", icon: "✏️" },
+  item_inline_edit: { label: "Item diedit (inline)", icon: "✏️" },
+  item_delete: { label: "Item dihapus", icon: "🗑️" },
+  stage_bulk: { label: "Tahap ditambah", icon: "🧱" },
+  ai_import: { label: "AI extract", icon: "🤖" },
+  import_excel: { label: "Import Excel", icon: "⬆️" },
+  lock: { label: "RAB dikunci", icon: "🔒" },
+  unlock: { label: "RAB dibuka", icon: "🔓" },
+  progress_historical_edit: { label: "Edit progres lampau", icon: "⏪" },
 };
 
 type Entry = {

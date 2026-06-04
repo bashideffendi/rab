@@ -9,6 +9,7 @@ import {
   assertNotLocked,
 } from "@/lib/auth";
 import { computeAhspPrices } from "@/lib/pricing";
+import { logAudit } from "@/lib/audit";
 
 // ─── Bulk create ─────────────────────────────────────────────────────────────
 
@@ -146,6 +147,17 @@ export async function createBulkProjectItems(
     };
   }
 
+  await logAudit({
+    projectId,
+    userId: user.id,
+    action: "stage_bulk",
+    summary: `Tahap: +${valuesToInsert.length} item`,
+    details: {
+      itemCount: valuesToInsert.length,
+      calculatorType: payload[0]?.calculatorType ?? null,
+      warnings: warnings.length > 0 ? warnings : undefined,
+    },
+  });
   revalidatePath(`/projects/${projectId}`);
   return {
     ok: true,
