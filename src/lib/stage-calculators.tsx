@@ -1905,49 +1905,20 @@ const stageFinishing: StageCalcDef = {
 // Stage 10: MEP (Listrik + Sanitasi)
 // ─────────────────────────────────────────────────────────────────────────────
 
-const stageMEP: StageCalcDef = {
-  type: "stage_mep",
-  label: "MEP — Listrik & Sanitasi (5 items)",
+const stageListrik: StageCalcDef = {
+  type: "stage_listrik",
+  label: "Listrik (Instalasi & Panel)",
   description:
-    "Instalasi listrik (titik lampu, saklar, stop kontak) dan sanitasi (pipa air bersih, air kotor).",
+    "Instalasi titik lampu/saklar/stop kontak, MCB box, kWh meter, grounding, kabel feeder. Isi jumlah per-jenis, tiap item AHSP terpisah. (PHB/panel besar: tambah manual via picker.)",
   inputs: [
-    {
-      key: "titikLampu",
-      label: "Jumlah Titik Lampu",
-      unit: "titik",
-      default: 0,
-      group: "Listrik",
-    },
-    {
-      key: "saklar",
-      label: "Jumlah Saklar",
-      unit: "titik",
-      default: 0,
-      group: "Listrik",
-    },
-    {
-      key: "stopKontak",
-      label: "Jumlah Stop Kontak",
-      unit: "titik",
-      default: 0,
-      group: "Listrik",
-    },
-    {
-      key: "panjangPipaBersih",
-      label: "Panjang Pipa Air Bersih",
-      unit: "m",
-      default: 0,
-      hint: "Total pipa PVC 1/2 inch dari toren ke kran",
-      group: "Sanitasi",
-    },
-    {
-      key: "panjangPipaKotor",
-      label: "Panjang Pipa Air Kotor",
-      unit: "m",
-      default: 0,
-      hint: "Total pipa PVC 4 inch dari WC ke septic tank",
-      group: "Sanitasi",
-    },
+    { key: "titikLampu", label: "Titik Lampu", unit: "titik", default: 8, group: "Penerangan & Daya" },
+    { key: "saklarTunggal", label: "Saklar Tunggal", unit: "bh", default: 4, group: "Penerangan & Daya" },
+    { key: "saklarGanda", label: "Saklar Ganda/Seri", unit: "bh", default: 2, group: "Penerangan & Daya" },
+    { key: "stopKontak", label: "Stop Kontak", unit: "titik", default: 6, group: "Penerangan & Daya" },
+    { key: "mcbBox", label: "MCB Box / Box Sekering", unit: "unit", default: 1, group: "Panel & Sumber" },
+    { key: "kwhMeter", label: "kWh Meter (sambungan PLN)", unit: "unit", default: 1, group: "Panel & Sumber" },
+    { key: "grounding", label: "Grounding / Arde (titik)", unit: "titik", default: 1, group: "Panel & Sumber" },
+    { key: "panjangKabel", label: "Panjang Kabel Feeder NYM 2,5", unit: "m", default: 0, hint: "Kabel utama dari MCB box ke instalasi. 0 = skip (sudah termasuk titik).", group: "Panel & Sumber" },
   ],
   items: [
     {
@@ -1955,64 +1926,345 @@ const stageMEP: StageCalcDef = {
       label: "Instalasi Titik Lampu",
       ahspKeyword: "instalasi titik lampu",
       ahspUnit: "titik",
-      defaultEnabled: false,
+      defaultEnabled: true,
       showIf: (i) => n(i.titikLampu) > 0,
       computeVolume: (i) => {
         const v = n(i.titikLampu);
-        if (v <= 0) return null;
-        return { volume: v, formula: `${v} titik` };
+        return v > 0 ? { volume: v, formula: `${v} titik` } : null;
       },
     },
     {
-      key: "saklar",
-      label: "Pemasangan Saklar",
-      ahspKeyword: "saklar",
+      key: "saklarTunggal",
+      label: "Saklar Tunggal",
+      ahspKeyword: "saklar tunggal",
       ahspUnit: "unit",
-      defaultEnabled: false,
-      showIf: (i) => n(i.saklar) > 0,
+      defaultEnabled: true,
+      showIf: (i) => n(i.saklarTunggal) > 0,
       computeVolume: (i) => {
-        const v = n(i.saklar);
-        if (v <= 0) return null;
-        return { volume: v, formula: `${v} titik` };
+        const v = n(i.saklarTunggal);
+        return v > 0 ? { volume: v, formula: `${v} unit` } : null;
+      },
+    },
+    {
+      key: "saklarGanda",
+      label: "Saklar Ganda / Seri",
+      ahspKeyword: "saklar ganda",
+      ahspUnit: "unit",
+      defaultEnabled: true,
+      showIf: (i) => n(i.saklarGanda) > 0,
+      computeVolume: (i) => {
+        const v = n(i.saklarGanda);
+        return v > 0 ? { volume: v, formula: `${v} unit` } : null;
       },
     },
     {
       key: "stopKontak",
-      label: "Pemasangan Stop Kontak",
+      label: "Instalasi Stop Kontak",
       ahspKeyword: "instalasi stop kontak",
       ahspUnit: "titik",
-      defaultEnabled: false,
+      defaultEnabled: true,
       showIf: (i) => n(i.stopKontak) > 0,
       computeVolume: (i) => {
         const v = n(i.stopKontak);
-        if (v <= 0) return null;
-        return { volume: v, formula: `${v} titik` };
+        return v > 0 ? { volume: v, formula: `${v} titik` } : null;
       },
     },
     {
-      key: "pipaBersih",
-      label: "Pemasangan Pipa Air Bersih",
-      ahspKeyword: "pipa pvc",
-      ahspUnit: "m",
-      defaultEnabled: false,
-      showIf: (i) => n(i.panjangPipaBersih) > 0,
+      key: "mcbBox",
+      label: "MCB Box / Box Sekering",
+      ahspKeyword: "mcb box",
+      ahspUnit: "unit",
+      defaultEnabled: true,
+      showIf: (i) => n(i.mcbBox) > 0,
       computeVolume: (i) => {
-        const v = n(i.panjangPipaBersih);
-        if (v <= 0) return null;
-        return { volume: v, formula: `${fmt(v, 2)} m` };
+        const v = n(i.mcbBox);
+        return v > 0 ? { volume: v, formula: `${v} unit` } : null;
       },
     },
     {
-      key: "pipaKotor",
-      label: "Pemasangan Pipa Air Kotor",
-      ahspKeyword: "pipa pvc",
+      key: "kwhMeter",
+      label: "kWh Meter (sambungan PLN)",
+      ahspKeyword: "kwh meter token 1 phase",
+      ahspUnit: "unit",
+      defaultEnabled: false, // sering disediakan PLN, bukan kontraktor
+      showIf: (i) => n(i.kwhMeter) > 0,
+      computeVolume: (i) => {
+        const v = n(i.kwhMeter);
+        return v > 0 ? { volume: v, formula: `${v} unit` } : null;
+      },
+    },
+    {
+      key: "grounding",
+      label: "Grounding / Arde (Rod)",
+      ahspKeyword: "grounding rod gip",
+      ahspUnit: "titik",
+      defaultEnabled: true,
+      showIf: (i) => n(i.grounding) > 0,
+      computeVolume: (i) => {
+        const v = n(i.grounding);
+        return v > 0 ? { volume: v, formula: `${v} titik` } : null;
+      },
+    },
+    {
+      key: "kabelFeeder",
+      label: "Kabel Feeder NYM 2,5 mm²",
+      ahspKeyword: "kabel nym 2,5",
       ahspUnit: "m",
       defaultEnabled: false,
-      showIf: (i) => n(i.panjangPipaKotor) > 0,
+      showIf: (i) => n(i.panjangKabel) > 0,
       computeVolume: (i) => {
-        const v = n(i.panjangPipaKotor);
-        if (v <= 0) return null;
-        return { volume: v, formula: `${fmt(v, 2)} m` };
+        const v = n(i.panjangKabel);
+        return v > 0 ? { volume: v, formula: `${fmt(v, 2)} m` } : null;
+      },
+    },
+  ],
+};
+
+// ── Plumbing & Sanitasi — pipa di-pin per-diameter via notasi '(NN mm)' (unik,
+// anti collision 1/2" vs 1-1/2"). Septictank sengaja keyword non-resolving →
+// user pilih manual (hindari auto ke Sumur Resapan Air Limbah {6.2.1.7}). ──
+const stagePlumbing: StageCalcDef = {
+  type: "stage_plumbing",
+  label: "Plumbing & Sanitasi",
+  description:
+    "Pipa air bersih (per diameter) + air kotor + fixture sanitair (kloset/wastafel/kran/floor drain/bak cuci/shower) + pompa/toren + resapan. Septictank/biofilter: pilih AHSP manual (belum di katalog standar).",
+  inputs: [
+    { key: "pipaBersih12", label: "Pipa Air Bersih 1/2\" (15mm)", unit: "m", default: 0, hint: "Distribusi ke kran/shower", group: "Pipa Air Bersih" },
+    { key: "pipaBersih34", label: "Pipa Air Bersih 3/4\" (20mm)", unit: "m", default: 0, hint: "Pipa utama dalam rumah", group: "Pipa Air Bersih" },
+    { key: "pipaBersih1", label: "Pipa Air Bersih 1\" (25mm)", unit: "m", default: 0, hint: "Pipa induk dari toren/pompa", group: "Pipa Air Bersih" },
+    { key: "pipaKotor3", label: "Pipa Air Kotor 3\" (80mm)", unit: "m", default: 0, hint: "Buangan wastafel/floor drain", group: "Pipa Air Kotor" },
+    { key: "pipaKotor4", label: "Pipa Air Kotor 4\" (100mm)", unit: "m", default: 0, hint: "Buangan kloset ke septic", group: "Pipa Air Kotor" },
+    { key: "klosetDuduk", label: "Kloset Duduk / Monoblock", unit: "bh", default: 0, group: "Sanitair" },
+    { key: "klosetJongkok", label: "Kloset Jongkok", unit: "bh", default: 1, group: "Sanitair" },
+    { key: "wastafel", label: "Wastafel", unit: "bh", default: 1, group: "Sanitair" },
+    { key: "floorDrain", label: "Floor Drain", unit: "bh", default: 2, group: "Sanitair" },
+    { key: "kran", label: "Kran Air (1/2\"-3/4\")", unit: "bh", default: 3, group: "Sanitair" },
+    { key: "bakCuci", label: "Bak Cuci Piring (zink)", unit: "bh", default: 1, group: "Sanitair" },
+    { key: "showerSet", label: "Shower Set", unit: "bh", default: 0, group: "Sanitair" },
+    { key: "jetWasher", label: "Jet Washer", unit: "bh", default: 0, group: "Sanitair" },
+    { key: "pompa", label: "Pompa Air (jet)", unit: "unit", default: 0, group: "Sumber Air & Buangan" },
+    { key: "toren", label: "Toren / Tandon Air", unit: "unit", default: 0, group: "Sumber Air & Buangan" },
+    { key: "bakKontrol", label: "Bak Kontrol", unit: "bh", default: 0, group: "Sumber Air & Buangan" },
+    { key: "sumurResapan", label: "Sumur Resapan Air Hujan", unit: "bh", default: 0, group: "Sumber Air & Buangan" },
+    { key: "septictank", label: "Septictank / Biofilter", unit: "unit", default: 1, hint: "Belum ada AHSP standar — pilih manual via picker.", group: "Sumber Air & Buangan" },
+  ],
+  items: [
+    {
+      key: "pipaBersih12",
+      label: "Pipa Air Bersih PVC 1/2\"",
+      ahspKeyword: "pipa pvc aw (15 mm)",
+      ahspUnit: "m",
+      defaultEnabled: false,
+      showIf: (i) => n(i.pipaBersih12) > 0,
+      computeVolume: (i) => {
+        const v = n(i.pipaBersih12);
+        return v > 0 ? { volume: v, formula: `${fmt(v, 2)} m` } : null;
+      },
+    },
+    {
+      key: "pipaBersih34",
+      label: "Pipa Air Bersih PVC 3/4\"",
+      ahspKeyword: "pipa pvc aw (20 mm)",
+      ahspUnit: "m",
+      defaultEnabled: false,
+      showIf: (i) => n(i.pipaBersih34) > 0,
+      computeVolume: (i) => {
+        const v = n(i.pipaBersih34);
+        return v > 0 ? { volume: v, formula: `${fmt(v, 2)} m` } : null;
+      },
+    },
+    {
+      key: "pipaBersih1",
+      label: "Pipa Air Bersih PVC 1\"",
+      ahspKeyword: "pipa pvc aw (25 mm)",
+      ahspUnit: "m",
+      defaultEnabled: false,
+      showIf: (i) => n(i.pipaBersih1) > 0,
+      computeVolume: (i) => {
+        const v = n(i.pipaBersih1);
+        return v > 0 ? { volume: v, formula: `${fmt(v, 2)} m` } : null;
+      },
+    },
+    {
+      key: "pipaKotor3",
+      label: "Pipa Air Kotor PVC 3\"",
+      ahspKeyword: "pipa pvc aw (80 mm)",
+      ahspUnit: "m",
+      defaultEnabled: false,
+      showIf: (i) => n(i.pipaKotor3) > 0,
+      computeVolume: (i) => {
+        const v = n(i.pipaKotor3);
+        return v > 0 ? { volume: v, formula: `${fmt(v, 2)} m` } : null;
+      },
+    },
+    {
+      key: "pipaKotor4",
+      label: "Pipa Air Kotor PVC 4\"",
+      ahspKeyword: "pipa pvc aw (100 mm)",
+      ahspUnit: "m",
+      defaultEnabled: false,
+      showIf: (i) => n(i.pipaKotor4) > 0,
+      computeVolume: (i) => {
+        const v = n(i.pipaKotor4);
+        return v > 0 ? { volume: v, formula: `${fmt(v, 2)} m` } : null;
+      },
+    },
+    {
+      key: "klosetDuduk",
+      label: "Kloset Duduk / Monoblock",
+      ahspKeyword: "closet duduk",
+      ahspUnit: "bh",
+      defaultEnabled: false,
+      showIf: (i) => n(i.klosetDuduk) > 0,
+      computeVolume: (i) => {
+        const v = n(i.klosetDuduk);
+        return v > 0 ? { volume: v, formula: `${v} bh` } : null;
+      },
+    },
+    {
+      key: "klosetJongkok",
+      label: "Kloset Jongkok",
+      ahspKeyword: "closet jongkok",
+      ahspUnit: "bh",
+      defaultEnabled: true,
+      showIf: (i) => n(i.klosetJongkok) > 0,
+      computeVolume: (i) => {
+        const v = n(i.klosetJongkok);
+        return v > 0 ? { volume: v, formula: `${v} bh` } : null;
+      },
+    },
+    {
+      key: "wastafel",
+      label: "Wastafel",
+      ahspKeyword: "wastafel",
+      ahspUnit: "bh",
+      defaultEnabled: true,
+      showIf: (i) => n(i.wastafel) > 0,
+      computeVolume: (i) => {
+        const v = n(i.wastafel);
+        return v > 0 ? { volume: v, formula: `${v} bh` } : null;
+      },
+    },
+    {
+      key: "floorDrain",
+      label: "Floor Drain",
+      ahspKeyword: "floor drain",
+      ahspUnit: "bh",
+      defaultEnabled: true,
+      showIf: (i) => n(i.floorDrain) > 0,
+      computeVolume: (i) => {
+        const v = n(i.floorDrain);
+        return v > 0 ? { volume: v, formula: `${v} bh` } : null;
+      },
+    },
+    {
+      key: "kran",
+      label: "Kran Air (1/2\"-3/4\")",
+      ahspKeyword: "kran diameter",
+      ahspUnit: "bh",
+      defaultEnabled: true,
+      showIf: (i) => n(i.kran) > 0,
+      computeVolume: (i) => {
+        const v = n(i.kran);
+        return v > 0 ? { volume: v, formula: `${v} bh` } : null;
+      },
+    },
+    {
+      key: "bakCuci",
+      label: "Bak Cuci Piring (zink)",
+      ahspKeyword: "bak cuci piring",
+      ahspUnit: "bh",
+      defaultEnabled: true,
+      showIf: (i) => n(i.bakCuci) > 0,
+      computeVolume: (i) => {
+        const v = n(i.bakCuci);
+        return v > 0 ? { volume: v, formula: `${v} bh` } : null;
+      },
+    },
+    {
+      key: "showerSet",
+      label: "Shower Set",
+      ahspKeyword: "shower set",
+      ahspUnit: "bh",
+      defaultEnabled: false,
+      showIf: (i) => n(i.showerSet) > 0,
+      computeVolume: (i) => {
+        const v = n(i.showerSet);
+        return v > 0 ? { volume: v, formula: `${v} bh` } : null;
+      },
+    },
+    {
+      key: "jetWasher",
+      label: "Jet Washer",
+      ahspKeyword: "jet washer",
+      ahspUnit: "bh",
+      defaultEnabled: false,
+      showIf: (i) => n(i.jetWasher) > 0,
+      computeVolume: (i) => {
+        const v = n(i.jetWasher);
+        return v > 0 ? { volume: v, formula: `${v} bh` } : null;
+      },
+    },
+    {
+      key: "pompa",
+      label: "Pompa Air (jet)",
+      ahspKeyword: "pompa jet",
+      ahspUnit: "unit",
+      defaultEnabled: false,
+      showIf: (i) => n(i.pompa) > 0,
+      computeVolume: (i) => {
+        const v = n(i.pompa);
+        return v > 0 ? { volume: v, formula: `${v} unit (default jet — pilih kapasitas via picker)` } : null;
+      },
+    },
+    {
+      key: "toren",
+      label: "Toren / Tandon Air",
+      ahspKeyword: "tangki toren kap. 0,7",
+      ahspUnit: "unit",
+      defaultEnabled: false,
+      showIf: (i) => n(i.toren) > 0,
+      computeVolume: (i) => {
+        const v = n(i.toren);
+        return v > 0 ? { volume: v, formula: `${v} unit` } : null;
+      },
+    },
+    {
+      key: "bakKontrol",
+      label: "Bak Kontrol",
+      ahspKeyword: "bak kontrol pas. bata 30x30",
+      ahspUnit: "bh",
+      defaultEnabled: false,
+      showIf: (i) => n(i.bakKontrol) > 0,
+      computeVolume: (i) => {
+        const v = n(i.bakKontrol);
+        return v > 0 ? { volume: v, formula: `${v} bh` } : null;
+      },
+    },
+    {
+      key: "sumurResapan",
+      label: "Sumur Resapan Air Hujan",
+      ahspKeyword: "sumur resapan air hujan",
+      ahspUnit: "bh",
+      defaultEnabled: false,
+      showIf: (i) => n(i.sumurResapan) > 0,
+      computeVolume: (i) => {
+        const v = n(i.sumurResapan);
+        return v > 0 ? { volume: v, formula: `${v} bh` } : null;
+      },
+    },
+    {
+      // Keyword sengaja non-resolving → badge "AHSP belum ada, pilih manual".
+      // Jangan auto-pick ke Sumur Resapan Air Limbah {6.2.1.7} (seed Rp 383jt).
+      key: "septictank",
+      label: "Septictank / Biofilter (pilih manual)",
+      ahspKeyword: "septictank biofilter pabrikan",
+      ahspUnit: "unit",
+      defaultEnabled: true,
+      showIf: (i) => n(i.septictank) > 0,
+      computeVolume: (i) => {
+        const v = n(i.septictank);
+        return v > 0 ? { volume: v, formula: `${v} unit (pilih AHSP manual)` } : null;
       },
     },
   ],
@@ -2172,116 +2424,9 @@ const stageBukaan: StageCalcDef = {
 // Stage: SANITAIR & SANITASI — gap audit: dulu tak ada sama sekali
 // ─────────────────────────────────────────────────────────────────────────────
 
-const stageSanitair: StageCalcDef = {
-  type: "stage_sanitair",
-  label: "Sanitair & Sanitasi",
-  description:
-    "Kloset, wastafel, floor drain, sumur resapan. Isi jumlah, tiap fixture jadi item AHSP terpisah. (Kran & septictank: tambah manual via picker bila perlu.)",
-  inputs: [
-    {
-      key: "klosetDuduk",
-      label: "Kloset Duduk / Monoblock",
-      unit: "bh",
-      default: 0,
-      group: "Kloset",
-    },
-    {
-      key: "klosetJongkok",
-      label: "Kloset Jongkok",
-      unit: "bh",
-      default: 1,
-      group: "Kloset",
-    },
-    {
-      key: "wastafel",
-      label: "Wastafel",
-      unit: "bh",
-      default: 0,
-      group: "Fixture",
-    },
-    {
-      key: "floorDrain",
-      label: "Floor Drain",
-      unit: "bh",
-      default: 1,
-      group: "Fixture",
-    },
-    {
-      key: "sumurResapan",
-      label: "Sumur Resapan",
-      unit: "bh",
-      default: 0,
-      group: "Resapan",
-    },
-  ],
-  items: [
-    {
-      key: "klosetDuduk",
-      label: "Kloset Duduk / Monoblock",
-      ahspKeyword: "closet duduk",
-      ahspUnit: "bh",
-      defaultEnabled: false,
-      showIf: (i) => n(i.klosetDuduk) > 0,
-      computeVolume: (i) => {
-        const v = n(i.klosetDuduk);
-        if (v <= 0) return null;
-        return { volume: v, formula: `${v} bh` };
-      },
-    },
-    {
-      key: "klosetJongkok",
-      label: "Kloset Jongkok",
-      ahspKeyword: "closet jongkok",
-      ahspUnit: "bh",
-      defaultEnabled: true,
-      showIf: (i) => n(i.klosetJongkok) > 0,
-      computeVolume: (i) => {
-        const v = n(i.klosetJongkok);
-        if (v <= 0) return null;
-        return { volume: v, formula: `${v} bh` };
-      },
-    },
-    {
-      key: "wastafel",
-      label: "Wastafel",
-      ahspKeyword: "wastafel",
-      ahspUnit: "bh",
-      defaultEnabled: false,
-      showIf: (i) => n(i.wastafel) > 0,
-      computeVolume: (i) => {
-        const v = n(i.wastafel);
-        if (v <= 0) return null;
-        return { volume: v, formula: `${v} bh` };
-      },
-    },
-    {
-      key: "floorDrain",
-      label: "Floor Drain",
-      ahspKeyword: "floor drain",
-      ahspUnit: "bh",
-      defaultEnabled: true,
-      showIf: (i) => n(i.floorDrain) > 0,
-      computeVolume: (i) => {
-        const v = n(i.floorDrain);
-        if (v <= 0) return null;
-        return { volume: v, formula: `${v} bh` };
-      },
-    },
-    {
-      key: "sumurResapan",
-      label: "Sumur Resapan Air",
-      ahspKeyword: "sumur resapan air",
-      ahspUnit: "bh",
-      defaultEnabled: false,
-      showIf: (i) => n(i.sumurResapan) > 0,
-      computeVolume: (i) => {
-        const v = n(i.sumurResapan);
-        if (v <= 0) return null;
-        return { volume: v, formula: `${v} bh` };
-      },
-    },
-  ],
-};
+// (stageSanitair lama dihapus — diserap stagePlumbing yang lebih lengkap +
+//  sumurResapan keyword sudah diperbaiki ke "air hujan" {6.6.1.1}, bukan
+//  "air limbah" {6.2.1.7} yang seed-bug Rp 383jt.)
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Stage: FOOTPLATE / PONDASI TAPAK — restore gap Fase A (single calc di-hide).
@@ -2962,8 +3107,8 @@ export const STAGE_CALCULATORS: StageCalcDef[] = [
   stageAtap,
   stageFinishing,
   stageBukaan,
-  stageSanitair,
-  stageMEP,
+  stagePlumbing,
+  stageListrik,
 ];
 
 export function getStage(type: string): StageCalcDef | null {
