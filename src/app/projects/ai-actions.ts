@@ -20,6 +20,14 @@ function validVol(v: unknown): number | null {
   const n = Number(v);
   return Number.isFinite(n) && n > 0 && n <= MAX_VOL ? n : null;
 }
+// ahspId dari payload AI di-POST mentah → kalau bukan UUID, query ke kolom uuid
+// (inArray) bikin Postgres throw "invalid input syntax for type uuid" (server
+// action crash). Validasi dulu; non-UUID → treat sbg custom item.
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function validAhspId(v: unknown): string | null {
+  return typeof v === "string" && UUID_RE.test(v) ? v : null;
+}
 
 /**
  * Apply approved AI-extracted items ke project.
@@ -137,8 +145,8 @@ export async function applyAiExtraction(formData: FormData) {
   const ahspIds = new Set<string>();
   for (const w of payload.wbs) {
     for (const it of w.items) {
-      if (it.ahspId && it.name && validVol(it.volume) != null)
-        ahspIds.add(it.ahspId);
+      if (validAhspId(it.ahspId) && it.name && validVol(it.volume) != null)
+        ahspIds.add(it.ahspId as string);
     }
   }
 
@@ -192,13 +200,14 @@ export async function applyAiExtraction(formData: FormData) {
         .slice(0, 200);
       if (!name || vol == null) continue;
 
-      if (it.ahspId) {
-        const master = ahspMasterMap.get(it.ahspId);
+      const ahspId = validAhspId(it.ahspId); // non-UUID → null → jadi custom item
+      if (ahspId) {
+        const master = ahspMasterMap.get(ahspId);
         if (!master) continue; // AHSP gak ditemukan, skip
         itemRows.push({
           projectId,
           wbsItemId: wbsId,
-          ahspItemId: it.ahspId,
+          ahspItemId: ahspId,
           customName: master.name,
           customUnit: master.unit,
           customUnitPrice: master.basePrice.toFixed(2),
