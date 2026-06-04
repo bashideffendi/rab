@@ -27,6 +27,7 @@ type SubItemState = {
   searchOverride: string; // text user buat search override
   showSearch: boolean;
   searchResults: AhspMatch[]; // hasil pencarian manual untuk dipilih user
+  userPicked: boolean; // true kalau user pilih AHSP manual → jangan auto-clobber
 };
 
 type WbsOption = { id: string; code: string; name: string };
@@ -147,6 +148,7 @@ export function StageCalculatorModal({
         searchOverride: "",
         showSearch: false,
         searchResults: [],
+        userPicked: false,
       };
     }
     setSubItems(initSubs);
@@ -160,21 +162,28 @@ export function StageCalculatorModal({
     setError(null);
   }, [open, stageType, stage]);
 
-  // Auto-fetch AHSP for each enabled sub-item
+  // Keyword item dgn ahspKeyword fungsi (mis. mutu beton K-225→K-300) →
+  // serialize biar ganti dropdown spek memicu re-fetch AHSP. Item keyword statis
+  // konstan, jadi gak ikut bikin re-run saat dimensi berubah.
+  const dynKw = stage
+    ? stage.items.map((it) => `${it.key}:${kwOf(it, inputs)}`).join("|")
+    : "";
+
+  // Auto-fetch AHSP tiap sub-item. Pakai functional updater (baca state SEGAR,
+  // bukan subItems dari closure yang basi saat ganti stage → dulu item stage
+  // baru ke-skip). Re-run saat stage ATAU keyword-dinamis (mutu) berubah →
+  // harga beton ikut mutu. Pilihan manual user (userPicked) tidak di-clobber.
   useEffect(() => {
     if (!open || !stage) return;
     let cancelled = false;
     (async () => {
       for (const it of stage.items) {
-        const state = subItems[it.key];
-        if (!state || state.ahsp) continue;
         try {
           const res = await fetch(
             `/api/ahsp/search?q=${encodeURIComponent(kwOf(it, inputs))}&limit=10`,
           );
-          if (!res.ok) continue;
+          if (!res.ok || cancelled) continue;
           const data: AhspMatch[] = await res.json();
-          // Filter by unit (case-insensitive)
           const matched = data.find(
             (a) =>
               a.unit.toLowerCase().replace("'", "") ===
@@ -182,20 +191,21 @@ export function StageCalculatorModal({
           );
           const best = matched ?? data[0] ?? null;
           if (cancelled) return;
-          setSubItems((prev) => ({
-            ...prev,
-            [it.key]: {
-              ...prev[it.key],
-              ahsp: best,
-              loadingAhsp: false,
-            },
-          }));
+          setSubItems((prev) => {
+            const st = prev[it.key];
+            if (!st || st.userPicked) return prev; // hormati pilihan manual
+            return {
+              ...prev,
+              [it.key]: { ...st, ahsp: best, loadingAhsp: false },
+            };
+          });
         } catch {
           if (cancelled) return;
-          setSubItems((prev) => ({
-            ...prev,
-            [it.key]: { ...prev[it.key], loadingAhsp: false },
-          }));
+          setSubItems((prev) =>
+            prev[it.key]
+              ? { ...prev, [it.key]: { ...prev[it.key], loadingAhsp: false } }
+              : prev,
+          );
         }
       }
     })();
@@ -203,7 +213,7 @@ export function StageCalculatorModal({
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, stageType]);
+  }, [open, stageType, stage, dynKw]);
 
   // Compute volumes per sub-item
   const computed = useMemo(() => {
@@ -302,6 +312,7 @@ export function StageCalculatorModal({
       [key]: {
         ...prev[key],
         ahsp: match,
+        userPicked: true, // pilihan manual → auto-fetch (mutu/stage) gak clobber
         showSearch: false,
         searchResults: [],
       },
@@ -468,6 +479,7 @@ export function StageCalculatorModal({
                   searchOverride: "",
                   showSearch: false,
                   searchResults: [],
+                  userPicked: false,
                 };
                 const c = computed[it.key];
                 const hidden = it.showIf && !it.showIf(inputs);
