@@ -5,7 +5,6 @@ import { Button } from "./button";
 import {
   STAGE_CALCULATORS,
   getStage,
-  type StageCalcDef,
   type StageItemDef,
 } from "@/lib/stage-calculators";
 import type { CalcInputDef } from "@/lib/volume-calculators";
@@ -25,12 +24,11 @@ type SubItemState = {
   loadingAhsp: boolean;
   searchOverride: string; // text user buat search override
   showSearch: boolean;
+  searchResults: AhspMatch[]; // hasil pencarian manual untuk dipilih user
 };
 
 type WbsOption = { id: string; code: string; name: string };
 
-const formatIDR = (n: number) =>
-  "Rp " + n.toLocaleString("id-ID", { maximumFractionDigits: 0 });
 const formatNum = (n: number, d = 2) =>
   n.toLocaleString("id-ID", { maximumFractionDigits: d });
 
@@ -84,6 +82,7 @@ export function StageCalculatorModal({
         loadingAhsp: true,
         searchOverride: "",
         showSearch: false,
+        searchResults: [],
       };
     }
     setSubItems(initSubs);
@@ -170,6 +169,16 @@ export function StageCalculatorModal({
     return true;
   });
 
+  // Dicentang + bisa dihitung + showIf-visible TAPI belum ada AHSP → akan
+  // ter-skip saat simpan. Surface ke user, jangan diam-diam dibuang.
+  const enabledUnmatched = stage.items.filter((it) => {
+    const st = subItems[it.key];
+    if (!st || !st.enabled) return false;
+    if (it.showIf && !it.showIf(inputs)) return false;
+    if (computed[it.key] == null) return false;
+    return !st.ahsp;
+  });
+
   function toggleEnabled(key: string) {
     setSubItems((prev) => ({
       ...prev,
@@ -198,25 +207,31 @@ export function StageCalculatorModal({
         `/api/ahsp/search?q=${encodeURIComponent(q)}&limit=20`,
       );
       const data: AhspMatch[] = await res.json();
-      // Show search results — for MVP, just pick first
-      // TODO: add proper picker UI
-      if (data[0]) {
-        setSubItems((prev) => ({
-          ...prev,
-          [key]: { ...prev[key], ahsp: data[0], loadingAhsp: false },
-        }));
-      } else {
-        setSubItems((prev) => ({
-          ...prev,
-          [key]: { ...prev[key], loadingAhsp: false },
-        }));
-      }
+      // Tampilkan hasil sebagai daftar pilihan (user yang pilih) — bukan
+      // auto-pick item pertama yang bisa salah/unit beda.
+      setSubItems((prev) => ({
+        ...prev,
+        [key]: { ...prev[key], searchResults: data, loadingAhsp: false },
+      }));
     } catch {
       setSubItems((prev) => ({
         ...prev,
-        [key]: { ...prev[key], loadingAhsp: false },
+        [key]: { ...prev[key], loadingAhsp: false, searchResults: [] },
       }));
     }
+  }
+
+  /** User memilih satu AHSP dari daftar hasil pencarian. */
+  function pickAhsp(key: string, match: AhspMatch) {
+    setSubItems((prev) => ({
+      ...prev,
+      [key]: {
+        ...prev[key],
+        ahsp: match,
+        showSearch: false,
+        searchResults: [],
+      },
+    }));
   }
 
   async function handleSave() {
@@ -348,11 +363,16 @@ export function StageCalculatorModal({
                   loadingAhsp: false,
                   searchOverride: "",
                   showSearch: false,
+                  searchResults: [],
                 };
                 const c = computed[it.key];
                 const hidden = it.showIf && !it.showIf(inputs);
                 if (hidden) return null;
                 const cantCompute = c == null;
+                const unitBeda =
+                  state.ahsp != null &&
+                  state.ahsp.unit.toLowerCase().replace("'", "") !==
+                    it.ahspUnit.toLowerCase();
 
                 return (
                   <li
@@ -406,6 +426,12 @@ export function StageCalculatorModal({
                             <span className="text-muted-foreground">
                               {state.ahsp.name.slice(0, 60)}
                             </span>
+                            {unitBeda && (
+                              <span className="rounded border border-warning/40 bg-warning/5 px-1.5 py-0.5 text-[10px] text-warning">
+                                ⚠ unit &quot;{state.ahsp.unit}&quot; ≠ {it.ahspUnit}
+                                {" — cek"}
+                              </span>
+                            )}
                             <button
                               type="button"
                               onClick={() =>
@@ -424,30 +450,85 @@ export function StageCalculatorModal({
                           </>
                         )}
                         {!state.loadingAhsp && !state.ahsp && (
-                          <span className="rounded border border-warning/40 bg-warning/5 px-1.5 py-0.5 text-[10px] text-warning">
-                            ⚠ AHSP tidak ketemu — search manual
-                          </span>
-                        )}
-                      </div>
-                      {/* Search override */}
-                      {state.showSearch && (
-                        <div className="mt-2 flex gap-1.5">
-                          <input
-                            type="text"
-                            value={state.searchOverride}
-                            onChange={(e) =>
-                              setSearchOverride(it.key, e.target.value)
-                            }
-                            placeholder={`Cari AHSP yg lain (default: "${kwOf(it, inputs)}")`}
-                            className="flex-1 rounded border border-border bg-background px-2 py-1 text-xs focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
-                          />
                           <button
                             type="button"
-                            onClick={() => searchAhsp(it.key)}
-                            className="rounded bg-accent px-2 py-1 text-xs font-medium text-white"
+                            onClick={() =>
+                              setSubItems((p) => ({
+                                ...p,
+                                [it.key]: { ...p[it.key], showSearch: true },
+                              }))
+                            }
+                            className="rounded border border-warning/40 bg-warning/5 px-1.5 py-0.5 text-[10px] font-medium text-warning hover:bg-warning/10"
                           >
-                            Cari
+                            ⚠ AHSP belum ada — pilih manual
                           </button>
+                        )}
+                      </div>
+                      {/* Search + picker hasil */}
+                      {(state.showSearch ||
+                        (!state.loadingAhsp && !state.ahsp)) && (
+                        <div className="mt-2">
+                          <div className="flex gap-1.5">
+                            <input
+                              type="text"
+                              value={state.searchOverride}
+                              onChange={(e) =>
+                                setSearchOverride(it.key, e.target.value)
+                              }
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  searchAhsp(it.key);
+                                }
+                              }}
+                              placeholder={`Cari AHSP (default: "${kwOf(it, inputs)}")`}
+                              className="flex-1 rounded border border-border bg-background px-2 py-1 text-xs focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => searchAhsp(it.key)}
+                              className="rounded bg-accent px-2 py-1 text-xs font-medium text-white"
+                            >
+                              Cari
+                            </button>
+                          </div>
+                          {state.searchResults.length > 0 && (
+                            <ul className="mt-1.5 max-h-44 divide-y divide-border overflow-auto rounded border border-border bg-background">
+                              {state.searchResults.map((r) => (
+                                <li key={r.id}>
+                                  <button
+                                    type="button"
+                                    onClick={() => pickAhsp(it.key, r)}
+                                    className="flex w-full items-center gap-2 px-2 py-1.5 text-left hover:bg-accent/10"
+                                  >
+                                    <span
+                                      className={`shrink-0 rounded px-1 font-mono text-[9px] ${
+                                        r.unit.toLowerCase().replace("'", "") ===
+                                        it.ahspUnit.toLowerCase()
+                                          ? "bg-accent/10 text-accent"
+                                          : "bg-warning/10 text-warning"
+                                      }`}
+                                    >
+                                      {r.unit}
+                                    </span>
+                                    <span className="shrink-0 font-mono text-[10px] text-accent">
+                                      {r.code}
+                                    </span>
+                                    <span className="truncate text-[11px] text-muted-foreground">
+                                      {r.name}
+                                    </span>
+                                  </button>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                          {state.searchOverride &&
+                            !state.loadingAhsp &&
+                            state.searchResults.length === 0 && (
+                              <p className="mt-1 text-[10px] text-muted-foreground">
+                                Tidak ada hasil — coba kata kunci lain.
+                              </p>
+                            )}
                         </div>
                       )}
                     </div>
@@ -456,6 +537,14 @@ export function StageCalculatorModal({
               })}
             </ul>
           </div>
+
+          {enabledUnmatched.length > 0 && (
+            <div className="mt-4 rounded-md border border-warning/40 bg-warning/5 px-3 py-2 text-xs text-warning">
+              ⚠ {enabledUnmatched.length} pekerjaan dicentang tapi belum ada AHSP
+              ({enabledUnmatched.map((i) => i.label).join(", ")}) — akan di-skip
+              saat simpan. Pilih AHSP manual atau matikan centangnya.
+            </div>
+          )}
 
           {error && (
             <div className="mt-4 rounded-md border border-danger/40 bg-danger/5 px-3 py-2 text-sm text-danger">

@@ -1347,7 +1347,7 @@ const stagePasangan: StageCalcDef = {
     {
       key: "pasangan",
       label: "Pasangan Dinding Bata",
-      ahspKeyword: "dinding bata merah",
+      ahspKeyword: "pemasangan dinding bata merah",
       ahspUnit: "m2",
       defaultEnabled: true,
       computeVolume: (i) => {
@@ -1610,7 +1610,7 @@ const stageFinishing: StageCalcDef = {
     {
       key: "lantaiKeramik",
       label: "Pemasangan Lantai Keramik",
-      ahspKeyword: "lantai keramik",
+      ahspKeyword: "pemasangan lantai keramik",
       ahspUnit: "m2",
       defaultEnabled: true,
       computeVolume: (i) => {
@@ -1634,7 +1634,7 @@ const stageFinishing: StageCalcDef = {
     {
       key: "plafon",
       label: "Pemasangan Plafon",
-      ahspKeyword: "rangka plafon hollow",
+      ahspKeyword: "pemasangan rangka plafon hollow",
       ahspUnit: "m2",
       defaultEnabled: true,
       computeVolume: (i) => {
@@ -1731,7 +1731,7 @@ const stageMEP: StageCalcDef = {
       key: "saklar",
       label: "Pemasangan Saklar",
       ahspKeyword: "saklar",
-      ahspUnit: "titik",
+      ahspUnit: "unit",
       defaultEnabled: false,
       showIf: (i) => n(i.saklar) > 0,
       computeVolume: (i) => {
