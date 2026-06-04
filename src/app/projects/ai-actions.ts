@@ -10,6 +10,15 @@ import {
   assertNotLocked,
 } from "@/lib/auth";
 import { computeAhspPrices } from "@/lib/pricing";
+import { normalizeUnit } from "@/lib/units";
+
+// Validasi volume server-side (payload AI bisa di-POST mentah, bypass UI).
+// numeric(18,4) → cap < 1e12 biar gak overflow Postgres / inflate total.
+const MAX_VOL = 1_000_000_000_000;
+function validVol(v: unknown): number | null {
+  const n = Number(v);
+  return Number.isFinite(n) && n > 0 && n <= MAX_VOL ? n : null;
+}
 
 /**
  * Apply approved AI-extracted items ke project.
@@ -127,7 +136,8 @@ export async function applyAiExtraction(formData: FormData) {
   const ahspIds = new Set<string>();
   for (const w of payload.wbs) {
     for (const it of w.items) {
-      if (it.ahspId && it.name && it.volume > 0) ahspIds.add(it.ahspId);
+      if (it.ahspId && it.name && validVol(it.volume) != null)
+        ahspIds.add(it.ahspId);
     }
   }
 
@@ -172,7 +182,14 @@ export async function applyAiExtraction(formData: FormData) {
     if (!wbsId) continue;
 
     for (const it of w.items) {
-      if (!it.name || it.volume <= 0) continue;
+      // Validasi server-side (parity dgn import-actions): volume finite & >0 &
+      // <cap, nama di-cap 200, satuan dinormalisasi & di-cap 30. Payload AI bisa
+      // di-POST mentah (server action publik) → jangan percaya client.
+      const vol = validVol(it.volume);
+      const name = String(it.name ?? "")
+        .trim()
+        .slice(0, 200);
+      if (!name || vol == null) continue;
 
       if (it.ahspId) {
         const master = ahspMasterMap.get(it.ahspId);
@@ -184,7 +201,7 @@ export async function applyAiExtraction(formData: FormData) {
           customName: master.name,
           customUnit: master.unit,
           customUnitPrice: master.basePrice.toFixed(2),
-          volume: it.volume.toString(),
+          volume: vol.toString(),
           sortOrder: itemSortOrder++,
         });
       } else {
@@ -192,10 +209,13 @@ export async function applyAiExtraction(formData: FormData) {
           projectId,
           wbsItemId: wbsId,
           ahspItemId: null,
-          customName: it.name,
-          customUnit: it.unit,
+          customName: name,
+          customUnit: (normalizeUnit(String(it.unit ?? "")) || "ls").slice(
+            0,
+            30,
+          ),
           customUnitPrice: "0",
-          volume: it.volume.toString(),
+          volume: vol.toString(),
           sortOrder: itemSortOrder++,
         });
       }

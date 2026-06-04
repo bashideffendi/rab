@@ -145,13 +145,20 @@ export function AIImportClient({ projectId }: { projectId: string }) {
       for (const w of data.wbs) {
         for (let i = 0; i < w.items.length; i++) {
           const it = w.items[i];
+          // Auto-pilih AHSP cuma kalau ada PEMENANG JELAS: skor > 0.4 DAN
+          // unggul ≥0.05 dari runner-up. Kalau mepet (mis. beton K-225 vs
+          // K-300 yang mirip), kosongkan → user pilih manual, cegah salah-mutu
+          // ke-snapshot diam-diam.
+          const m0 = it.ahspMatches[0];
+          const m1 = it.ahspMatches[1];
+          const autoAhsp =
+            m0 && m0.score > 0.4 && (!m1 || m0.score - m1.score >= 0.05)
+              ? m0.ahspId
+              : "";
           states.set(itemKey(w.code, i), {
             approved: it.confidence !== "low" && it.estimatedVolume > 0,
             volume: it.estimatedVolume.toString(),
-            ahspId:
-              it.ahspMatches[0] && it.ahspMatches[0].score > 0.4
-                ? it.ahspMatches[0].ahspId
-                : "",
+            ahspId: autoAhsp,
           });
         }
       }

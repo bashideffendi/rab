@@ -311,11 +311,22 @@ export type AhspMatchCandidate = {
 };
 
 function tokenize(s: string): string[] {
-  return s
-    .toLowerCase()
+  const lower = s.toLowerCase();
+  // Pertahankan token PEMBEDA (mutu beton K-225/K-300, f'c, rasio campuran 1:4,
+  // diameter Ø12) SEBELUM filter panjang ≥3 — kalau gak, "beton K-225" vs
+  // "K-300" tokenize identik {beton} → auto-match bisa salah-pick mutu.
+  const special: string[] = [];
+  for (const m of lower.matchAll(/k[\s-]?(\d{2,3})\b/g)) special.push("k" + m[1]);
+  for (const m of lower.matchAll(/f'?c[\s=]*([\d,]+)/g))
+    special.push("fc" + m[1].replace(",", ".").replace(/\.$/, ""));
+  for (const m of lower.matchAll(/(\d+)\s*:\s*(\d+)/g))
+    special.push(m[1] + ":" + m[2]);
+  for (const m of lower.matchAll(/[ø⌀d](\d{1,2})\b/g)) special.push("d" + m[1]);
+  const base = lower
     .replace(/[^\w\s]/g, " ")
     .split(/\s+/)
     .filter((w) => w.length >= 3);
+  return [...base, ...special];
 }
 
 /**

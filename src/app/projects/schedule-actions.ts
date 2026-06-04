@@ -3,7 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
-import { requireUser, verifyProjectOwnership } from "@/lib/auth";
+import {
+  requireUser,
+  verifyProjectOwnership,
+  assertNotLocked,
+} from "@/lib/auth";
 
 /**
  * Bulk update schedule (start_week + duration_weeks) untuk multiple items
@@ -18,6 +22,8 @@ export async function updateItemsSchedule(formData: FormData) {
 
   const user = await requireUser();
   await verifyProjectOwnership(projectId, user.id);
+  // Jadwal (startWeek/durationWeeks) = lampiran kontrak → bekukan saat RAB lock.
+  await assertNotLocked(projectId);
 
   let payload: Array<{
     itemId: string;
@@ -101,6 +107,8 @@ export async function updatePlannedDistribution(
   const user = await requireUser();
   try {
     await verifyProjectOwnership(projectId, user.id);
+    // Baseline kurva-S rencana = lampiran kontrak → bekukan saat RAB lock.
+    await assertNotLocked(projectId);
   } catch (e) {
     return {
       error: e instanceof Error ? e.message : "Akses ditolak.",
