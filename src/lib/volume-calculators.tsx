@@ -3309,6 +3309,9 @@ export const CALCULATORS: CalcDef[] = [
 
   {
     type: "footplate",
+    // Hidden: single calc cuma harga beton m³; besi & bekisting display-only.
+    // TODO Fase C: tambah Stage Footplate (beton+besi+bekisting auto).
+    hidden: true,
     label: "Footplate / Pondasi Tapak Beton",
     description:
       "Pondasi tapak (footplate) beton bertulang per titik. Beda dari Galian Pondasi Tapak — ini menghitung BETON + TULANGAN-nya, bukan galian tanahnya. Output utama: volume beton (m³). Info: tulangan grid (arah X & Y), stek ke kolom, bekisting samping.",
@@ -3552,6 +3555,8 @@ export const CALCULATORS: CalcDef[] = [
 
   {
     type: "sloof_balok",
+    // Hidden: lihat catatan kolom — pakai Stage Calculator untuk RAB lengkap.
+    hidden: true,
     label: "Sloof / Balok Beton",
     description:
       "Sloof/balok beton bertulang RAB Pro level: pisah Tulangan Atas (D1) + Bawah (D2) + Sengkang (D3) + Kawat Ikat. Output volume beton (m³), info breakdown panjang & berat besi.",
@@ -3772,6 +3777,9 @@ export const CALCULATORS: CalcDef[] = [
 
   {
     type: "kolom",
+    // Hidden: single calc cuma harga beton m³; besi & bekisting display-only
+    // → under-estimate. Pakai Stage Calculator (beton+besi+bekisting auto).
+    hidden: true,
     label: "Kolom Beton",
     description:
       "Kolom beton bertulang RAB Pro level: pisah Besi Utama + Support + Ring/Begel + Kawat Ikat. Output volume beton (m³), info breakdown panjang & berat besi.",
@@ -4004,6 +4012,8 @@ export const CALCULATORS: CalcDef[] = [
 
   {
     type: "plat_lantai",
+    // Hidden: lihat catatan kolom — pakai Stage Calculator untuk RAB lengkap.
+    hidden: true,
     label: "Plat Lantai / Dak",
     description:
       "Plat lantai/dak beton bertulang RAB Pro level: tulangan 2-arah (X & Y) di 2 lapis (atas & bawah) + Kawat Ikat + bekisting. Output volume beton (m³).",

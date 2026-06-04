@@ -16,8 +16,9 @@ export type StageItemDef = {
   key: string;
   /** Label yang tampil di UI sub-item card */
   label: string;
-  /** Keyword untuk search AHSP (case-insensitive). Best match auto-picked. */
-  ahspKeyword: string;
+  /** Keyword untuk search AHSP (case-insensitive). Best match auto-picked.
+   *  Boleh fungsi dari inputs (mis. mutu beton dinamis: K→f'c via expandQuery). */
+  ahspKeyword: string | ((inputs: Record<string, number>) => string);
   /** Expected unit AHSP (mis. "m", "m2", "m3") — filter search results */
   ahspUnit: string;
   /** Whether checkbox checked by default */
@@ -85,14 +86,12 @@ function rebarWeight(dia: number): number {
   return REBAR_WEIGHT[dia] ?? 0.006165 * dia * dia;
 }
 
-/** Mutu beton (K-X) → keyword search untuk AHSP beton */
+/** Mutu beton (K-X) → keyword search AHSP. Pakai notasi "K{x}" supaya
+ *  expandQuery di /api/ahsp/search nge-map ke f'c yang benar & cocok ke beton
+ *  STRUKTURAL (token K/225/19,3 dst), bukan lean "f'c 10 MPa, agregat maks 19
+ *  mm" — notasi "f'c 19" lama malah nyangkut ke "19 mm" agregat lean. */
 function mutuBetonKeyword(k: number): string {
-  // K-175 ≈ fc 14.5, K-225 ≈ fc 19.3, K-275 ≈ fc 22.5, K-300 ≈ fc 24.9
-  if (k <= 175) return "beton mutu f'c 14";
-  if (k <= 225) return "beton mutu f'c 19";
-  if (k <= 275) return "beton mutu f'c 22";
-  if (k <= 300) return "beton mutu f'c 24";
-  return "beton mutu f'c 26";
+  return "beton K" + k;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -266,7 +265,7 @@ const stagePersiapan: StageCalcDef = {
     {
       key: "papanNama",
       label: "Papan Nama Proyek",
-      ahspKeyword: "papan nama proyek",
+      ahspKeyword: "papan nama",
       ahspUnit: "buah",
       defaultEnabled: false,
       showIf: (i) => n(i.papanNama) > 0,
@@ -437,7 +436,7 @@ const stagePondasi: StageCalcDef = {
     {
       key: "uruganPasir",
       label: "Urugan Pasir Bawah Pondasi",
-      ahspKeyword: "urugan pasir",
+      ahspKeyword: "urukan pasir",
       ahspUnit: "m3",
       defaultEnabled: true,
       showIf: (i) => n(i.tebalUruganPasir) > 0,
@@ -471,7 +470,7 @@ const stagePondasi: StageCalcDef = {
     {
       key: "lantaiKerja",
       label: "Lantai Kerja Beton (Beton Tumbuk)",
-      ahspKeyword: "beton tumbuk",
+      ahspKeyword: "beton mutu rendah",
       ahspUnit: "m3",
       defaultEnabled: false,
       showIf: (i) => n(i.tebalLantaiKerja) > 0,
@@ -505,7 +504,7 @@ const stagePondasi: StageCalcDef = {
     {
       key: "uruganKembali",
       label: "Urugan Kembali Bekas Galian",
-      ahspKeyword: "urugan kembali",
+      ahspKeyword: "urukan kembali",
       ahspUnit: "m3",
       defaultEnabled: true,
       computeVolume: (i) => {
@@ -627,7 +626,7 @@ const stageBetonSloof: StageCalcDef = {
     {
       key: "betonSloof",
       label: "Beton Sloof",
-      ahspKeyword: "beton mutu f'c 19",
+      ahspKeyword: (i) => mutuBetonKeyword(n(i.mutuBeton, 225)),
       ahspUnit: "m3",
       defaultEnabled: true,
       computeVolume: (i) => {
@@ -665,19 +664,17 @@ const stageBetonSloof: StageCalcDef = {
         const jmlRing = Math.ceil(P / R) + 1;
         const lRing = kelRing * jmlRing;
         const wRing = lRing * rebarWeight(D3);
-        // Kawat ikat 1%
+        // Kawat ikat TIDAK ditambah ke volume: AHSP pembesian PUPR sudah
+        // memuat bendrat (~0,15 kg/10 kg besi) + waste → +1% = double-count.
         const wBesi = wUtama + wRing;
-        const wKawat = wBesi * 0.01;
-        const total = wBesi + wKawat;
 
         const formula = [
           `Utama (Ø${D1} × ${n1} btg × ${fmt(P, 2)} m): ${fmt(lUtama, 2)} m → ${fmt(wUtama, 2)} kg`,
           `Ring/Begel (Ø${D3} jarak ${fmt(R * 100, 0)} cm, ${jmlRing} buah): ${fmt(lRing, 2)} m → ${fmt(wRing, 2)} kg`,
-          `Kawat ikat (1%): ${fmt(wKawat, 2)} kg`,
-          `TOTAL: ${fmt(total, 2)} kg`,
+          `TOTAL besi: ${fmt(wBesi, 2)} kg (kawat ikat sudah termasuk AHSP pembesian)`,
         ].join(" | ");
 
-        return { volume: total, formula };
+        return { volume: wBesi, formula };
       },
     },
     {
@@ -857,7 +854,7 @@ const stageBetonKolom: StageCalcDef = {
     {
       key: "betonKolom",
       label: "Beton Kolom",
-      ahspKeyword: "beton mutu f'c 19",
+      ahspKeyword: (i) => mutuBetonKeyword(n(i.mutuBeton, 225)),
       ahspUnit: "m3",
       defaultEnabled: true,
       computeVolume: (i) => {
@@ -906,11 +903,9 @@ const stageBetonKolom: StageCalcDef = {
         const lRing = kelRing * jmlRingPerKolom * nk;
         const wRing = lRing * rebarWeight(D3);
 
-        // Kawat ikat: ~1% dari berat besi total (atau pakai formula)
+        // Kawat ikat TIDAK ditambah ke volume: AHSP pembesian sudah memuat
+        // bendrat + waste → +1% = double-count.
         const wBesi = wUtama + wSupport + wRing;
-        const wKawat = wBesi * 0.01; // 1% rule of thumb
-
-        const total = wBesi + wKawat;
 
         const formula = [
           `Utama (Ø${D1} × ${n1} btg × ${fmt(T, 2)} m × ${nk}): ${fmt(lUtama, 2)} m → ${fmt(wUtama, 2)} kg`,
@@ -918,13 +913,12 @@ const stageBetonKolom: StageCalcDef = {
             ? `Support (Ø${D2} × ${n2} btg × ${fmt(T, 2)} × ${nk}): ${fmt(lSupport, 2)} m → ${fmt(wSupport, 2)} kg`
             : "",
           `Ring/Begel (Ø${D3} jarak ${fmt(R * 100, 0)} cm, ${jmlRingPerKolom} buah/kolom × ${nk}): ${fmt(lRing, 2)} m → ${fmt(wRing, 2)} kg`,
-          `Kawat ikat (1% dari besi): ${fmt(wKawat, 2)} kg`,
-          `TOTAL: ${fmt(total, 2)} kg`,
+          `TOTAL besi: ${fmt(wBesi, 2)} kg (kawat ikat sudah termasuk AHSP)`,
         ]
           .filter(Boolean)
           .join(" | ");
 
-        return { volume: total, formula };
+        return { volume: wBesi, formula };
       },
     },
     {
@@ -1063,7 +1057,7 @@ const stageBetonBalok: StageCalcDef = {
     {
       key: "betonBalok",
       label: "Beton Balok",
-      ahspKeyword: "beton mutu f'c 19",
+      ahspKeyword: (i) => mutuBetonKeyword(n(i.mutuBeton, 225)),
       ahspUnit: "m3",
       defaultEnabled: true,
       computeVolume: (i) => {
@@ -1104,8 +1098,7 @@ const stageBetonBalok: StageCalcDef = {
         const lRing = kelRing * jmlRing;
         const wRing = lRing * rebarWeight(D3);
         const wBesi = wUtama + wSupport + wRing;
-        const wKawat = wBesi * 0.01;
-        const total = wBesi + wKawat;
+        // Kawat ikat sudah termasuk AHSP pembesian → tidak ditambah (anti double-count).
 
         const formula = [
           `Utama (Ø${D1} × ${n1} btg × ${fmt(P, 2)} m): ${fmt(lUtama, 2)} m → ${fmt(wUtama, 2)} kg`,
@@ -1113,13 +1106,12 @@ const stageBetonBalok: StageCalcDef = {
             ? `Support (Ø${D2} × ${n2} btg × ${fmt(P, 2)}): ${fmt(lSupport, 2)} m → ${fmt(wSupport, 2)} kg`
             : "",
           `Ring/Begel (Ø${D3} jarak ${fmt(R * 100, 0)} cm, ${jmlRing} bh): ${fmt(lRing, 2)} m → ${fmt(wRing, 2)} kg`,
-          `Kawat ikat (1%): ${fmt(wKawat, 2)} kg`,
-          `TOTAL: ${fmt(total, 2)} kg`,
+          `TOTAL besi: ${fmt(wBesi, 2)} kg (kawat ikat sudah termasuk AHSP)`,
         ]
           .filter(Boolean)
           .join(" | ");
 
-        return { volume: total, formula };
+        return { volume: wBesi, formula };
       },
     },
     {
@@ -1223,7 +1215,7 @@ const stageBetonPlat: StageCalcDef = {
     {
       key: "betonPlat",
       label: "Beton Plat",
-      ahspKeyword: "beton mutu f'c 19",
+      ahspKeyword: (i) => mutuBetonKeyword(n(i.mutuBeton, 225)),
       ahspUnit: "m3",
       defaultEnabled: true,
       computeVolume: (i) => {
@@ -1514,7 +1506,7 @@ const stageAtap: StageCalcDef = {
     {
       key: "penutupAtap",
       label: "Penutup Atap (Genteng / Spandek)",
-      ahspKeyword: "rangka atap genteng",
+      ahspKeyword: "atap genteng beton",
       ahspUnit: "m2",
       defaultEnabled: true,
       computeVolume: (i) => {
@@ -1545,7 +1537,7 @@ const stageAtap: StageCalcDef = {
     {
       key: "listplank",
       label: "Listplank Tepi Atap",
-      ahspKeyword: "listplank",
+      ahspKeyword: "lisplank",
       ahspUnit: "m",
       defaultEnabled: false,
       showIf: (i) => n(i.panjangListplank) > 0,
@@ -1629,7 +1621,7 @@ const stageFinishing: StageCalcDef = {
     {
       key: "skirting",
       label: "Skirting / Lis Lantai",
-      ahspKeyword: "skirting",
+      ahspKeyword: "plint",
       ahspUnit: "m",
       defaultEnabled: false,
       showIf: (i) => n(i.kelilingLantai) > 0,

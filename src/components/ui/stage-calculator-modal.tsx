@@ -34,6 +34,14 @@ const formatIDR = (n: number) =>
 const formatNum = (n: number, d = 2) =>
   n.toLocaleString("id-ID", { maximumFractionDigits: d });
 
+/** Resolve ahspKeyword — boleh string statis atau fungsi dari inputs (mis.
+ *  mutu beton dinamis K→f'c). */
+function kwOf(it: StageItemDef, inputs: Record<string, number>): string {
+  return typeof it.ahspKeyword === "function"
+    ? it.ahspKeyword(inputs)
+    : it.ahspKeyword;
+}
+
 export function StageCalculatorModal({
   open,
   projectId,
@@ -92,7 +100,7 @@ export function StageCalculatorModal({
         if (!state || state.ahsp) continue;
         try {
           const res = await fetch(
-            `/api/ahsp/search?q=${encodeURIComponent(it.ahspKeyword)}&limit=10`,
+            `/api/ahsp/search?q=${encodeURIComponent(kwOf(it, inputs))}&limit=10`,
           );
           if (!res.ok) continue;
           const data: AhspMatch[] = await res.json();
@@ -430,7 +438,7 @@ export function StageCalculatorModal({
                             onChange={(e) =>
                               setSearchOverride(it.key, e.target.value)
                             }
-                            placeholder={`Cari AHSP yg lain (default: "${it.ahspKeyword}")`}
+                            placeholder={`Cari AHSP yg lain (default: "${kwOf(it, inputs)}")`}
                             className="flex-1 rounded border border-border bg-background px-2 py-1 text-xs focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
                           />
                           <button
