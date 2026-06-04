@@ -1783,6 +1783,271 @@ const stageMEP: StageCalcDef = {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Stage: BUKAAN (pintu, jendela, aksesoris) — gap audit: dulu cuma kusen
+// ─────────────────────────────────────────────────────────────────────────────
+
+const stageBukaan: StageCalcDef = {
+  type: "stage_bukaan",
+  label: "Pintu, Jendela & Aksesoris",
+  description:
+    "Kusen, daun pintu, jendela kaca, dan aksesoris (engsel/kunci/grendel). Isi jumlah unit, aksesoris auto-hitung. Tiap item AHSP terpisah.",
+  inputs: [
+    {
+      key: "jmlPintu",
+      label: "Jumlah Pintu",
+      unit: "bh",
+      default: 4,
+      group: "Jumlah Unit",
+    },
+    {
+      key: "jmlJendela",
+      label: "Jumlah Jendela",
+      unit: "bh",
+      default: 6,
+      group: "Jumlah Unit",
+    },
+    {
+      key: "panjangKusen",
+      label: "Total Panjang Kusen",
+      unit: "m",
+      default: 0,
+      hint: "Keliling semua kusen pintu+jendela (m'). 0 = skip (mis. pakai kusen aluminium/uPVC).",
+      group: "Kusen",
+    },
+    {
+      key: "luasDaunPintu",
+      label: "Luas per Daun Pintu",
+      unit: "m2",
+      default: 1.8,
+      hint: "mis. 0,9 × 2,0 = 1,8 m²",
+      group: "Daun Pintu",
+    },
+    {
+      key: "engselPintu",
+      label: "Engsel per Pintu",
+      unit: "bh",
+      default: 3,
+      group: "Aksesoris",
+    },
+    {
+      key: "engselJendela",
+      label: "Engsel per Jendela",
+      unit: "bh",
+      default: 2,
+      group: "Aksesoris",
+    },
+  ],
+  items: [
+    {
+      key: "kusen",
+      label: "Kusen Pintu & Jendela (kayu)",
+      ahspKeyword: "kusen pintu jendela kayu",
+      ahspUnit: "m",
+      defaultEnabled: false,
+      showIf: (i) => n(i.panjangKusen) > 0,
+      computeVolume: (i) => {
+        const v = n(i.panjangKusen);
+        if (v <= 0) return null;
+        return { volume: v, formula: `${fmt(v, 2)} m (input langsung)` };
+      },
+    },
+    {
+      key: "daunPintu",
+      label: "Daun Pintu Panel",
+      ahspKeyword: "pembuatan daun pintu panel",
+      ahspUnit: "m2",
+      defaultEnabled: true,
+      showIf: (i) => n(i.jmlPintu) > 0,
+      computeVolume: (i) => {
+        const jml = n(i.jmlPintu);
+        const luas = n(i.luasDaunPintu, 1.8);
+        const v = jml * luas;
+        if (v <= 0) return null;
+        return {
+          volume: v,
+          formula: `${jml} pintu × ${fmt(luas, 2)} m² = ${fmt(v, 2)} m²`,
+        };
+      },
+    },
+    {
+      key: "jendela",
+      label: "Jendela Kaca (lengkap)",
+      ahspKeyword: "pemasangan jendela kaca",
+      ahspUnit: "bh",
+      defaultEnabled: true,
+      showIf: (i) => n(i.jmlJendela) > 0,
+      computeVolume: (i) => {
+        const v = n(i.jmlJendela);
+        if (v <= 0) return null;
+        return { volume: v, formula: `${v} jendela` };
+      },
+    },
+    {
+      key: "engsel",
+      label: "Engsel (pintu + jendela)",
+      ahspKeyword: "engsel",
+      ahspUnit: "bh",
+      defaultEnabled: true,
+      showIf: (i) =>
+        n(i.jmlPintu) * n(i.engselPintu, 3) +
+          n(i.jmlJendela) * n(i.engselJendela, 2) >
+        0,
+      computeVolume: (i) => {
+        const ep = n(i.jmlPintu) * n(i.engselPintu, 3);
+        const ej = n(i.jmlJendela) * n(i.engselJendela, 2);
+        const v = ep + ej;
+        if (v <= 0) return null;
+        return {
+          volume: v,
+          formula: `${n(i.jmlPintu)}×${n(i.engselPintu, 3)} + ${n(i.jmlJendela)}×${n(i.engselJendela, 2)} = ${v} bh`,
+        };
+      },
+    },
+    {
+      key: "kunci",
+      label: "Kunci Tanam (per pintu)",
+      ahspKeyword: "kunci tanam",
+      ahspUnit: "bh",
+      defaultEnabled: true,
+      showIf: (i) => n(i.jmlPintu) > 0,
+      computeVolume: (i) => {
+        const v = n(i.jmlPintu);
+        if (v <= 0) return null;
+        return { volume: v, formula: `${v} pintu` };
+      },
+    },
+    {
+      key: "grendel",
+      label: "Grendel (per jendela)",
+      ahspKeyword: "grendel",
+      ahspUnit: "bh",
+      defaultEnabled: true,
+      showIf: (i) => n(i.jmlJendela) > 0,
+      computeVolume: (i) => {
+        const v = n(i.jmlJendela);
+        if (v <= 0) return null;
+        return { volume: v, formula: `${v} jendela` };
+      },
+    },
+  ],
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Stage: SANITAIR & SANITASI — gap audit: dulu tak ada sama sekali
+// ─────────────────────────────────────────────────────────────────────────────
+
+const stageSanitair: StageCalcDef = {
+  type: "stage_sanitair",
+  label: "Sanitair & Sanitasi",
+  description:
+    "Kloset, wastafel, floor drain, sumur resapan. Isi jumlah, tiap fixture jadi item AHSP terpisah. (Kran & septictank: tambah manual via picker bila perlu.)",
+  inputs: [
+    {
+      key: "klosetDuduk",
+      label: "Kloset Duduk / Monoblock",
+      unit: "bh",
+      default: 0,
+      group: "Kloset",
+    },
+    {
+      key: "klosetJongkok",
+      label: "Kloset Jongkok",
+      unit: "bh",
+      default: 1,
+      group: "Kloset",
+    },
+    {
+      key: "wastafel",
+      label: "Wastafel",
+      unit: "bh",
+      default: 0,
+      group: "Fixture",
+    },
+    {
+      key: "floorDrain",
+      label: "Floor Drain",
+      unit: "bh",
+      default: 1,
+      group: "Fixture",
+    },
+    {
+      key: "sumurResapan",
+      label: "Sumur Resapan",
+      unit: "bh",
+      default: 0,
+      group: "Resapan",
+    },
+  ],
+  items: [
+    {
+      key: "klosetDuduk",
+      label: "Kloset Duduk / Monoblock",
+      ahspKeyword: "closet duduk",
+      ahspUnit: "bh",
+      defaultEnabled: false,
+      showIf: (i) => n(i.klosetDuduk) > 0,
+      computeVolume: (i) => {
+        const v = n(i.klosetDuduk);
+        if (v <= 0) return null;
+        return { volume: v, formula: `${v} bh` };
+      },
+    },
+    {
+      key: "klosetJongkok",
+      label: "Kloset Jongkok",
+      ahspKeyword: "closet jongkok",
+      ahspUnit: "bh",
+      defaultEnabled: true,
+      showIf: (i) => n(i.klosetJongkok) > 0,
+      computeVolume: (i) => {
+        const v = n(i.klosetJongkok);
+        if (v <= 0) return null;
+        return { volume: v, formula: `${v} bh` };
+      },
+    },
+    {
+      key: "wastafel",
+      label: "Wastafel",
+      ahspKeyword: "wastafel",
+      ahspUnit: "bh",
+      defaultEnabled: false,
+      showIf: (i) => n(i.wastafel) > 0,
+      computeVolume: (i) => {
+        const v = n(i.wastafel);
+        if (v <= 0) return null;
+        return { volume: v, formula: `${v} bh` };
+      },
+    },
+    {
+      key: "floorDrain",
+      label: "Floor Drain",
+      ahspKeyword: "floor drain",
+      ahspUnit: "bh",
+      defaultEnabled: true,
+      showIf: (i) => n(i.floorDrain) > 0,
+      computeVolume: (i) => {
+        const v = n(i.floorDrain);
+        if (v <= 0) return null;
+        return { volume: v, formula: `${v} bh` };
+      },
+    },
+    {
+      key: "sumurResapan",
+      label: "Sumur Resapan Air",
+      ahspKeyword: "sumur resapan air",
+      ahspUnit: "bh",
+      defaultEnabled: false,
+      showIf: (i) => n(i.sumurResapan) > 0,
+      computeVolume: (i) => {
+        const v = n(i.sumurResapan);
+        if (v <= 0) return null;
+        return { volume: v, formula: `${v} bh` };
+      },
+    },
+  ],
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Export all stages
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -1796,6 +2061,8 @@ export const STAGE_CALCULATORS: StageCalcDef[] = [
   stagePasangan,
   stageAtap,
   stageFinishing,
+  stageBukaan,
+  stageSanitair,
   stageMEP,
 ];
 
