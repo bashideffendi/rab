@@ -526,6 +526,32 @@ const stagePondasi: StageCalcDef = {
         return { volume: v, formula };
       },
     },
+    {
+      key: "buangTanah",
+      label: "Buang/Angkut Tanah Keluar",
+      ahspKeyword: "mengangkut tanah",
+      ahspUnit: "m3",
+      defaultEnabled: false,
+      computeVolume: (i) => {
+        const P = n(i.panjangTotal);
+        const Lb = n(i.lebarGalian, 0.6);
+        const aTop = n(i.lebarAtasPondasi, 0.25);
+        const tPon = n(i.tinggiPondasi, 0.5);
+        const vPondasi = ((aTop + Lb) / 2) * tPon * P;
+        const vPasir = P * Lb * n(i.tebalUruganPasir, 0);
+        const vAan = P * Lb * n(i.tebalAanstamping, 0);
+        const vLantai = P * Lb * n(i.tebalLantaiKerja, 0);
+        // Tanah yg keluar = volume terdesak struktur (tak bisa diurug balik),
+        // × faktor gembur 1,2 (tanah lepas mengembang saat diangkut).
+        const vIsian = vPondasi + vPasir + vAan + vLantai;
+        const v = vIsian * 1.2;
+        if (v <= 0) return null;
+        return {
+          volume: v,
+          formula: `${fmt(vIsian, 3)} terdesak × 1,2 gembur = ${fmt(v, 3)} m³`,
+        };
+      },
+    },
   ],
 };
 
@@ -1482,6 +1508,14 @@ const stageAtap: StageCalcDef = {
       hint: "Keliling tepi atap. 0 = skip.",
       group: "Spesifikasi",
     },
+    {
+      key: "panjangTalang",
+      label: "Panjang Talang Air",
+      unit: "m",
+      default: 0,
+      hint: "Talang datar/jurai. 0 = skip.",
+      group: "Spesifikasi",
+    },
   ],
   items: [
     {
@@ -1543,6 +1577,40 @@ const stageAtap: StageCalcDef = {
       showIf: (i) => n(i.panjangListplank) > 0,
       computeVolume: (i) => {
         const v = n(i.panjangListplank);
+        if (v <= 0) return null;
+        return { volume: v, formula: `${fmt(v, 2)} m (input langsung)` };
+      },
+    },
+    {
+      key: "reng",
+      label: "Reng (dudukan genteng)",
+      ahspKeyword: "reng baja ringan",
+      ahspUnit: "m",
+      defaultEnabled: false,
+      computeVolume: (i) => {
+        const P = n(i.Pbang);
+        const L = n(i.Lbang);
+        const overhang = n(i.overhang, 0.6);
+        const sudut = n(i.sudut, 30);
+        const cosS = Math.cos((sudut * Math.PI) / 180) || 1;
+        const luasMiring = ((P + 2 * overhang) * (L + 2 * overhang)) / cosS;
+        const v = luasMiring / 0.26; // jarak reng genteng ~26 cm
+        if (v <= 0) return null;
+        return {
+          volume: v,
+          formula: `${fmt(luasMiring, 2)} m² / 0,26 m = ${fmt(v, 2)} m reng`,
+        };
+      },
+    },
+    {
+      key: "talang",
+      label: "Talang Air",
+      ahspKeyword: "talang",
+      ahspUnit: "m",
+      defaultEnabled: false,
+      showIf: (i) => n(i.panjangTalang) > 0,
+      computeVolume: (i) => {
+        const v = n(i.panjangTalang);
         if (v <= 0) return null;
         return { volume: v, formula: `${fmt(v, 2)} m (input langsung)` };
       },
@@ -2048,12 +2116,180 @@ const stageSanitair: StageCalcDef = {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Stage: FOOTPLATE / PONDASI TAPAK — restore gap Fase A (single calc di-hide).
+// 3 output: beton + pembesian grid + bekisting sisi.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const stageFootplate: StageCalcDef = {
+  type: "stage_footplate",
+  label: "Footplate / Pondasi Tapak Beton",
+  description:
+    "Pondasi telapak beton bertulang: beton + pembesian grid 2 arah + bekisting sisi. Isi dimensi tapak sekali, 3 item AHSP keluar.",
+  inputs: [
+    {
+      key: "Ptapak",
+      label: "Panjang Tapak (P)",
+      unit: "m",
+      default: 1.0,
+      group: "Dimensi Tapak",
+    },
+    {
+      key: "Ltapak",
+      label: "Lebar Tapak (L)",
+      unit: "m",
+      default: 1.0,
+      group: "Dimensi Tapak",
+    },
+    {
+      key: "Ttapak",
+      label: "Tebal Tapak (T)",
+      unit: "m",
+      default: 0.25,
+      group: "Dimensi Tapak",
+    },
+    {
+      key: "jmlTitik",
+      label: "Jumlah Titik",
+      unit: "bh",
+      default: 4,
+      group: "Dimensi Tapak",
+    },
+    {
+      key: "mutuBeton",
+      label: "Mutu Beton",
+      unit: "K",
+      default: 225,
+      group: "Spesifikasi Beton",
+      options: [
+        { value: 175, label: "K-175 (fc 14.5)" },
+        { value: 225, label: "K-225 (fc 19.3)" },
+        { value: 275, label: "K-275 (fc 22.5)" },
+      ],
+    },
+    {
+      key: "selimut",
+      label: "Selimut Beton (k)",
+      unit: "m",
+      default: 0.04,
+      group: "Pembesian",
+    },
+    {
+      key: "diaX",
+      label: "Ø Tulangan Arah X",
+      unit: "mm",
+      default: 13,
+      group: "Pembesian",
+      options: [
+        { value: 10, label: "Ø10 mm" },
+        { value: 13, label: "Ø13 mm" },
+        { value: 16, label: "Ø16 mm" },
+      ],
+    },
+    {
+      key: "jarakX",
+      label: "Jarak Tulangan X",
+      unit: "m",
+      default: 0.15,
+      group: "Pembesian",
+    },
+    {
+      key: "diaY",
+      label: "Ø Tulangan Arah Y",
+      unit: "mm",
+      default: 13,
+      group: "Pembesian",
+      options: [
+        { value: 10, label: "Ø10 mm" },
+        { value: 13, label: "Ø13 mm" },
+        { value: 16, label: "Ø16 mm" },
+      ],
+    },
+    {
+      key: "jarakY",
+      label: "Jarak Tulangan Y",
+      unit: "m",
+      default: 0.15,
+      group: "Pembesian",
+    },
+  ],
+  items: [
+    {
+      key: "betonFootplate",
+      label: "Beton Footplate",
+      ahspKeyword: (i) => mutuBetonKeyword(n(i.mutuBeton, 225)),
+      ahspUnit: "m3",
+      defaultEnabled: true,
+      computeVolume: (i) => {
+        const P = n(i.Ptapak, 1);
+        const L = n(i.Ltapak, 1);
+        const T = n(i.Ttapak, 0.25);
+        const jml = n(i.jmlTitik, 1);
+        const v = P * L * T * jml;
+        return {
+          volume: v,
+          formula: `${fmt(P, 2)} × ${fmt(L, 2)} × ${fmt(T, 2)} × ${jml} = ${fmt(v, 3)} m³`,
+        };
+      },
+    },
+    {
+      key: "penulanganFootplate",
+      label: "Penulangan Footplate (grid 2 arah)",
+      ahspKeyword: "penulangan kolom balok sloof",
+      ahspUnit: "kg",
+      defaultEnabled: true,
+      computeVolume: (i) => {
+        const P = n(i.Ptapak, 1);
+        const L = n(i.Ltapak, 1);
+        const jml = n(i.jmlTitik, 1);
+        const k = n(i.selimut, 0.04);
+        const diaX = n(i.diaX, 13);
+        const jX = n(i.jarakX, 0.15);
+        const diaY = n(i.diaY, 13);
+        const jY = n(i.jarakY, 0.15);
+        // Grid bawah: batang arah X membentang sepanjang P (jumlah dibagi
+        // di lebar L), batang arah Y membentang sepanjang L (dibagi di P).
+        const lenP = Math.max(0, P - 2 * k);
+        const lenL = Math.max(0, L - 2 * k);
+        const nX = Math.floor(lenL / jX) + 1;
+        const nY = Math.floor(lenP / jY) + 1;
+        const wX = nX * lenP * rebarWeight(diaX);
+        const wY = nY * lenL * rebarWeight(diaY);
+        const total = (wX + wY) * jml;
+        return {
+          volume: total,
+          formula: `X:${nX}×${fmt(lenP, 2)}m + Y:${nY}×${fmt(lenL, 2)}m, ×${jml} titik → ${fmt(total, 2)} kg`,
+        };
+      },
+    },
+    {
+      key: "bekistingFootplate",
+      label: "Bekisting Footplate (sisi)",
+      ahspKeyword: "bekisting pondasi",
+      ahspUnit: "m2",
+      defaultEnabled: true,
+      computeVolume: (i) => {
+        const P = n(i.Ptapak, 1);
+        const L = n(i.Ltapak, 1);
+        const T = n(i.Ttapak, 0.25);
+        const jml = n(i.jmlTitik, 1);
+        const v = 2 * (P + L) * T * jml;
+        return {
+          volume: v,
+          formula: `2×(${fmt(P, 2)}+${fmt(L, 2)})×${fmt(T, 2)}×${jml} = ${fmt(v, 2)} m²`,
+        };
+      },
+    },
+  ],
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Export all stages
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const STAGE_CALCULATORS: StageCalcDef[] = [
   stagePersiapan,
   stagePondasi,
+  stageFootplate,
   stageBetonSloof,
   stageBetonKolom,
   stageBetonBalok,
